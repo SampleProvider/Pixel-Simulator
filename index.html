@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Pixel Simulator</title>
+    <link href="style.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+    <div id="gameContainer">
+        <canvas id="canvas"></canvas>
+        <canvas id="overlayCanvas"></canvas>
+        <!-- <div id="sidebar"> -->
+            <div id="controlSettings">
+                <button id="playButton" class="button"></button>
+                <button id="stepButton" class="button"></button>
+                <button id="simulateButton" class="button"></button>
+                <button id="slowmodeButton" class="button"></button>
+                <button id="menuButton" class="button"></button>
+                <button id="screenshotButton" class="button"></button>
+                <button id="resetButton" class="button"></button>
+            </div>
+        <div id="saveCodeSettings" class="hidden" style="display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: center;">
+                <button id="downloadSaveCodeButton" class="button"></button>
+                <button id="uploadSaveCodeButton" class="button"></button>
+                <button id="generateSaveCodeButton" class="button"></button>
+            </div>
+            <div id="saveCodeText">Save Code:</div>
+            <textarea id="saveCode" style="flex-grow: 1;"></textarea>
+            <div id="saveCodeSettingsToggle">
+                <div></div>
+            </div>
+        </div>
+            <div id="history">
+                <!-- asdf -->
+            </div>
+            <div id="pixelPicker"></div>
+        <!-- </div> -->
+        <div id="tooltip">
+            <div id="tooltipName"></div>
+            <div id="tooltipDescription" style="display: none;"></div>
+        </div>
+    </div>
+    <dialog id="modalContainer">
+        <div id="modalTitle"></div>
+        <div id="modalContent"></div>
+        <div id="modalButtons" style="display: flex; justify-content: center;">
+            <button id="modalYes" class="modalButton button">Yes</button>
+            <button id="modalNo" class="modalButton button">No</button>
+            <button id="modalOk" class="modalButton button">Ok</button>
+        </div>
+    </dialog>
+    <!-- <script src="pixels.js" type="module"></script> -->
+    <script src="game.js" type="module" defer></script>
+    <!-- <script src="renderer.js" type="module" defer></script> -->
+</body>
+
+</html>
