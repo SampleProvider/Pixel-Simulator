@@ -1,4 +1,4 @@
-/* helper classes: hidden */
+/* helper classes: hidden, expanded */
 
 @font-face {
     font-family: "Noto Sans";
@@ -154,11 +154,14 @@ button {
     border-right: 2px solid black;
     border-top: 2px solid black;
     border-bottom: 2px solid black;
-    transition: 200ms ease transform;
+    transition: 200ms ease transform, 2000ms ease height;
     transform: translateX(0px);
 }
 #saveCodeSettings.hidden {
     transform: translateX(calc(-100% - var(--border-size) * 2));
+}
+#saveCodeSettings.expanded {
+    height: 400px;
 }
 #saveCodeSettingsToggle {
     position: absolute;
@@ -181,6 +184,61 @@ button {
 }
 #saveCodeSettings.hidden #saveCodeSettingsToggle div {
     transform: scaleX(1);
+}
+#saveCodeSettingsExpandToggle {
+    position: absolute;
+    left: calc(var(--border-size) * -2);
+    top: calc(var(--border-size) * -4 - 33px);
+    width: 33px;
+    height: 33px;
+    background-color: #00000066;
+    border: 2px solid black;
+    cursor: pointer;
+}
+#saveCodeSettingsExpandToggle div {
+    width: 33px;
+    height: 33px;
+    background-image: url("/img/arrow.png");
+    background-size: 100%;
+    image-rendering: pixelated;
+    transition: 200ms ease transform;
+    transform: rotate(90deg) scaleX(-1);
+}
+#saveCodeSettings.expanded #saveCodeSettingsExpandToggle div {
+    transform: rotate(90deg) scaleX(1);
+}
+
+#saveGridButton {
+    width: 144px;
+    height: 30px;
+    margin: 4px;
+    border: none;
+    background-color: transparent;
+    background-image: url("/img/buttons2.png");
+    background-size: 400% 640%;
+    background-position: 0% 0%;
+}
+#savedGridsList {
+    border: 2px solid black;
+    padding: 1px;
+    flex-grow: 1;
+    overflow: scroll;
+}
+#saveGridButton, #savedGridsListText, #savedGridsList {
+    max-height: 0px;
+    margin: 0px;
+    padding: 0px;
+    transition: 2000ms ease max-height, 2000ms ease margin;
+    overflow: hidden;
+}
+#saveCodeSettings.expanded #saveGridButton, #saveCodeSettings.expanded #savedGridsListText, #saveCodeSettings.expanded #savedGridsList {
+    max-height: 100%;
+    margin: revert-layer;
+}
+.savedGrid {
+    height: 50px;
+    margin: 1px;
+    border: 2px solid black;
 }
 
 #downloadSaveCodeButton {

@@ -5820,7 +5820,7 @@ let pixelData = {
         flammability: 0,
         blastResistance: 0,
         update: function(x, y) {
-            let functions = [addPixel, addFire, addUpdatedChunk, move, fillEllipse, resetPushPixels, setPushPixels, pushLeft, pushRight, pushUp, pushDown];
+            let functions = [addPixel, addFire, addUpdatedChunk, move, fillEllipse, pushLeft, pushRight, pushUp, pushDown];
             for (let i in pixelData) {
                 for (let j in pixelData[i]) {
                     if (typeof pixelData[i][j] == "function") {

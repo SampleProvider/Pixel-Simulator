@@ -48,6 +48,8 @@ why are observers deactivatable that is dumb - DONE
 water/flow code is kind of bad
 water needs to check for acid in ispassible
 
+button textures for 2x1 button clicked
+
 check "for i in" stuff
 
 polishing:
@@ -241,6 +243,7 @@ resetButton.onclick = async () => {
 
 const saveCodeSettings = document.getElementById("saveCodeSettings");
 const saveCodeSettingsToggle = document.getElementById("saveCodeSettingsToggle");
+const saveCodeSettingsExpandToggle = document.getElementById("saveCodeSettingsExpandToggle");
 const saveCode = document.getElementById("saveCode");
 const downloadSaveCodeButton = document.getElementById("downloadSaveCodeButton");
 const uploadSaveCodeButton = document.getElementById("uploadSaveCodeButton");
@@ -248,6 +251,12 @@ const generateSaveCodeButton = document.getElementById("generateSaveCodeButton")
 
 saveCodeSettingsToggle.onclick = () => {
     saveCodeSettings.classList.toggle("hidden");
+    if (saveCodeSettings.classList.contains("hidden")) {
+        saveCodeSettings.classList.remove("expanded");
+    }
+};
+saveCodeSettingsExpandToggle.onclick = () => {
+    saveCodeSettings.classList.toggle("expanded");
 };
 
 downloadSaveCodeButton.onclick = () => {
@@ -266,7 +275,7 @@ function generateSaveCode() {
     string += gridWidth + "-" + gridHeight + ";";
 
     let id = grid[ID];
-    let amount = 0;
+    let amount = -1;
 
     for (let i = 0; i < gridWidth * gridHeight * gridStride; i += gridStride) {
         amount += 1;
