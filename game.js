@@ -847,7 +847,7 @@ document.oncontextmenu = (e) => {
 document.onkeydown = (e) => {
     var key = e.key;
     if (key == " ") {
-        key == "Space";
+        key = "Space";
     }
     if (controls[key] == false) {
         controls[key] = performance.now();
@@ -900,7 +900,7 @@ document.onkeydown = (e) => {
 document.onkeyup = (e) => {
     var key = e.key;
     if (key == " ") {
-        key == "Space";
+        key = "Space";
     }
     controls[key] = false;
 };
@@ -913,9 +913,9 @@ window.onblur = () => {
 };
 let buttons = document.getElementsByClassName("button");
 for (let i = 0; i < buttons.length; i++) {
-    buttons[i].onfocus = () => {
-        buttons[i].blur();
-    };
+    // buttons[i].onfocus = () => {
+    //     buttons[i].blur();
+    // };
 }
 
 overlayCanvas.addEventListener("wheel", (e) => {
@@ -1570,6 +1570,7 @@ function update() {
         // overlayCtx.strokeRect(1, 51, overlayCtx.measureText(drawText).width + 4, 16);
 
         overlayCtx.font = "16px Source Code Pro";
+        overlayCtx.font = "16px Noto Sans";
         overlayCtx.textBaseline = "top";
         overlayCtx.textAlign = "left";
         overlayCtx.fillStyle = "#000000";

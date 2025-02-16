@@ -4279,9 +4279,11 @@ let pixelData = {
                         return;
                     }
                 }
-                addPixel(x - 1, y, grid[index + ID]);
+                if (grid[index1 + ID] == AIR) {
+                    addPixel(x - 1, y, grid[index + ID]);
+                }
             }
-            // addUpdatedChunk(x, y);
+            addUpdatedChunk(x, y);
         },
     },
     cloner_up: {
@@ -4310,9 +4312,11 @@ let pixelData = {
                         return;
                     }
                 }
-                addPixel(x, y - 1, grid[index + ID]);
+                if (grid[index1 + ID] == AIR) {
+                    addPixel(x, y - 1, grid[index + ID]);
+                }
             }
-            // addUpdatedChunk(x, y);
+            addUpdatedChunk(x, y);
         },
     },
     cloner_right: {
@@ -4341,9 +4345,11 @@ let pixelData = {
                         return;
                     }
                 }
-                addPixel(x + 1, y, grid[index + ID]);
+                if (grid[index1 + ID] == AIR) {
+                    addPixel(x + 1, y, grid[index + ID]);
+                }
             }
-            // addUpdatedChunk(x, y);
+            addUpdatedChunk(x, y);
         },
     },
     cloner_down: {
@@ -4364,17 +4370,19 @@ let pixelData = {
             if (isDeactivated(x, y)) {
                 return;
             }
-            let index = (x + (y + 1) * gridWidth) * gridStride;
+            let index = (x + (y - 1) * gridWidth) * gridStride;
             if (grid[index + ID] != AIR && grid[index + UPDATED] != tick) {
-                let index1 = (x + (y - 1) * gridWidth) * gridStride;
+                let index1 = (x + (y + 1) * gridWidth) * gridStride;
                 if (grid[index1 + ID] != AIR) {
-                    if (!pushDown(x, y - 1, x, y, 2)) {
+                    if (!pushDown(x, y + 1, x, y, 2)) {
                         return;
                     }
                 }
-                addPixel(x, y - 1, grid[index + ID]);
+                if (grid[index1 + ID] == AIR) {
+                    addPixel(x, y + 1, grid[index + ID]);
+                }
             }
-            // addUpdatedChunk(x, y);
+            addUpdatedChunk(x, y);
         },
     },
     rotator_left: {
@@ -5016,6 +5024,126 @@ let pixelData = {
             }
         },
     },
+    flamethrower_left: {
+        name: "Flamethrower (Left)",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Destruction",
+        subgroup: "Flamethrower",
+        texture: new Float32Array([120, 40, 15, 15]),
+        state: SOLID,
+        flammability: 0,
+        blastResistance: 220,
+        update: function(x, y) {
+            for (let i = 0; i < 3; i++) {
+                let angle = Math.PI + Math.random() * Math.PI / 6 - Math.PI / 12;
+                raycast(x, y, Math.cos(angle), Math.sin(angle), (x1, y1) => {
+                    let dist = Math.sqrt((x1 - x) ** 2 + (y1 - y) ** 2);
+                    if (dist > 10) {
+                        return false;
+                    }
+                    let index1 = (x1 + y1 * gridWidth) * gridStride;
+                    if (grid[index1 + ON_FIRE] == false) {
+                        addFire(x1, y1, true);
+                        return false;
+                    }
+                    if (grid[index1 + ID] != AIR) {
+                        return false;
+                    }
+                    return true;
+                });
+            }
+        },
+    },
+    flamethrower_up: {
+        name: "Flamethrower (Up)",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Destruction",
+        subgroup: "Flamethrower",
+        texture: new Float32Array([135, 40, 15, 15]),
+        state: SOLID,
+        flammability: 0,
+        blastResistance: 220,
+        update: function(x, y) {
+            for (let i = 0; i < 3; i++) {
+                let angle = Math.PI * 3 / 2 + Math.random() * Math.PI / 6 - Math.PI / 12;
+                raycast(x, y, Math.cos(angle), Math.sin(angle), (x1, y1) => {
+                    let dist = Math.sqrt((x1 - x) ** 2 + (y1 - y) ** 2);
+                    if (dist > 10) {
+                        return false;
+                    }
+                    let index1 = (x1 + y1 * gridWidth) * gridStride;
+                    if (grid[index1 + ON_FIRE] == false) {
+                        addFire(x1, y1, true);
+                        return false;
+                    }
+                    if (grid[index1 + ID] != AIR) {
+                        return false;
+                    }
+                    return true;
+                });
+            }
+        },
+    },
+    flamethrower_right: {
+        name: "Flamethrower (Right)",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Destruction",
+        subgroup: "Flamethrower",
+        texture: new Float32Array([150, 40, 15, 15]),
+        state: SOLID,
+        flammability: 0,
+        blastResistance: 220,
+        update: function(x, y) {
+            for (let i = 0; i < 3; i++) {
+                let angle = Math.random() * Math.PI / 6 - Math.PI / 12;
+                raycast(x, y, Math.cos(angle), Math.sin(angle), (x1, y1) => {
+                    let dist = Math.sqrt((x1 - x) ** 2 + (y1 - y) ** 2);
+                    if (dist > 10) {
+                        return false;
+                    }
+                    let index1 = (x1 + y1 * gridWidth) * gridStride;
+                    if (grid[index1 + ON_FIRE] == false) {
+                        addFire(x1, y1, true);
+                        return false;
+                    }
+                    if (grid[index1 + ID] != AIR) {
+                        return false;
+                    }
+                    return true;
+                });
+            }
+        },
+    },
+    flamethrower_down: {
+        name: "Flamethrower (Down)",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Destruction",
+        subgroup: "Flamethrower",
+        texture: new Float32Array([165, 40, 15, 15]),
+        state: SOLID,
+        flammability: 0,
+        blastResistance: 220,
+        update: function(x, y) {
+            for (let i = 0; i < 3; i++) {
+                let angle = Math.PI / 2 + Math.random() * Math.PI / 6 - Math.PI / 12;
+                raycast(x, y, Math.cos(angle), Math.sin(angle), (x1, y1) => {
+                    let dist = Math.sqrt((x1 - x) ** 2 + (y1 - y) ** 2);
+                    if (dist > 10) {
+                        return false;
+                    }
+                    let index1 = (x1 + y1 * gridWidth) * gridStride;
+                    if (grid[index1 + ON_FIRE] == false) {
+                        addFire(x1, y1, true);
+                        return false;
+                    }
+                    if (grid[index1 + ID] != AIR) {
+                        return false;
+                    }
+                    return true;
+                });
+            }
+        },
+    },
     nuke: {
         name: "Nuke",
         description: "Unrealistically flows and may or may not be wet",
@@ -5205,7 +5333,7 @@ let pixelData = {
         texture: new Float32Array([8, 5, 4, 4]),
         state: GAS,
         flammability: 0,
-        blastResistance: 0,
+        blastResistance: -1,
         cloneable: false,
     },
     laser_left: {
@@ -5578,6 +5706,38 @@ let pixelData = {
     //         }
     //     },
     // },
+    pink_sand: {
+        name: "Pink Sand",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Destruction",
+        subgroup: "Pink Sand",
+        color: new Float32Array([255, 105, 180, 1]),
+        state: SOLID,
+        flammability: 0,
+        blastResistance: 100,
+        update: function(x, y) {
+            if (isTouching(x, y, [SAND])) {
+                explode(x, y, 80 * 80, 80 * 8, 16000);
+            }
+            rise(x, y, 1, 1, isPassableSolid, isMoveableSolid);
+        },
+    },
+    red_sand: {
+        name: "Red Sand",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Destruction",
+        subgroup: "Pink Sand",
+        color: new Float32Array([225, 75, 0, 1]),
+        state: SOLID,
+        flammability: 0,
+        blastResistance: 100,
+        update: function(x, y) {
+            if (isTouching(x, y, [WATER])) {
+                explode(x, y, 5 * 5, 5 * 8, 3000);
+            }
+            flow(x, y, 1, 1, isPassableSolid, isMoveableSolid);
+        },
+    },
     pickle: {
         name: "Pickle",
         description: "Unrealistically flows and may or may not be wet",
@@ -5610,6 +5770,43 @@ let pixelData = {
                 }
             }
             flow(x, y, 1, 1, isPassableSolid, isMoveableSolid);
+            addUpdatedChunk(x, y);
+        },
+    },
+    pickled_pickle: {
+        name: "Pickled Pickle",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Destruction",
+        subgroup: "Pickle",
+        color: new Float32Array([75, 255, 30, 1]),
+        state: SOLID,
+        flammability: 0,
+        blastResistance: 0,
+        update4: function(x, y) {
+            if (Math.random() < 0.1) {
+                if (Math.random() < 0.01) {
+                    let x1 = Math.floor(Math.random() * gridWidth);
+                    let y1 = Math.floor(Math.random() * gridHeight);
+                    if ((x1 - x) ** 2 + (y1 - y) ** 2 > 400) {
+                        explode(x1, y1, 20 * 20, 20 * 8, 8000);
+                        addPixel(x1, y1, PICKLED_PICKLE);
+                    }
+                }
+                else {
+                    for (let i = 0; i < 100; i++) {
+                        let chunkX = Math.floor(Math.random() * chunkXAmount);
+                        let chunkY = Math.floor(Math.random() * chunkYAmount);
+                        let chunkIndex = (chunkX + chunkY * chunkXAmount) * chunkStride;
+                        nextChunks[chunkIndex] = chunkX * chunkWidth + chunkWidth;
+                        nextChunks[chunkIndex + 1] = chunkX * chunkWidth - 1;
+                        nextChunks[chunkIndex + 2] = chunkY * chunkHeight + chunkHeight;
+                        nextChunks[chunkIndex + 3] = chunkY * chunkHeight - 1;
+                    }
+                }
+            }
+            flow(x, y, 1, 1, isPassableSolid, isMoveableSolid);
+        },
+        update5: function(x, y) {
             addUpdatedChunk(x, y);
         },
     },
