@@ -1,4 +1,4 @@
-import { pixels, addPixel, addFire, addUpdatedChunk, addUpdatedChunk2, resetPushPixels } from "./pixels.js";
+import { pixels, addPixel, addFire, addUpdatedChunk, addUpdatedChunk2, resetPushPixels, pixelImages } from "./pixels.js";
 import { resizeCanvas, resizeGrid, render } from "./renderer.js";
 
 /*
@@ -152,9 +152,11 @@ function modal(title, content, type) {
     if (type == "error") {
         modalTitle.innerHTML = "An error has occured";
         modalContent.innerHTML = title + "<br><br>" + content + "<br><br>Please report this to the developers";
-        runState = PAUSED;
     }
     runState = PAUSED;
+    playButton.classList.remove("pauseButton");
+    simulateButton.classList.remove("pauseButton");
+    slowmodeButton.classList.remove("pauseButton");
     return new Promise((resolve, reject) => {
         modalContainer.onclose = () => {
             console.log(modalContainer.returnValue)
@@ -241,9 +243,63 @@ resetButton.onclick = async () => {
     }
 };
 
+const supportsFileSystemAccess = "showOpenFilePicker" in window &&
+(() => {
+  try {
+    return window.self === window.top;
+  } catch {
+    return false;
+  }
+})();
+async function downloadFile(blob, name) {
+    if (supportsFileSystemAccess) {
+        const handle = await showSaveFilePicker({
+            suggestedName: name,
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        return;
+    }
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+};
+async function uploadFile(acceptedFiles) {
+    if (supportsFileSystemAccess) {
+        const handle = await showOpenFilePicker({
+            types: [
+                {
+                    accept: {
+                        // "application/octet-stream": [acceptedFiles],
+                        // "text/plain": [acceptedFiles],
+                        "application/json": acceptedFiles,
+                    },
+                },
+            ],
+        });
+        let file = await handle[0].getFile();
+        // file.handle = handle;
+        return file;
+    }
+    return new Promise((resolve) => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = acceptedFiles;
+        input.oninput = () => {
+            let files = input.files;
+            if (files.length == 0) {
+                return;
+            }
+            resolve(files[0]);
+        };
+        input.click();
+    });
+};
+
 const saveCodeSettings = document.getElementById("saveCodeSettings");
 const saveCodeSettingsToggle = document.getElementById("saveCodeSettingsToggle");
-const saveCodeSettingsExpandToggle = document.getElementById("saveCodeSettingsExpandToggle");
 const saveCode = document.getElementById("saveCode");
 const downloadSaveCodeButton = document.getElementById("downloadSaveCodeButton");
 const uploadSaveCodeButton = document.getElementById("uploadSaveCodeButton");
@@ -251,42 +307,146 @@ const generateSaveCodeButton = document.getElementById("generateSaveCodeButton")
 
 saveCodeSettingsToggle.onclick = () => {
     saveCodeSettings.classList.toggle("hidden");
-    if (saveCodeSettings.classList.contains("hidden")) {
-        saveCodeSettings.classList.remove("expanded");
-    }
-};
-saveCodeSettingsExpandToggle.onclick = () => {
-    saveCodeSettings.classList.toggle("expanded");
 };
 
 downloadSaveCodeButton.onclick = () => {
-    saveCode.value = generateSaveCode();
+    const blob = new Blob([JSON.stringify({
+        saveCode: saveCode.value,
+    })], { type: "application/json" });
+    const now = new Date();
+    downloadFile(blob, now.toISOString().slice(0, 16).replaceAll("T", "_") + ".pixel");
 };
-uploadSaveCodeButton.onclick = () => {
-    saveCode.value = generateSaveCode();
+uploadSaveCodeButton.onclick = async () => {
+    let file = await uploadFile([".pixel", ".json"]);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        if (await modal("Load Save?", "Your current simulation will be overwritten!", "confirm")) {
+            try {
+                saveCode.value = JSON.parse(e.target.result).saveCode;
+            }
+            catch (err) {
+                saveCode.value = e.target.result;
+            }
+            loadSaveCode(saveCode.value);
+            runState = PAUSED;
+            playButton.classList.remove("pauseButton");
+            simulateButton.classList.remove("pauseButton");
+            slowmodeButton.classList.remove("pauseButton");
+        }
+    };
+    reader.readAsText(file);
 };
 generateSaveCodeButton.onclick = () => {
     saveCode.value = generateSaveCode();
 };
 
-function generateSaveCode() {
+if (localStorage.getItem("saveCode") != null) {
+    try {
+        saveCode.value = localStorage.getItem("saveCode");
+    }
+    catch (err) {
+        modal("Save Code Error", "The stored save code was unable to be loaded.", "error");
+    }
+}
+
+let blueprints = [];
+
+const blueprintSettingsContainer = document.getElementById("blueprintSettingsContainer");
+const blueprintSettingsToggle = document.getElementById("blueprintSettingsToggle");
+const saveBlueprintButton = document.getElementById("saveBlueprintButton");
+const uploadBlueprintButton = document.getElementById("uploadBlueprintButton");
+const blueprintsList = document.getElementById("blueprintsList");
+const blueprintTemplate = document.getElementById("blueprintTemplate");
+
+blueprintSettingsToggle.onclick = () => {
+    blueprintSettingsContainer.classList.toggle("hidden");
+    blueprintSettingsToggle.classList.toggle("hidden");
+};
+
+saveBlueprintButton.onclick = () => {
+    if (selectionGrid != null) {
+        let saveCode = generateSaveCode(true);
+        addBlueprint("New Blueprint", saveCode, drawBlueprintImg(selectionGrid, selectionGridWidth, selectionGridHeight));
+    }
+    else {
+        modal("No Selection!", "A copied selection is required to make a blueprint!", "info");
+    }
+};
+uploadBlueprintButton.onclick = async () => {
+    let file = await uploadFile([".pixel", ".json"]);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        let json;
+        try {
+            json = JSON.parse(e.target.result);
+        }
+        catch (err) {
+            json = {
+                saveCode: e.target.result,
+            };
+        }
+        if (json.name == null) {
+            json.name = "Unnamed";
+        }
+        if (json.img == null) {
+            let parsed = parseSaveCode(json.saveCode);
+            json.img = drawBlueprintImg(parsed.grid, parsed.gridWidth, parsed.gridHeight);
+        }
+        for (let i in blueprints) {
+            if (blueprints[i].name == json.name) {
+                if (!await modal("Overwrite Existing Blueprint?", "A blueprint with the name '" + json.name + "' already exists. Loading will overwrite this blueprint! This cannot be undone!", "confirm")) {
+                    return;
+                }
+                blueprints[i].saveCode = json.saveCode;
+                blueprints[i].img = json.img;
+                blueprints[i].div.querySelector(".blueprintImg").style.backgroundImage = "url(" + json.img + ")";
+                break;
+            }
+        }
+        addBlueprint(json.name, json.saveCode, json.img);
+    };
+    reader.readAsText(file);
+};
+
+if (localStorage.getItem("blueprints") != null) {
+    try {
+        let storedBlueprints = JSON.parse(localStorage.getItem("blueprints"));
+        for (let i in storedBlueprints) {
+            addBlueprint(storedBlueprints[i].name, storedBlueprints[i].saveCode, storedBlueprints[i].img);
+        }
+    }
+    catch (err) {
+        modal("Blueprint Error", "The stored blueprints were unable to be loaded.", "error");
+    }
+}
+
+function generateSaveCode(selection = false) {
+    let generatingGrid = grid;
+    let generatingGridWidth = gridWidth;
+    let generatingGridHeight = gridHeight;
+    if (selection) {
+        generatingGrid = selectionGrid;
+        generatingGridWidth = selectionGridWidth;
+        generatingGridHeight = selectionGridHeight;
+    }
+
     let string = "";
     string += "V1;";
-    string += gridWidth + "-" + gridHeight + ";";
+    string += generatingGridWidth + "-" + generatingGridHeight + ";";
 
-    let id = grid[ID];
+    let id = generatingGrid[ID];
     let amount = -1;
 
-    for (let i = 0; i < gridWidth * gridHeight * gridStride; i += gridStride) {
+    for (let i = 0; i < generatingGridWidth * generatingGridHeight * gridStride; i += gridStride) {
         amount += 1;
-        if (grid[i + ID] != id) {
+        if (generatingGrid[i + ID] != id) {
             string += pixels[id].id;
             if (amount > 1) {
                 string += "-" + amount;
             }
             string += ":";
 
-            id = grid[i + ID];
+            id = generatingGrid[i + ID];
             amount = 0;
         }
     }
@@ -296,17 +456,17 @@ function generateSaveCode() {
     }
     string += ";";
 
-    id = grid[ON_FIRE];
+    id = generatingGrid[ON_FIRE];
     amount = 0;
 
     string += id + ":";
 
-    for (let i = 0; i < gridWidth * gridHeight * gridStride; i += gridStride) {
+    for (let i = 0; i < generatingGridWidth * generatingGridHeight * gridStride; i += gridStride) {
         amount += 1;
-        if (grid[i + ON_FIRE] != id) {
+        if (generatingGrid[i + ON_FIRE] != id) {
             string += amount + ":";
 
-            id = grid[i + ON_FIRE];
+            id = generatingGrid[i + ON_FIRE];
             amount = 0;
         }
     }
@@ -314,19 +474,20 @@ function generateSaveCode() {
 
     return string;
 };
-function loadSaveCode(string) {
+function parseSaveCode(string) {
     let sections = string.split(";");
     let version = sections[0];
     if (version == "V1") {
         let array = sections[1].split("-");
-        gridWidth = Number(array[0]);
-        if (array.length > 1) {
-            gridHeight = Number(array[1]);
+        let gridWidth = Number(array[0]);
+        let gridHeight = array.length > 1 ? Number(array[1]) : gridWidth;
+        let gridArray = [];
+        for (let y = 0; y < gridHeight; y++) {
+            for (let x = 0; x < gridWidth; x++) {
+                gridArray.push(...[0, 0, 0, 0]);
+            }
         }
-        else {
-            gridHeight = gridWidth;
-        }
-        createGrid();
+        let grid = new Float32Array(gridArray);
 
         array = sections[2].split(":");
 
@@ -368,7 +529,100 @@ function loadSaveCode(string) {
 
             fire = (fire + 1) % 2;
         }
+        return {
+            grid: grid,
+            gridWidth: gridWidth,
+            gridHeight: gridHeight,
+        };
     }
+};
+function loadSaveCode(string, selection = false) {
+    let parsed = parseSaveCode(string);
+    if (selection) {
+        selectionGrid = parsed.grid;
+        selectionGridWidth = parsed.gridWidth;
+        selectionGridHeight = parsed.gridHeight;
+    }
+    else {
+        gridWidth = parsed.gridWidth;
+        gridHeight = parsed.gridHeight;
+        createGrid();
+        grid = parsed.grid;
+    }
+};
+
+function addBlueprint(name, saveCode, img) {
+    let data = {
+        name: name,
+        saveCode: saveCode,
+        img: img,
+    };
+    const blueprint = blueprintTemplate.content.cloneNode(true);
+    const blueprintImg = blueprint.querySelector(".blueprintImg");
+    blueprintImg.style.backgroundImage = "url(" + img + ")";
+    const blueprintName = blueprint.querySelector(".blueprintName");
+    blueprintName.value = name;
+    blueprintName.oninput = () => {
+        data.name = blueprintName.value;
+    };
+    const blueprintCopyButton = blueprint.querySelector(".blueprintCopyButton");
+    blueprintCopyButton.onclick = () => {
+        loadSaveCode(data.saveCode, true);
+    };
+    const blueprintDownloadButton = blueprint.querySelector(".blueprintDownloadButton");
+    blueprintDownloadButton.onclick = () => {
+        const blob = new Blob([JSON.stringify({
+            name: data.name,
+            saveCode: data.saveCode,
+            img: data.img,
+        })], { type: "application/json" });
+        const now = new Date();
+        downloadFile(blob, now.toISOString().slice(0, 16).replaceAll("T", "_") + ".pixel");
+    };
+    const blueprintDeleteButton = blueprint.querySelector(".blueprintDeleteButton");
+    blueprintDeleteButton.onclick = async () => {
+        if (await modal("Delete blueprint?", "'" + data.name + "' will be lost forever!", "confirm")) {
+            // TODO: how to not spaghetti buh
+            blueprintsList.removeChild(data.div);
+            for (let i in blueprints) {
+                if (blueprints[i] == data) {
+                    blueprints.splice(i, 1);
+                    return;
+                }
+            }
+        }
+    };
+    blueprintsList.appendChild(blueprint);
+    data.div = blueprintImg.parentNode;
+    blueprints.push(data);
+};
+function drawBlueprintImg(grid, gridWidth, gridHeight) {
+    let canvas = document.createElement("canvas");
+    let ctx = canvas.getContext("2d");
+    canvas.width = 100;
+    canvas.height = 100;
+    let scale = 100 / Math.max(gridWidth, gridHeight);
+    ctx.scale(scale, scale);
+    for (let i = 0; i < gridWidth * gridHeight * gridStride; i += gridStride) {
+        let x = 50 / scale - gridWidth / 2 + (i / gridStride) % gridWidth;
+        let y = 50 / scale - gridHeight / 2 + Math.floor(i / gridStride / gridWidth);
+        let pixel = pixels[grid[i + ID]];
+        if (pixel.color != null) {
+            ctx.fillStyle = "rgba(" + pixel.color[0] + ", " + pixel.color[1] + ", " + pixel.color[2] + ", 1)";
+            if (pixel.noise != null) {
+                ctx.fillStyle = "rgba(" + (pixel.color[0] + pixel.noise[0] / 2) + ", " + (pixel.color[1] + pixel.noise[1] / 2) + ", " + (pixel.color[2] + pixel.noise[2] / 2) + ", 1)";
+            }
+            ctx.fillRect(x, y, 1, 1);
+        }
+        else {
+            ctx.drawImage(pixelImages, pixel.texture[0], pixel.texture[1], pixel.texture[2], pixel.texture[3], x, y, 1, 1);
+        }
+        if (grid[i + ON_FIRE]) {
+            ctx.fillStyle = "rgba(255, 153, 0, 0.585)";
+            ctx.fillRect(x, y, 1, 1);
+        }
+    }
+    return canvas.toDataURL("image/png");
 };
 
 // controls
@@ -950,6 +1204,13 @@ overlayCanvas.addEventListener("wheel", (e) => {
     // }
 });
 
+window.onbeforeunload = () => {
+    localStorage.setItem("grid", generateSaveCode());
+    localStorage.setItem("saveCode", saveCode.value);
+    localStorage.setItem("selectionGrid", generateSaveCode(true));
+    localStorage.setItem("blueprints", JSON.stringify(blueprints));
+};
+
 function createGrid() {
     let gridArray = [];
     for (let y = 0; y < gridHeight; y++) {
@@ -996,6 +1257,22 @@ function createGrid() {
     resizeGrid(gridWidth, gridHeight, gridStride, chunkXAmount, chunkYAmount, chunkStride);
 };
 createGrid();
+if (localStorage.getItem("grid") != null) {
+    try {
+        loadSaveCode(localStorage.getItem("grid"));
+    }
+    catch (err) {
+        modal("Grid Error", "The stored grid was unable to be loaded.", "error");
+    }
+}
+if (localStorage.getItem("selectionGrid") != null) {
+    try {
+        loadSaveCode(localStorage.getItem("selectionGrid"), true);
+    }
+    catch (err) {
+        modal("Selection Grid Error", "The stored selection grid was unable to be loaded.", "error");
+    }
+}
 
 function drawGrid(ctx) {
     // for (let chunkY = 0; chunkY < chunkYAmount; chunkY++) {

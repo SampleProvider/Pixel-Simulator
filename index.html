@@ -23,36 +23,6 @@
                 <button id="resetButton" class="button"></button>
             </div>
         <div id="saveCodeSettings" class="hidden" style="display: flex; flex-direction: column;">
-            <div id="saveGridButtonContainer" style="display: flex; justify-content: center;">
-                <button id="saveGridButton" class="button"></button>
-            </div>
-            <div id="savedGridsListText">Saved Grids:</div>
-            <div id="savedGridsList">
-                <div class="savedGrid">
-                    <div class="savedGridImg"></div>
-                    <div class="savedGridName">test</div>
-                    <button class="savedGridDownloadButton button"></button>
-                    <button class="savedGridDeleteButton button"></button>
-                </div>
-                <div class="savedGrid">
-                    <div class="savedGridImg"></div>
-                    <div class="savedGridName">test</div>
-                    <button class="savedGridDownloadButton button"></button>
-                    <button class="savedGridDeleteButton button"></button>
-                </div>
-                <div class="savedGrid">
-                    <div class="savedGridImg"></div>
-                    <div class="savedGridName">test</div>
-                    <button class="savedGridDownloadButton button"></button>
-                    <button class="savedGridDeleteButton button"></button>
-                </div>
-                <div class="savedGrid">
-                    <div class="savedGridImg"></div>
-                    <div class="savedGridName">test</div>
-                    <button class="savedGridDownloadButton button"></button>
-                    <button class="savedGridDeleteButton button"></button>
-                </div>
-            </div>
             <div style="display: flex; justify-content: center;">
                 <button id="downloadSaveCodeButton" class="button"></button>
                 <button id="uploadSaveCodeButton" class="button"></button>
@@ -63,7 +33,17 @@
             <div id="saveCodeSettingsToggle">
                 <div></div>
             </div>
-            <div id="saveCodeSettingsExpandToggle">
+            <div id="blueprintSettingsContainer" class="hidden">
+                <div id="blueprintSettings" style="display: flex; flex-direction: column;">
+                    <div style="display: flex; justify-content: center;">
+                        <button id="saveBlueprintButton" class="button"></button>
+                        <button id="uploadBlueprintButton" class="button"></button>
+                    </div>
+                    <div id="blueprintsListText">Saved Blueprints:</div>
+                    <div id="blueprintsList"></div>
+                </div>
+            </div>
+            <div id="blueprintSettingsToggle" class="hidden">
                 <div></div>
             </div>
         </div>
@@ -86,6 +66,22 @@
             <button id="modalOk" class="modalButton button">Ok</button>
         </div>
     </dialog>
+    <template id="blueprintTemplate">
+        <div class="blueprint" style="display: flex;">
+            <div class="blueprintImg"></div>
+            <div style="display: flex; flex-direction: column;">
+                <div style="display: flex; position: relative;">
+                    <input class="blueprintName" type="text">
+                </div>
+                <div style="display: flex;">
+                    <button class="blueprintCopyButton button"></button>
+                    <button class="blueprintDownloadButton button"></button>
+                    <button class="blueprintDeleteButton button"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+    </template>
     <!-- <script src="pixels.js" type="module"></script> -->
     <script src="game.js" type="module" defer></script>
     <!-- <script src="renderer.js" type="module" defer></script> -->

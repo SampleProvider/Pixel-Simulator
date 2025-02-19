@@ -237,7 +237,8 @@ fn get_color(id: f32, color: vec4<f32>, pos: vec2<f32>) -> vec4<f32> {
 fn get_fire_color(color: vec4<f32>, pos: vec2<f32>) -> vec4<f32> {
     let index = (u32(pos.x) + u32(pos.y) * grid_size.x) * stride;
     var noise = perlinNoise2(vec2<f32>(floor(pos) / 6)) + perlinNoise2(vec2<f32>(floor(pos) / 3)) * 0.25 + perlinNoise2(vec2<f32>(floor(pos) / 2)) * 0.75;
-    noise = noise * (random(index) * 1.5 + 0.25) / 1.25;
+    // noise = noise * (random(index) * 1.5 + 0.25) / 1.25;
+    noise = noise * (random(index) * 1.5 + 0.25);
     //noise = noise + (random(index) - 0.5);
     //return vec4<f32>(1.0, 0.4 + noise * 0.3, 0.0, 0.3);
     //(x * 0.7 + (1, 0.4, 0) * 0.3) * 0.7 + (1, 1, 0) * noise * 0.3
@@ -246,7 +247,8 @@ fn get_fire_color(color: vec4<f32>, pos: vec2<f32>) -> vec4<f32> {
     //return color * 0.5 + vec4<f32>(1.0, 0.4 + noise * 0.3, 0.0, 1.0) / 2;
     //return color * (1 - (0.3 + 0.05 * noise)) + vec4<f32>(1.0 + noise, 0.4 + noise * 0.3, 0.0, 1.0) * (0.3 + 0.05 * noise);
     //return vec4<f32>(1.0 + noise, 0.4 + noise * 0.3, 0.0, 1.0);
-    return mix(color, vec4<f32>(1.0, 0.55 + noise * 0.15, 0.0, 1.0), 0.575 + noise * 0.025);
+    // return mix(color, vec4<f32>(1.0, 0.55 + noise * 0.15, 0.0, 1.0), 0.575 + noise * 0.025); old with /1.25
+    return mix(color, vec4<f32>(1.0, 0.55 + noise * 0.1, 0.0, 1.0), 0.575 + noise * 0.02);
     //return color * (1 - (0.3)) + vec4<f32>(1.0, 0.4 + noise * 0.3, 0.0, 1.0) * (0.3);
 }
 fn get_background_color(pos: vec2<f32>) -> vec4<f32> {

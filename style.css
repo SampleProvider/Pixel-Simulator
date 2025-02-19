@@ -62,7 +62,7 @@ button {
     border: none;
     background-color: transparent;
     background-image: url("/img/buttons.png");
-    background-size: 1200% 400%;
+    background-size: 1500% 400%;
     background-position: 0% 0%;
     image-rendering: pixelated;
     cursor: pointer;
@@ -154,14 +154,11 @@ button {
     border-right: 2px solid black;
     border-top: 2px solid black;
     border-bottom: 2px solid black;
-    transition: 200ms ease transform, 2000ms ease height;
+    transition: 200ms ease transform;
     transform: translateX(0px);
 }
 #saveCodeSettings.hidden {
     transform: translateX(calc(-100% - var(--border-size) * 2));
-}
-#saveCodeSettings.expanded {
-    height: 400px;
 }
 #saveCodeSettingsToggle {
     position: absolute;
@@ -184,61 +181,6 @@ button {
 }
 #saveCodeSettings.hidden #saveCodeSettingsToggle div {
     transform: scaleX(1);
-}
-#saveCodeSettingsExpandToggle {
-    position: absolute;
-    left: calc(var(--border-size) * -2);
-    top: calc(var(--border-size) * -4 - 33px);
-    width: 33px;
-    height: 33px;
-    background-color: #00000066;
-    border: 2px solid black;
-    cursor: pointer;
-}
-#saveCodeSettingsExpandToggle div {
-    width: 33px;
-    height: 33px;
-    background-image: url("/img/arrow.png");
-    background-size: 100%;
-    image-rendering: pixelated;
-    transition: 200ms ease transform;
-    transform: rotate(90deg) scaleX(-1);
-}
-#saveCodeSettings.expanded #saveCodeSettingsExpandToggle div {
-    transform: rotate(90deg) scaleX(1);
-}
-
-#saveGridButton {
-    width: 144px;
-    height: 30px;
-    margin: 4px;
-    border: none;
-    background-color: transparent;
-    background-image: url("/img/buttons2.png");
-    background-size: 400% 640%;
-    background-position: 0% 0%;
-}
-#savedGridsList {
-    border: 2px solid black;
-    padding: 1px;
-    flex-grow: 1;
-    overflow: scroll;
-}
-#saveGridButton, #savedGridsListText, #savedGridsList {
-    max-height: 0px;
-    margin: 0px;
-    padding: 0px;
-    transition: 2000ms ease max-height, 2000ms ease margin;
-    overflow: hidden;
-}
-#saveCodeSettings.expanded #saveGridButton, #saveCodeSettings.expanded #savedGridsListText, #saveCodeSettings.expanded #savedGridsList {
-    max-height: 100%;
-    margin: revert-layer;
-}
-.savedGrid {
-    height: 50px;
-    margin: 1px;
-    border: 2px solid black;
 }
 
 #downloadSaveCodeButton {
@@ -266,6 +208,146 @@ button {
     appearance: none;
     border: 2px solid black;
     resize: none;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+#blueprintSettingsContainer {
+    position: absolute;
+    left: 0px;
+    /* bottom: calc(208px + var(--border-size) * 2); */
+    bottom: 208px;
+    width: 208px; /* temp values */
+    /* height: 208px; */
+    height: calc(208px + var(--border-size) * 2);
+    background-color: #00000066;
+    border-right: 2px solid black;
+    border-top: 2px solid black;
+    transition: 200ms ease height;
+    overflow: hidden;
+}
+#blueprintSettingsContainer.hidden {
+    height: 0px;
+}
+#blueprintSettings {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    /* bottom: 0px; */
+    /* bottom: calc(208px + var(--border-size) * 2); */
+    /* top: calc(-100% - var(--border-size) * 2); */
+    width: 200px; /* temp values */
+    height: 200px;
+    padding: 4px;
+}
+#blueprintSettingsToggle {
+    position: absolute;
+    left: calc(var(--border-size) * -2);
+    top: calc(var(--border-size) * -4 - 33px);
+    width: 33px;
+    height: 33px;
+    background-color: #00000066;
+    border: 2px solid black;
+    cursor: pointer;
+    transition: 200ms ease transform;
+    transform: translateY(calc(-208px - var(--border-size) * 2));
+}
+#blueprintSettingsToggle.hidden {
+    transform: translateY(0px);
+}
+#blueprintSettingsToggle div {
+    width: 33px;
+    height: 33px;
+    background-image: url("/img/arrow.png");
+    background-size: 100%;
+    image-rendering: pixelated;
+    transition: 200ms ease transform;
+    transform: rotate(90deg) scaleX(1);
+}
+#blueprintSettingsToggle.hidden div {
+    transform: rotate(90deg) scaleX(-1);
+}
+
+#saveBlueprintButton {
+    width: 144px;
+    height: 30px;
+    margin: 2px;
+    background-size: 500% 640%;
+    background-position: -400% 0%;
+}
+#saveBlueprintButton:active {
+    background-position: -400% -100%;
+}
+#uploadBlueprintButton {
+    width: 30px;
+    height: 30px;
+    margin: 2px;
+    background-size: 2400% 640%;
+    background-position: -2200% -200%;
+}
+#uploadBlueprintButton:active {
+    background-position: -2200% -300%;
+}
+#blueprintsListText {
+    color: white;
+}
+#blueprintsList {
+    border: 2px solid black;
+    padding: 1px;
+    flex-grow: 1;
+    overflow-y: scroll;
+}
+.blueprint {
+    /* height: 50px; */
+    margin: 1px;
+    border: 2px solid black;
+}
+.blueprintImg {
+    border: 2px solid black;
+    margin: 1px;
+    width: 52px;
+    flex-shrink: 0;
+    /* aspect-ratio: 1; */
+    background-size: contain;
+}
+.blueprintName {
+    /* color: white; */
+    appearance: none;
+    border: 2px solid black;
+    resize: none;
+    /* margin-left: 4px; */
+    margin: 2px;
+    width: 100%;
+    font-family: 'Courier New', Courier, monospace;
+}
+.blueprintCopyButton {
+    width: 30px;
+    height: 30px;
+    margin: 2px;
+    background-size: 2400% 640%;
+    background-position: -2000% -200%;
+}
+.blueprintCopyButton:active {
+    background-position: -2000% -300%;
+}
+.blueprintDownloadButton {
+    width: 30px;
+    height: 30px;
+    margin: 2px;
+    background-size: 2400% 640%;
+    background-position: -2100% -200%;
+}
+.blueprintDownloadButton:active {
+    background-position: -2100% -300%;
+}
+.blueprintDeleteButton {
+    width: 30px;
+    height: 30px;
+    margin: 2px;
+    background-size: 2400% 640%;
+    background-position: -2300% -200%;
+}
+.blueprintDeleteButton:active {
+    background-position: -2300% -300%;
 }
 
 #history {
@@ -546,7 +628,7 @@ because the nesting selector cannot represent pseudo-elements. */
     /* display: flex;
     align-items: center; */
     width: 96px;
-    background-size: 600% 400%;
+    background-size: 750% 400%;
     /* font-family: "Noto Sans"; */
     font-family: "Source Code Pro";
     font-weight: 500;

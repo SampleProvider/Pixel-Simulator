@@ -1,8 +1,7 @@
 import { grid, gridWidth, gridHeight, gridStride, chunks, nextChunks, drawChunks, chunkWidth, chunkHeight, chunkXAmount, chunkYAmount, chunkStride, tick, modal, setBrushPixel, showTooltip, hideTooltip, moveTooltip } from "./game.js";
 // import { imageBitmap } from "./renderer.js";
 
-const response = await fetch("pixels.png");
-const imageBitmap = await createImageBitmap(await response.blob());
+const pixelImages = await createImageBitmap(await (await fetch("pixels.png")).blob());
 const ID = 0;
 const ON_FIRE = 1;
 const HAS_TARGET = 2;
@@ -4155,7 +4154,7 @@ let pixelData = {
                 return;
             }
             let index = (x + 1 + y * gridWidth) * gridStride;
-            if (grid[index + ID] != AIR && grid[index + UPDATED] != tick) {
+            if (pixels[grid[index + ID]].cloneable && grid[index + UPDATED] != tick) {
                 let index1 = (x - 1 + y * gridWidth) * gridStride;
                 if (grid[index1 + ID] != AIR) {
                     return;
@@ -4184,7 +4183,7 @@ let pixelData = {
                 return;
             }
             let index = (x + (y + 1) * gridWidth) * gridStride;
-            if (grid[index + ID] != AIR && grid[index + UPDATED] != tick) {
+            if (pixels[grid[index + ID]].cloneable && grid[index + UPDATED] != tick) {
                 let index1 = (x + (y - 1) * gridWidth) * gridStride;
                 if (grid[index1 + ID] != AIR) {
                     return;
@@ -4213,7 +4212,7 @@ let pixelData = {
                 return;
             }
             let index = (x - 1 + y * gridWidth) * gridStride;
-            if (grid[index + ID] != AIR && grid[index + UPDATED] != tick) {
+            if (pixels[grid[index + ID]].cloneable && grid[index + UPDATED] != tick) {
                 let index1 = (x + 1 + y * gridWidth) * gridStride;
                 if (grid[index1 + ID] != AIR) {
                     return;
@@ -4242,7 +4241,7 @@ let pixelData = {
                 return;
             }
             let index = (x + (y - 1) * gridWidth) * gridStride;
-            if (grid[index + ID] != AIR && grid[index + UPDATED] != tick) {
+            if (pixels[grid[index + ID]].cloneable && grid[index + UPDATED] != tick) {
                 let index1 = (x + (y + 1) * gridWidth) * gridStride;
                 if (grid[index1 + ID] != AIR) {
                     return;
@@ -4272,7 +4271,7 @@ let pixelData = {
                 return;
             }
             let index = (x + 1 + y * gridWidth) * gridStride;
-            if (grid[index + ID] != AIR && grid[index + UPDATED] != tick) {
+            if (pixels[grid[index + ID]].cloneable && grid[index + UPDATED] != tick) {
                 let index1 = (x - 1 + y * gridWidth) * gridStride;
                 if (grid[index1 + ID] != AIR) {
                     if (!pushLeft(x - 1, y, x, y, 2)) {
@@ -4305,7 +4304,7 @@ let pixelData = {
                 return;
             }
             let index = (x + (y + 1) * gridWidth) * gridStride;
-            if (grid[index + ID] != AIR && grid[index + UPDATED] != tick) {
+            if (pixels[grid[index + ID]].cloneable && grid[index + UPDATED] != tick) {
                 let index1 = (x + (y - 1) * gridWidth) * gridStride;
                 if (grid[index1 + ID] != AIR) {
                     if (!pushUp(x, y - 1, x, y, 2)) {
@@ -4338,7 +4337,7 @@ let pixelData = {
                 return;
             }
             let index = (x - 1 + y * gridWidth) * gridStride;
-            if (grid[index + ID] != AIR && grid[index + UPDATED] != tick) {
+            if (pixels[grid[index + ID]].cloneable && grid[index + UPDATED] != tick) {
                 let index1 = (x + 1 + y * gridWidth) * gridStride;
                 if (grid[index1 + ID] != AIR) {
                     if (!pushRight(x + 1, y, x, y, 2)) {
@@ -4371,7 +4370,7 @@ let pixelData = {
                 return;
             }
             let index = (x + (y - 1) * gridWidth) * gridStride;
-            if (grid[index + ID] != AIR && grid[index + UPDATED] != tick) {
+            if (pixels[grid[index + ID]].cloneable && grid[index + UPDATED] != tick) {
                 let index1 = (x + (y + 1) * gridWidth) * gridStride;
                 if (grid[index1 + ID] != AIR) {
                     if (!pushDown(x, y + 1, x, y, 2)) {
@@ -5033,6 +5032,8 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 220,
+        rotatable: true,
+        rotations: ["flamethrower_left", "flamethrower_up", "flamethrower_right", "flamethrower_down"],
         update: function(x, y) {
             for (let i = 0; i < 3; i++) {
                 let angle = Math.PI + Math.random() * Math.PI / 6 - Math.PI / 12;
@@ -5063,6 +5064,8 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 220,
+        rotatable: true,
+        rotations: ["flamethrower_left", "flamethrower_up", "flamethrower_right", "flamethrower_down"],
         update: function(x, y) {
             for (let i = 0; i < 3; i++) {
                 let angle = Math.PI * 3 / 2 + Math.random() * Math.PI / 6 - Math.PI / 12;
@@ -5093,6 +5096,8 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 220,
+        rotatable: true,
+        rotations: ["flamethrower_left", "flamethrower_up", "flamethrower_right", "flamethrower_down"],
         update: function(x, y) {
             for (let i = 0; i < 3; i++) {
                 let angle = Math.random() * Math.PI / 6 - Math.PI / 12;
@@ -5123,6 +5128,8 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 220,
+        rotatable: true,
+        rotations: ["flamethrower_left", "flamethrower_up", "flamethrower_right", "flamethrower_down"],
         update: function(x, y) {
             for (let i = 0; i < 3; i++) {
                 let angle = Math.PI / 2 + Math.random() * Math.PI / 6 - Math.PI / 12;
@@ -6276,7 +6283,7 @@ for (let i = 0; i < pixels.length; i++) {
         ctx.fillRect(0, 0, 48, 48);
     }
     else {
-        ctx.drawImage(imageBitmap, pixels[i].texture[0], pixels[i].texture[1], pixels[i].texture[2], pixels[i].texture[3], 0, 0, 48, 48);
+        ctx.drawImage(pixelImages, pixels[i].texture[0], pixels[i].texture[1], pixels[i].texture[2], pixels[i].texture[3], 0, 0, 48, 48);
     }
     let data = canvas.toDataURL("image/png");
     if (pixelGroups[pixels[i].group] == null) {
@@ -6383,4 +6390,4 @@ for (let i = 0; i < pixels.length; i++) {
     }
 }
 
-export { pixels, addPixel, addFire, addUpdatedChunk, addUpdatedChunk2, resetPushPixels };
+export { pixels, addPixel, addFire, addUpdatedChunk, addUpdatedChunk2, resetPushPixels, pixelImages };
