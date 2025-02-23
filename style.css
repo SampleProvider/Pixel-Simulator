@@ -14,6 +14,7 @@ body {
 }
 
 * {
+    font-family: "Noto Sans";
     box-sizing: content-box;
     /* box-sizing: border-box; */
 }
@@ -22,7 +23,7 @@ button {
     padding: 0px;
 }
 
-#gameContainer {
+#menuContainer, #gameContainer {
     position: absolute;
     width: 100vw;
     height: 100vh;
@@ -76,6 +77,56 @@ button {
 .button:active {
     transform: translateY(2px);
     background-position: 0% 300%;
+}
+
+#menuContainer {
+    background-color: black;
+}
+#menuTitle {
+    position: absolute;
+    left: 50vw;
+    top: 25vh;
+    height: 10vh;
+    image-rendering: pixelated;
+    transform: translate(-50%, -50%);
+}
+#menuCanvas {
+    position: absolute;
+    width: 100vw;
+    height: 100vh;
+    /* transition: 1500ms cubic-bezier(0.3, 0, 0.3, 1) transform;
+    transform: translateY(15vh); */
+}
+.menuButton {
+    position: absolute;
+    left: 50vw;
+    width: 50vw;
+    border: 4px solid white;
+    border-style: outset;
+    box-shadow: 0px 0px 5px #ffffff;
+    background-color: #ffffff33;
+    color: white;
+    font-size: 3.5vh;
+    cursor: pointer;
+    transition: 50ms linear transform;
+    transform: translate(-50%, -50%);
+}
+.menuButton:hover {
+    transform: translate(-50%, -50%) translateY(-2px);
+}
+.menuButton:active {
+    border-style: inset;
+    transform: translate(-50%, -50%) translateY(2px);
+}
+#sandboxButtonContainer, #puzzlesButtonContainer {
+    transition: 1500ms cubic-bezier(0.2, 0.2, 0, 1) transform;
+    transform: translateY(50vh);
+}
+#sandboxButton {
+    top: 60vh;
+}
+#puzzlesButton {
+    top: 70vh;
 }
 
 #playButton {

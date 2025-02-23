@@ -1,5 +1,6 @@
 import { pixels, addPixel, addFire, addUpdatedChunk, addUpdatedChunk2, resetPushPixels, pixelImages } from "./pixels.js";
 import { resizeCanvas, resizeGrid, render } from "./renderer.js";
+import { menuCanvas, menuCtx, menuOffscreenCanvas1, menuOffscreenCtx1, menuOffscreenCanvas2, menuOffscreenCtx2, updateMenu } from "./menu.js";
 
 /*
 
@@ -82,10 +83,30 @@ window.onresize = () => {
     HEIGHT = window.innerHeight * devicePixelRatio;
     overlayCanvas.width = WIDTH;
     overlayCanvas.height = HEIGHT;
+    menuCanvas.width = WIDTH;
+    menuCanvas.height = HEIGHT;
+    menuCtx.imageSmoothingEnabled = false;
+    menuCtx.webkitImageSmoothingEnabled = false;
+    menuCtx.mozImageSmoothingEnabled = false;
+    menuOffscreenCanvas1.width = WIDTH;
+    menuOffscreenCanvas1.height = HEIGHT;
+    menuOffscreenCanvas2.width = WIDTH;
+    menuOffscreenCanvas2.height = HEIGHT;
+    menuOffscreenCtx1.imageSmoothingEnabled = false;
+    menuOffscreenCtx1.webkitImageSmoothingEnabled = false;
+    menuOffscreenCtx1.mozImageSmoothingEnabled = false;
+    menuOffscreenCtx2.imageSmoothingEnabled = false;
+    menuOffscreenCtx2.webkitImageSmoothingEnabled = false;
+    menuOffscreenCtx2.mozImageSmoothingEnabled = false;
     resizeCanvas(WIDTH, HEIGHT);
     document.body.style.setProperty("--border-size", Number(getComputedStyle(pixelPicker).getPropertyValue("border-left-width").replaceAll("px", "")) / 2 + "px");
 };
 window.onresize();
+
+const LOADING = 0;
+const MENU = 1;
+const GAME = 2;
+let gameState = MENU;
 
 const ID = 0;
 const ON_FIRE = 1;
@@ -601,6 +622,9 @@ function drawBlueprintImg(grid, gridWidth, gridHeight) {
     let ctx = canvas.getContext("2d");
     canvas.width = 100;
     canvas.height = 100;
+    ctx.imageSmoothingEnabled = false;
+    ctx.webkitImageSmoothingEnabled = false;
+    ctx.mozImageSmoothingEnabled = false;
     let scale = 100 / Math.max(gridWidth, gridHeight);
     ctx.scale(scale, scale);
     for (let i = 0; i < gridWidth * gridHeight * gridStride; i += gridStride) {
@@ -1764,7 +1788,7 @@ function updateTimes(history, time) {
     return [history, time, minTime, maxTime, averageTime];
 };
 
-function update() {
+function updateGame() {
     let updateStart = performance.now();
     updateCamera();
     if (runState == PLAYING) {
@@ -1915,7 +1939,14 @@ function update() {
         // console.log(cameraX, cameraY, Math.round(cameraScale * 256) / 256, frameTime)
 
     }
-
+};
+function update() {
+    if (gameState == MENU) {
+        updateMenu();
+    }
+    else if (gameState == GAME) {
+        updateGame();
+    }
     window.requestAnimationFrame(update);
 };
 
