@@ -8,22 +8,30 @@ let HEIGHT = window.innerHeight * devicePixelRatio;
 
 const menuCanvas = document.getElementById("menuCanvas");
 const menuCtx = menuCanvas.getContext("2d");
-menuCanvas.width = WIDTH;
-menuCanvas.height = HEIGHT;
-menuCtx.imageSmoothingEnabled = false;
-menuCtx.webkitImageSmoothingEnabled = false;
-menuCtx.mozImageSmoothingEnabled = false;
 
 const menuOffscreenCanvas1 = new OffscreenCanvas(WIDTH, HEIGHT);
 const menuOffscreenCtx1 = menuOffscreenCanvas1.getContext("2d");
 const menuOffscreenCanvas2 = new OffscreenCanvas(WIDTH, HEIGHT);
 const menuOffscreenCtx2 = menuOffscreenCanvas2.getContext("2d");
-menuOffscreenCtx1.imageSmoothingEnabled = false;
-menuOffscreenCtx1.webkitImageSmoothingEnabled = false;
-menuOffscreenCtx1.mozImageSmoothingEnabled = false;
-menuOffscreenCtx2.imageSmoothingEnabled = false;
-menuOffscreenCtx2.webkitImageSmoothingEnabled = false;
-menuOffscreenCtx2.mozImageSmoothingEnabled = false;
+
+function resizeMenuCanvases(WIDTH, HEIGHT) {
+    menuCanvas.width = WIDTH;
+    menuCanvas.height = HEIGHT;
+    menuCtx.imageSmoothingEnabled = false;
+    menuCtx.webkitImageSmoothingEnabled = false;
+    menuCtx.mozImageSmoothingEnabled = false;
+    menuOffscreenCanvas1.width = WIDTH;
+    menuOffscreenCanvas1.height = HEIGHT;
+    menuOffscreenCtx1.imageSmoothingEnabled = false;
+    menuOffscreenCtx1.webkitImageSmoothingEnabled = false;
+    menuOffscreenCtx1.mozImageSmoothingEnabled = false;
+    menuOffscreenCanvas2.width = WIDTH;
+    menuOffscreenCanvas2.height = HEIGHT;
+    menuOffscreenCtx2.imageSmoothingEnabled = false;
+    menuOffscreenCtx2.webkitImageSmoothingEnabled = false;
+    menuOffscreenCtx2.mozImageSmoothingEnabled = false;
+};
+resizeMenuCanvases(WIDTH, HEIGHT);
 
 const titleImage = await createImageBitmap(await (await fetch(Math.random() < 0.001 ? "img/easterEggTitle.png" : "img/title.png")).blob());
 let canvas = document.createElement("canvas");
@@ -37,8 +45,8 @@ ctx.mozImageSmoothingEnabled = false;
 ctx.drawImage(titleImage, 0, 0);
 let imageData = ctx.getImageData(0, 0, titleImage.width, titleImage.height);
 let titlePixels = [];
-for (let i = 0; i < imageData.data.length; i += 4) {
-    if (imageData.data[i] !== 0) {
+for (let i = 3; i < imageData.data.length; i += 4) {
+    if (imageData.data[i] != 0) {
         titlePixels.push({
             x: 0,
             y: 0,
@@ -50,6 +58,7 @@ for (let i = 0; i < imageData.data.length; i += 4) {
             targetY: 0,
             targetRotation: 0,
             targetOpacity: 0,
+            color: "rgb(" + imageData.data[i - 3] + ", " + imageData.data[i - 2] + ", " + imageData.data[i - 1] + ")",
             pastLocations: [],
             getSize: function() {
                 return Math.round(menuCanvas.height * 0.014);
@@ -80,8 +89,41 @@ function addBackgroundPixel(id, x, y, rotation) {
     });
 };
 
-function fadeInMenu() {
-    menuState = FADE_IN;
+const transitionContainer = document.getElementById("transitionContainer");
+const transitionTop = document.getElementById("transitionTop");
+const transitionBottom = document.getElementById("transitionBottom");
+
+function transitionIn() {
+    transitionContainer.style.display = "block";
+    transitionContainer.innerText;
+    transitionTop.style.transform = "translateX(0px)";
+    transitionBottom.style.transform = "translateX(0px)";
+
+    return new Promise((resolve, reject) => {
+        transitionTop.ontransitionend = () => {
+            resolve();
+        };
+    });
+};
+function transitionOut() {
+    transitionTop.style.transform = "";
+    transitionBottom.style.transform = "";
+
+    return new Promise((resolve, reject) => {
+        transitionTop.ontransitionend = () => {
+            transitionContainer.style.display = "none";
+            resolve();
+        };
+    });
+};
+
+// pixelate in
+// pixelate out
+// slide in
+// slide out
+
+function pixelateInMenu() {
+    menuState = "pixelateIn";
     menuStateTime = 0;
     for (let i in titlePixels) {
         // titlePixels[i].x = Math.random() * menuCanvas.width * 2 - menuCanvas.width;
@@ -96,8 +138,8 @@ function fadeInMenu() {
         titlePixels[i].targetOpacity = 1;
     }
 };
-function fadeOutMenu() {
-    menuState = FADE_OUT;
+function pixelateOutMenu() {
+    menuState = "pixelateOut";
     menuStateTime = 0;
     for (let i in titlePixels) {
         titlePixels[i].targetX = Math.random() * 200 - 100;
@@ -106,30 +148,40 @@ function fadeOutMenu() {
         titlePixels[i].targetOpacity = 0;
     }
 };
+function slideInMenu() {
+    menuState = "slideIn";
+    menuStateTime = 0;
+};
+function slideOutMenu() {
+    menuState = "slideOut";
+    menuStateTime = 0;
+    gameContainer.style.display = "";
+};
 
-const MENU = 0;
-const FADE_IN = 1;
-const FADE_OUT = 2;
-let menuState = MENU;
+let menuState = "menu";
 let menuStateTime = 0;
-fadeInMenu();
+pixelateInMenu();
 
+const menuContainer = document.getElementById("menuContainer");
 const sandboxButtonContainer = document.getElementById("sandboxButtonContainer");
 const puzzlesButtonContainer = document.getElementById("puzzlesButtonContainer");
 const sandboxButton = document.getElementById("sandboxButton");
 const puzzlesButton = document.getElementById("puzzlesButton");
 
 sandboxButton.onclick = () => {
-    fadeOutMenu();
+    slideOutMenu();
 };
 
 function updateMenu() {
+    if (menuContainer.style.display == "none") {
+        return;
+    }
     // menuCtx.fillStyle = "rgba(0, 0, 0, 0.5)";
     // menuCtx.fillRect(0, 0, menuCanvas.width, menuCanvas.height);
     menuCtx.clearRect(0, 0, menuCanvas.width, menuCanvas.height);
     let titleX = Math.round(menuCanvas.width / 2);
     let titleY = Math.round(menuCanvas.height * 0.35);
-    if (menuState == FADE_IN) {
+    if (menuState == "pixelateIn") {
         // log(10^-4)/log(0.95) = 179 frames
         // 2500ms = 150 frames
         if (menuStateTime < 150) {
@@ -144,7 +196,7 @@ function updateMenu() {
             titleY = Math.round(menuCanvas.height / 2 * (1 - t) + menuCanvas.height * 0.35 * t);
         }
         else {
-            menuState = MENU;
+            menuState = "menu";
         }
         if (menuStateTime == 168) {
             sandboxButtonContainer.style.transform = "translateY(0px)";
@@ -153,31 +205,63 @@ function updateMenu() {
             puzzlesButtonContainer.style.transform = "translateY(0px)";
         }
     }
-    else if (menuState == FADE_OUT) {
-        // log(10^-4)/log(0.95) = 179 frames
-        // 2500ms = 150 frames
-        if (menuStateTime < 150) {
-            titleY = Math.round(menuCanvas.height / 2);
+    else if (menuState == "pixelateOut") {
+        if (menuStateTime == 18) {
+            sandboxButtonContainer.style.transform = "";
         }
-        else if (menuStateTime < 150 + 90) {
+        if (menuStateTime == 12) {
+            puzzlesButtonContainer.style.transform = "";
+        }
+    }
+    else if (menuState == "slideIn") {
+        if (menuStateTime < 90) {
             // menuCanvas.style.transform = "none";
             // // let t = (1 - Math.cos((performance.now() - menuStateTime - 2500) / 1500 * Math.PI)) / 2;
-            let t = (menuStateTime - 150) / 90;
+            let t = (menuStateTime - 0) / 90;
             // t = t * t * t * (t * (t * 6. - 15.) + 10.);
-            t = bezier(0.3, 0, 0.3, 1)(t);
-            titleY = Math.round(menuCanvas.height / 2 * (1 - t) + menuCanvas.height * 0.35 * t);
+            t = bezier(0.5, 0, 0.5, 1)(t);
+            titleY = Math.round(menuCanvas.height * -0.2 * (1 - t) + menuCanvas.height * 0.35 * t);
         }
         else {
             // menuState = MENU;
         }
-        if (menuStateTime == 12) {
-            sandboxButtonContainer.style.transform = "";
+        if (menuStateTime == 36) {
+            sandboxButtonContainer.style.transform = "translateY(0px)";
         }
-        if (menuStateTime == 0) {
-            puzzlesButtonContainer.style.transform = "";
+        if (menuStateTime == 42) {
+            puzzlesButtonContainer.style.transform = "translateY(0px)";
+        }
+        if (menuStateTime == 96) {
+            menuState = "menu";
         }
     }
-    if (menuState == MENU) {
+    else if (menuState == "slideOut") {
+        if (menuStateTime < 90) {
+            // menuCanvas.style.transform = "none";
+            // // let t = (1 - Math.cos((performance.now() - menuStateTime - 2500) / 1500 * Math.PI)) / 2;
+            let t = (menuStateTime - 0) / 90;
+            // t = t * t * t * (t * (t * 6. - 15.) + 10.);
+            t = bezier(0.5, 0, 0.5, 1)(t);
+            titleY = Math.round(menuCanvas.height * 0.35 * (1 - t) + menuCanvas.height * -0.35 * t);
+        }
+        else {
+            // menuState = MENU;
+        }
+        if (menuStateTime == 36) {
+            menuContainer.style.opacity = 0;
+        }
+        if (menuStateTime == 18) {
+            sandboxButtonContainer.style.transform = "";
+        }
+        if (menuStateTime == 12) {
+            puzzlesButtonContainer.style.transform = "";
+        }
+        if (menuStateTime == 96) {
+            menuContainer.style.display = "none";
+            backgroundPixels = [];
+        }
+    }
+    if (menuState == "menu") {
         if (Math.random() < 0.1 * 2) {
             let validPixels = [
                 DIRT,
@@ -303,13 +387,14 @@ function updateMenu() {
             // let x = titlePixels[i].x;
             // let y = titlePixels[i].y;
             ctx.fillStyle = "#ffffff";
+            ctx.fillStyle = titlePixels[i].color;
             let value = noise.perlin3(titlePixels[i].imageX / 5, titlePixels[i].imageY / 5, performance.now() / 1000);
             // menuCtx.fillStyle = "rgba(255, " + (255 - 125 * value) + ", " + (255 - 125 * value) + ")";
             // menuCtx.fillStyle = "rgba(255, 255, 255, " + (0.6 + 0.4 * (Math.sin((x + y + performance.now() / 10) / 100) + 1) / 2) + ")";
             ctx.globalAlpha = location.opacity;
             if (j == 0) {
             //     // menuCtx.fillStyle = "rgba(255, 255, 255, " + (0.6 + 0.4 * noise.perlin3(titlePixels[i].x / 5, titlePixels[i].y / 5, performance.now() / 1000)) + ")";
-                ctx.globalAlpha *= 0.6 + 0.4 * value;
+                // ctx.globalAlpha *= 0.6 + 0.4 * value;
             }
             // menuCtx.fillRect(x - scale / 2, y - scale / 2, scale, scale);
                 // menuCtx.fillStyle = "#ffffff11";
@@ -341,4 +426,4 @@ function updateMenu() {
     menuStateTime++;
 };
 
-export { menuCanvas, menuCtx, menuOffscreenCanvas1, menuOffscreenCtx1, menuOffscreenCanvas2, menuOffscreenCtx2, updateMenu }
+export { resizeMenuCanvases, transitionIn, transitionOut, slideInMenu, updateMenu }

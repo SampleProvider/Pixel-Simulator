@@ -9,16 +9,6 @@
 </head>
 
 <body>
-    <div id="menuContainer">
-        <!-- <img id="menuTitle" src="/img/title.png"> -->
-        <canvas id="menuCanvas"></canvas>
-        <div id="sandboxButtonContainer">
-            <button id="sandboxButton" class="menuButton">Sandbox</button>
-        </div>
-        <div id="puzzlesButtonContainer">
-            <button id="puzzlesButton" class="menuButton">Puzzles</button>
-        </div>
-    </div>
     <div id="gameContainer" style="display: none;">
         <canvas id="canvas"></canvas>
         <canvas id="overlayCanvas"></canvas>
@@ -65,6 +55,20 @@
         <div id="tooltip">
             <div id="tooltipName"></div>
             <div id="tooltipDescription" style="display: none;"></div>
+        </div>
+    </div>
+    <div id="transitionContainer" style="display: none;">
+        <div id="transitionTop"></div>
+        <div id="transitionBottom"></div>
+    </div>
+    <div id="menuContainer">
+        <!-- <img id="menuTitle" src="/img/title.png"> -->
+        <canvas id="menuCanvas"></canvas>
+        <div id="sandboxButtonContainer">
+            <button id="sandboxButton" class="menuButton">Sandbox</button>
+        </div>
+        <div id="puzzlesButtonContainer">
+            <button id="puzzlesButton" class="menuButton">Puzzles</button>
         </div>
     </div>
     <dialog id="modalContainer">

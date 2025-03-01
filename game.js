@@ -1,6 +1,6 @@
 import { pixels, addPixel, addFire, addUpdatedChunk, addUpdatedChunk2, resetPushPixels, pixelImages } from "./pixels.js";
 import { resizeCanvas, resizeGrid, render } from "./renderer.js";
-import { menuCanvas, menuCtx, menuOffscreenCanvas1, menuOffscreenCtx1, menuOffscreenCanvas2, menuOffscreenCtx2, updateMenu } from "./menu.js";
+import { resizeMenuCanvases, transitionIn, transitionOut, slideInMenu, updateMenu } from "./menu.js";
 
 /*
 
@@ -68,8 +68,8 @@ ghost stuff where the fade texture off the grid is not cleared
 // window.onerror = function(a, b, c, d, e) {
 //     alert(a + " " + b + " " + c + " " + d + " " + e)
 // }
-window.onerror = function(e) {
-    modal("ERROR BUG BUG BUG!!!", e.message + " " + e.filename + " " + e.lineno + " " + e.colno, "error");
+window.onerror = function(message, source, lineno, colno, error) {
+    modal("ERROR BUG BUG BUG!!!", source + "<br>" + message + " " + source + " " + lineno + " " + colno, "error");
 };
 const overlayCanvas = document.getElementById("overlayCanvas");
 const overlayCtx = overlayCanvas.getContext("2d");
@@ -83,30 +83,11 @@ window.onresize = () => {
     HEIGHT = window.innerHeight * devicePixelRatio;
     overlayCanvas.width = WIDTH;
     overlayCanvas.height = HEIGHT;
-    menuCanvas.width = WIDTH;
-    menuCanvas.height = HEIGHT;
-    menuCtx.imageSmoothingEnabled = false;
-    menuCtx.webkitImageSmoothingEnabled = false;
-    menuCtx.mozImageSmoothingEnabled = false;
-    menuOffscreenCanvas1.width = WIDTH;
-    menuOffscreenCanvas1.height = HEIGHT;
-    menuOffscreenCanvas2.width = WIDTH;
-    menuOffscreenCanvas2.height = HEIGHT;
-    menuOffscreenCtx1.imageSmoothingEnabled = false;
-    menuOffscreenCtx1.webkitImageSmoothingEnabled = false;
-    menuOffscreenCtx1.mozImageSmoothingEnabled = false;
-    menuOffscreenCtx2.imageSmoothingEnabled = false;
-    menuOffscreenCtx2.webkitImageSmoothingEnabled = false;
-    menuOffscreenCtx2.mozImageSmoothingEnabled = false;
+    resizeMenuCanvases(WIDTH, HEIGHT);
     resizeCanvas(WIDTH, HEIGHT);
     document.body.style.setProperty("--border-size", Number(getComputedStyle(pixelPicker).getPropertyValue("border-left-width").replaceAll("px", "")) / 2 + "px");
 };
 window.onresize();
-
-const LOADING = 0;
-const MENU = 1;
-const GAME = 2;
-let gameState = MENU;
 
 const ID = 0;
 const ON_FIRE = 1;
@@ -153,9 +134,6 @@ const modalNo = document.getElementById("modalNo");
 const modalOk = document.getElementById("modalOk");
 
 function modal(title, content, type) {
-    if (type == "error") {
-        return;
-    }
     modalContainer.showModal();
     modalTitle.innerHTML = title;
     modalContent.innerHTML = content;
@@ -262,6 +240,26 @@ resetButton.onclick = async () => {
     if (await modal("Reset?", "Your current simulation will be deleted!", "confirm")) {
         loadSaveCode(saveCode.value);
     }
+};
+
+const transitionContainer = document.getElementById("transitionContainer");
+const transitionTop = document.getElementById("transitionTop");
+const transitionBottom = document.getElementById("transitionBottom");
+const menuContainer = document.getElementById("menuContainer");
+
+const menuButton = document.getElementById("menuButton");
+menuButton.onclick = async () => {
+    runState = PAUSED;
+    playButton.classList.remove("pauseButton");
+    simulateButton.classList.remove("pauseButton");
+    slowmodeButton.classList.remove("pauseButton");
+    await transitionIn();
+    transitionContainer.style.display = "none";
+    transitionTop.style.transform = "";
+    transitionBottom.style.transform = "";
+    menuContainer.style.opacity = 1;
+    menuContainer.style.display = "block";
+    slideInMenu();
 };
 
 const supportsFileSystemAccess = "showOpenFilePicker" in window &&
@@ -1261,6 +1259,9 @@ function createGrid() {
         }
     }
 
+    chunkXAmount = Math.ceil(gridWidth / chunkWidth);
+    chunkYAmount = Math.ceil(gridHeight / chunkHeight);
+
     let chunksArray = [];
     // for (let y = 0; y < chunkYAmount; y++) {
     //     for (let x = 0; x < chunkXAmount; x++) {
@@ -1269,7 +1270,7 @@ function createGrid() {
     // }
     for (let y = 0; y < chunkYAmount; y++) {
         for (let x = 0; x < chunkXAmount; x++) {
-            chunksArray.push(...[x * chunkWidth, x * chunkWidth + chunkWidth - 1, y * chunkHeight, y * chunkHeight + chunkHeight - 1]);
+            chunksArray.push(...[x * chunkWidth, Math.min(x * chunkWidth + chunkWidth - 1, gridWidth - 1), y * chunkHeight, Math.min(y * chunkHeight + chunkHeight - 1, gridHeight - 1)]);
         }
     }
 
@@ -1279,6 +1280,13 @@ function createGrid() {
     drawChunks = new Int32Array(chunksArray);
     resetPushPixels();
     resizeGrid(gridWidth, gridHeight, gridStride, chunkXAmount, chunkYAmount, chunkStride);
+
+    cameraScale = Math.min(WIDTH / gridWidth, HEIGHT / gridHeight);
+    cameraScaleTarget = cameraScale;
+    cameraX = -WIDTH / cameraScale / 2 + gridWidth / 2;
+    cameraY = -HEIGHT / cameraScale / 2 + gridHeight / 2;
+    cameraSpeedX = 0;
+    cameraSpeedY = 0;
 };
 createGrid();
 if (localStorage.getItem("grid") != null) {
@@ -1680,6 +1688,9 @@ function updateGrid() {
         for (let chunkX = 0; chunkX < chunkXAmount; chunkX++) {
             let x = chunkX * chunkWidth + Math.floor(Math.random() * chunkWidth);
             let y = chunkY * chunkHeight + Math.floor(Math.random() * chunkHeight);
+            if (x >= gridWidth || y >= gridHeight) {
+                continue;
+            }
             let index = (x + y * gridWidth) * gridStride;
             if (pixels[grid[index + ID]].randomUpdate != null) {
                 pixels[grid[index + ID]].randomUpdate(x, y);
@@ -1740,6 +1751,20 @@ function updateGrid() {
     //     }
     //     tick -= 11;
     // }
+
+    // remove dumb chunks out of grid
+    if (gridWidth % chunkWidth != 0) {
+        for (let chunkY = 0; chunkY < chunkYAmount; chunkY++) {
+            nextChunks[(chunkXAmount - 1 + chunkY * chunkXAmount) * chunkStride + 1] = Math.min(nextChunks[(chunkXAmount - 1 + chunkY * chunkXAmount) * chunkStride + 1], gridWidth - 1);
+            drawChunks[(chunkXAmount - 1 + chunkY * chunkXAmount) * chunkStride + 1] = Math.min(drawChunks[(chunkXAmount - 1 + chunkY * chunkXAmount) * chunkStride + 1], gridWidth - 1);
+        }
+    }
+    if (gridHeight % chunkHeight != 0) {
+        for (let chunkX = 0; chunkX < chunkXAmount; chunkX++) {
+            nextChunks[(chunkX + (chunkYAmount - 1) * chunkXAmount) * chunkStride + 3] = Math.min(nextChunks[(chunkX + (chunkYAmount - 1) * chunkXAmount) * chunkStride + 3], gridHeight - 1);
+            drawChunks[(chunkX + (chunkYAmount - 1) * chunkXAmount) * chunkStride + 3] = Math.min(drawChunks[(chunkX + (chunkYAmount - 1) * chunkXAmount) * chunkStride + 3], gridHeight - 1);
+        }
+    }
 };
 
 let debug = true;
@@ -1789,6 +1814,9 @@ function updateTimes(history, time) {
 };
 
 function updateGame() {
+    if (gameContainer.style.display == "none") {
+        return;
+    }
     let updateStart = performance.now();
     updateCamera();
     if (runState == PLAYING) {
@@ -1941,15 +1969,10 @@ function updateGame() {
     }
 };
 function update() {
-    if (gameState == MENU) {
-        updateMenu();
-    }
-    else if (gameState == GAME) {
-        updateGame();
-    }
+    updateMenu();
+    updateGame();
     window.requestAnimationFrame(update);
 };
-
 window.requestAnimationFrame(update);
 
 // setInterval(update, 100);

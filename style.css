@@ -23,7 +23,7 @@ button {
     padding: 0px;
 }
 
-#menuContainer, #gameContainer {
+#menuContainer, #gameContainer, #transitionContainer {
     position: absolute;
     width: 100vw;
     height: 100vh;
@@ -81,6 +81,8 @@ button {
 
 #menuContainer {
     background-color: black;
+    opacity: 1;
+    transition: 1000ms linear opacity;
 }
 #menuTitle {
     position: absolute;
@@ -127,6 +129,20 @@ button {
 }
 #puzzlesButton {
     top: 70vh;
+}
+
+#transitionTop, #transitionBottom {
+    width: 100vw;
+    height: 50vh;
+    background-color: black;
+    transition: 1000ms cubic-bezier(0.5, 0, 0.5, 1) transform;
+}
+#transitionTop {
+    transform: translateX(100vw);
+}
+#transitionBottom {
+    top: 50vh;
+    transform: translateX(-100vw);
 }
 
 #playButton {
