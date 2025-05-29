@@ -1,5 +1,6 @@
-import { pixels, pixelImages } from "./pixels.js";
-import { modal } from "./game.js";
+import { pixels, pixelTexture, pixelInventory, resetPixelInventory } from "./pixels.js";
+import { modal, sandboxGrid, sandboxSaveCode, loadSaveCode } from "./game.js";
+import { loadPuzzle } from "./puzzles.js";
 import { noise } from "./noise.js";
 import { bezier } from "./cubic-bezier.js";
 
@@ -95,6 +96,8 @@ const transitionBottom = document.getElementById("transitionBottom");
 
 function transitionIn() {
     transitionContainer.style.display = "block";
+    transitionTop.style.transform = "";
+    transitionBottom.style.transform = "";
     transitionContainer.innerText;
     transitionTop.style.transform = "translateX(0px)";
     transitionBottom.style.transform = "translateX(0px)";
@@ -106,8 +109,11 @@ function transitionIn() {
     });
 };
 function transitionOut() {
-    transitionTop.style.transform = "";
-    transitionBottom.style.transform = "";
+    transitionTop.style.transform = "translateX(0px)";
+    transitionBottom.style.transform = "translateX(0px)";
+    transitionContainer.innerText;
+    transitionTop.style.transform = "translateX(-100vw)";
+    transitionBottom.style.transform = "translateX(100vw)";
 
     return new Promise((resolve, reject) => {
         transitionTop.ontransitionend = () => {
@@ -122,8 +128,8 @@ function transitionOut() {
 // slide in
 // slide out
 
-function pixelateInMenu() {
-    menuState = "pixelateIn";
+function pixelateInTitle() {
+    menuState = "pixelateInTitle";
     menuStateTime = 0;
     for (let i in titlePixels) {
         // titlePixels[i].x = Math.random() * menuCanvas.width * 2 - menuCanvas.width;
@@ -138,8 +144,8 @@ function pixelateInMenu() {
         titlePixels[i].targetOpacity = 1;
     }
 };
-function pixelateOutMenu() {
-    menuState = "pixelateOut";
+function pixelateOutTitle() {
+    menuState = "pixelateOutTitle";
     menuStateTime = 0;
     for (let i in titlePixels) {
         titlePixels[i].targetX = Math.random() * 200 - 100;
@@ -148,28 +154,96 @@ function pixelateOutMenu() {
         titlePixels[i].targetOpacity = 0;
     }
 };
-function slideInMenu() {
-    menuState = "slideIn";
+function slideInTitle() {
+    menuState = "slideInTitle";
     menuStateTime = 0;
+    // titleContainer.style.transform = "";
+    // sandboxButtonContainer.style.transform = "";
+    // puzzlesButtonContainer.style.transform = "";
+    // puzzlesContainer.style.display = "none";
+    // menuContainer.innerText;
+    // backgroundPixels = [];
 };
-function slideOutMenu() {
-    menuState = "slideOut";
+function slideOutTitle() {
+    menuState = "slideOutTitle";
     menuStateTime = 0;
+    menuContainer.style.pointerEvents = "none";
     gameContainer.style.display = "";
+    for (let i in pixels) {
+        pixelInventory[i] = Infinity;
+        pixelInventory[i] = 100;
+    }
+    resetPixelInventory();
+};
+// for (let i in pixels) {
+//     pixelInventory[i] = Infinity;
+//     pixelInventory[i] = 100;
+// }
+// pixelInventory[37] = 0;
+// resetPixelInventory();
+function slideInPuzzles() {
+    menuState = "slideInPuzzles";
+    menuStateTime = 0;
+    titleContainer.style.transform = "translateX(-100vw)";
+    puzzlesContainer.style.display = "";
+    // puzzlesContainer.style.transform = "translate(-50%, -50%) translateX(100vw)";
+    puzzlesContainer.innerText;
+    puzzlesContainer.style.transform = "translate(-50%, -50%)";
+};
+function slideOutPuzzles() {
+    menuState = "slideOutPuzzles";
+    menuStateTime = 0;
+    titleContainer.style.transform = "";
+    // puzzlesContainer.style.transform = "translate(-50%, -50%)";
+    // puzzlesContainer.innerText;
+    puzzlesContainer.style.transform = "translate(-50%, -50%) translateX(100vw)";
 };
 
-let menuState = "menu";
+let menuState = "title";
 let menuStateTime = 0;
-pixelateInMenu();
+pixelateInTitle();
 
+window.onload = () => {
+    loadSaveCode(sandboxGrid);
+    saveCode.value = sandboxSaveCode;
+    loadPuzzle(null);
+    document.getElementById("menuContainer").style.display = "none";
+    document.getElementById("gameContainer").style.display = "block";
+};
+
+const gameContainer = document.getElementById("gameContainer");
 const menuContainer = document.getElementById("menuContainer");
+const titleContainer = document.getElementById("titleContainer");
 const sandboxButtonContainer = document.getElementById("sandboxButtonContainer");
 const puzzlesButtonContainer = document.getElementById("puzzlesButtonContainer");
 const sandboxButton = document.getElementById("sandboxButton");
 const puzzlesButton = document.getElementById("puzzlesButton");
 
 sandboxButton.onclick = () => {
-    slideOutMenu();
+    if (menuState != "title" && menuState != "pixelateInTitle" && menuState != "slideInTitle") {
+        return;
+    }
+    slideOutTitle();
+    loadSaveCode(sandboxGrid);
+    saveCode.value = sandboxSaveCode;
+    loadPuzzle(null);
+    // very buh
+};
+puzzlesButton.onclick = () => {
+    if (menuState != "title" && menuState != "pixelateInTitle" && menuState != "slideInTitle") {
+        return;
+    }
+    slideInPuzzles();
+};
+
+const puzzlesContainer = document.getElementById("puzzlesContainer");
+const puzzlesCloseButton = document.getElementById("puzzlesCloseButton");
+
+puzzlesCloseButton.onclick = () => {
+    if (menuState != "puzzles") {
+        return;
+    }
+    slideOutPuzzles();
 };
 
 function updateMenu() {
@@ -181,7 +255,7 @@ function updateMenu() {
     menuCtx.clearRect(0, 0, menuCanvas.width, menuCanvas.height);
     let titleX = Math.round(menuCanvas.width / 2);
     let titleY = Math.round(menuCanvas.height * 0.35);
-    if (menuState == "pixelateIn") {
+    if (menuState == "pixelateInTitle") {
         // log(10^-4)/log(0.95) = 179 frames
         // 2500ms = 150 frames
         if (menuStateTime < 150) {
@@ -196,7 +270,7 @@ function updateMenu() {
             titleY = Math.round(menuCanvas.height / 2 * (1 - t) + menuCanvas.height * 0.35 * t);
         }
         else {
-            menuState = "menu";
+            menuState = "title";
         }
         if (menuStateTime == 168) {
             sandboxButtonContainer.style.transform = "translateY(0px)";
@@ -205,7 +279,7 @@ function updateMenu() {
             puzzlesButtonContainer.style.transform = "translateY(0px)";
         }
     }
-    else if (menuState == "pixelateOut") {
+    else if (menuState == "pixelateOutTitle") {
         if (menuStateTime == 18) {
             sandboxButtonContainer.style.transform = "";
         }
@@ -213,7 +287,7 @@ function updateMenu() {
             puzzlesButtonContainer.style.transform = "";
         }
     }
-    else if (menuState == "slideIn") {
+    else if (menuState == "slideInTitle") {
         if (menuStateTime < 90) {
             // menuCanvas.style.transform = "none";
             // // let t = (1 - Math.cos((performance.now() - menuStateTime - 2500) / 1500 * Math.PI)) / 2;
@@ -232,10 +306,10 @@ function updateMenu() {
             puzzlesButtonContainer.style.transform = "translateY(0px)";
         }
         if (menuStateTime == 96) {
-            menuState = "menu";
+            menuState = "title";
         }
     }
-    else if (menuState == "slideOut") {
+    else if (menuState == "slideOutTitle") {
         if (menuStateTime < 90) {
             // menuCanvas.style.transform = "none";
             // // let t = (1 - Math.cos((performance.now() - menuStateTime - 2500) / 1500 * Math.PI)) / 2;
@@ -261,7 +335,31 @@ function updateMenu() {
             backgroundPixels = [];
         }
     }
-    if (menuState == "menu") {
+    else if (menuState == "slideInPuzzles") {
+        if (menuStateTime < 30) {
+            let t = (menuStateTime - 0) / 30;
+            t = bezier(0.5, 0, 0.5, 1)(t);
+            titleX = Math.round(menuCanvas.width / 2 * (1 - t) + -menuCanvas.width / 2 * t);
+        }
+        if (menuStateTime == 30) {
+            menuState = "puzzles";
+        }
+    }
+    else if (menuState == "slideOutPuzzles") {
+        if (menuStateTime < 30) {
+            let t = (menuStateTime - 0) / 30;
+            t = bezier(0.5, 0, 0.5, 1)(t);
+            titleX = Math.round(-menuCanvas.width / 2 * (1 - t) + menuCanvas.width / 2 * t);
+        }
+        if (menuStateTime == 30) {
+            menuState = "title";
+            puzzlesContainer.style.display = "none";
+        }
+    }
+    else if (menuState == "puzzles") {
+        titleX = -menuCanvas.width / 2;
+    }
+    if (menuState == "title" || menuState == "slideInPuzzles" || menuState == "puzzles" || menuState == "slideOutPuzzles") {
         if (Math.random() < 0.1 * 2) {
             let validPixels = [
                 DIRT,
@@ -327,7 +425,7 @@ function updateMenu() {
             menuCtx.fillRect(-size / 2, -size / 2, size, size);
         }
         else {
-            menuCtx.drawImage(pixelImages, pixel.texture[0], pixel.texture[1], pixel.texture[2], pixel.texture[3], -size / 2, -size / 2, size, size);
+            menuCtx.drawImage(pixelTexture, pixel.texture[0], pixel.texture[1], pixel.texture[2], pixel.texture[3], -size / 2, -size / 2, size, size);
         }
         menuCtx.restore();
     }
@@ -426,4 +524,4 @@ function updateMenu() {
     menuStateTime++;
 };
 
-export { resizeMenuCanvases, transitionIn, transitionOut, slideInMenu, updateMenu }
+export { resizeMenuCanvases, transitionIn, transitionOut, slideInTitle, slideOutTitle, slideInPuzzles, slideOutPuzzles, updateMenu }

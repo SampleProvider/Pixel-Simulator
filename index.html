@@ -5,6 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width">
     <title>Pixel Simulator</title>
+    <link rel="icon" href="./img/favicon-large.png" type="image/x-icon">
     <link href="style.css" rel="stylesheet" type="text/css" />
 </head>
 
@@ -12,16 +13,15 @@
     <div id="gameContainer" style="display: none;">
         <canvas id="canvas"></canvas>
         <canvas id="overlayCanvas"></canvas>
-        <!-- <div id="sidebar"> -->
-            <div id="controlSettings">
-                <button id="playButton" class="button"></button>
-                <button id="stepButton" class="button"></button>
-                <button id="simulateButton" class="button"></button>
-                <button id="slowmodeButton" class="button"></button>
-                <button id="menuButton" class="button"></button>
-                <button id="screenshotButton" class="button"></button>
-                <button id="resetButton" class="button"></button>
-            </div>
+        <div id="controlSettings">
+            <button id="playButton" class="button"></button>
+            <button id="stepButton" class="button"></button>
+            <button id="simulateButton" class="button"></button>
+            <button id="slowmodeButton" class="button"></button>
+            <button id="menuButton" class="button"></button>
+            <button id="screenshotButton" class="button"></button>
+            <button id="resetButton" class="button"></button>
+        </div>
         <div id="saveCodeSettings" class="hidden" style="display: flex; flex-direction: column;">
             <div style="display: flex; justify-content: center;">
                 <button id="downloadSaveCodeButton" class="button"></button>
@@ -47,29 +47,149 @@
                 <div></div>
             </div>
         </div>
-            <div id="history">
-                <!-- asdf -->
+        <div id="history">
+            <!-- asdf -->
+        </div>
+        <div id="pixelPicker"></div>
+        <div id="puzzleOverlay">
+            <div id="puzzleInformation" style="display: flex; flex-direction: column;">
+                <div id="puzzleName">Return of Scenic Pond</div>
+                <div id="puzzleAuthor">sp</div>
             </div>
-            <div id="pixelPicker"></div>
-        <!-- </div> -->
+            <div id="puzzleObjectives" style="display: flex; flex-direction: column;">
+                <!-- <div class="puzzleObjective">
+                    Fix RPS
+                    <div class="puzzleObjectiveProgress">
+                        <div class="puzzleObjectiveProgressBackground"></div>
+                        <div class="puzzleObjectiveProgressText">0/1</div>
+                    </div>
+                </div>
+                <div class="puzzleObjective">
+                    <div class="puzzleObjectiveName">Destroy Monsters</div>
+                    <div class="puzzleObjectiveProgress">
+                        <div class="puzzleObjectiveProgressBackground"></div>
+                        <div class="puzzleObjectiveProgressText">1/3</div>
+                    </div>
+                </div> -->
+            </div>
+        </div>
         <div id="tooltip">
             <div id="tooltipName"></div>
             <div id="tooltipDescription" style="display: none;"></div>
+        </div>
+        <div id="congratulationsContainer" class="hidden">
+            <div id="congratulations">
+                <div id="congratulationsTitle">Congratulations!</div>
+                <div id="congratulationsSubtitle">128397219837 ticks</div>
+                <div id="congratulationsButtons">
+                    <button id="congratulationsResetButton" class="congratulationsButton">Reset</button>
+                    <button id="congratulationsContinueButton" class="congratulationsButton">Continue</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="menuContainer">
+        <!-- <img id="menuTitle" src="/img/title.png"> -->
+        <canvas id="menuCanvas"></canvas>
+        <div id="titleContainer">
+            <div id="sandboxButtonContainer" class="menuButtonContainer">
+                <button id="sandboxButton" class="menuButton">Sandbox</button>
+            </div>
+            <div id="puzzlesButtonContainer" class="menuButtonContainer">
+                <button id="puzzlesButton" class="menuButton">Puzzles</button>
+            </div>
+        </div>
+        <div id="puzzlesContainer" style="display: none;">
+            <div id="puzzlesTitle">Puzzles</div>
+            <div style="display: flex;">
+                <button id="officialPuzzlesButton" class="puzzlesHeaderButton">Official Puzzles</button>
+                <button id="customPuzzlesButton" class="puzzlesHeaderButton">Custom Puzzles</button>
+            </div>
+            <div id="officialPuzzlesList"></div>
+            <div id="customPuzzlesList" style="display: none;">
+                <div class="puzzle">
+                    <img class="puzzleImg">
+                    <div class="puzzleName">buh overflow problem</div>
+                    <div class="puzzleAuthor">sdf</div>
+                    <div class="puzzleTicks">Not completed</div>
+                </div>
+                <div class="puzzle">
+                    <img class="puzzleImg">
+                    <div class="puzzleName"></div>
+                    <div class="puzzleAuthor"></div>
+                    <div class="puzzleTicks"></div>
+                </div>
+                <div class="puzzle">
+                    <img class="puzzleImg">
+                    <div class="puzzleName"></div>
+                    <div class="puzzleAuthor"></div>
+                    <div class="puzzleTicks"></div>
+                </div>
+                <div class="puzzle">
+                    <img class="puzzleImg">
+                    <div class="puzzleName"></div>
+                    <div class="puzzleAuthor"></div>
+                    <div class="puzzleTicks"></div>
+                </div>
+                <div class="puzzle">
+                    <img class="puzzleImg">
+                    <div class="puzzleName"></div>
+                    <div class="puzzleAuthor"></div>
+                    <div class="puzzleTicks"></div>
+                </div>
+                <div class="puzzle">
+                    <img class="puzzleImg">
+                    <div class="puzzleName"></div>
+                    <div class="puzzleAuthor"></div>
+                    <div class="puzzleTicks"></div>
+                </div>
+                <div class="puzzle">
+                    <img class="puzzleImg">
+                    <div class="puzzleName"></div>
+                    <div class="puzzleAuthor"></div>
+                    <div class="puzzleTicks"></div>
+                </div>
+                <div class="puzzle">
+                    <img class="puzzleImg">
+                    <div class="puzzleName"></div>
+                    <div class="puzzleAuthor"></div>
+                    <div class="puzzleTicks"></div>
+                </div>
+                <div class="puzzle">
+                    <img class="puzzleImg">
+                    <div class="puzzleName"></div>
+                    <div class="puzzleAuthor"></div>
+                    <div class="puzzleTicks"></div>
+                </div>
+                <div class="puzzle">
+                    <img class="puzzleImg">
+                    <div class="puzzleName"></div>
+                    <div class="puzzleAuthor"></div>
+                    <div class="puzzleTicks"></div>
+                </div>
+                <div class="puzzle">
+                    <img class="puzzleImg">
+                    <div class="puzzleName"></div>
+                    <div class="puzzleAuthor"></div>
+                    <div class="puzzleTicks"></div>
+                </div>
+                <div class="puzzle">
+                    <img class="puzzleImg">
+                    <div class="puzzleName"></div>
+                    <div class="puzzleAuthor"></div>
+                    <div class="puzzleTicks"></div>
+                </div>
+            </div>
+            <button id="puzzlesCloseButton" class="button"></button>
+        </div>
+        <div id="puzzleTooltip">
+            <div id="puzzleTooltipName"></div>
+            <div id="puzzleTooltipDescription"></div>
         </div>
     </div>
     <div id="transitionContainer" style="display: none;">
         <div id="transitionTop"></div>
         <div id="transitionBottom"></div>
-    </div>
-    <div id="menuContainer">
-        <!-- <img id="menuTitle" src="/img/title.png"> -->
-        <canvas id="menuCanvas"></canvas>
-        <div id="sandboxButtonContainer">
-            <button id="sandboxButton" class="menuButton">Sandbox</button>
-        </div>
-        <div id="puzzlesButtonContainer">
-            <button id="puzzlesButton" class="menuButton">Puzzles</button>
-        </div>
     </div>
     <dialog id="modalContainer">
         <div id="modalTitle"></div>
@@ -92,6 +212,15 @@
                     <button class="blueprintDownloadButton button"></button>
                     <button class="blueprintDeleteButton button"></button>
                 </div>
+            </div>
+        </div>
+    </template>
+    <template id="puzzleObjectiveTemplate">
+        <div class="puzzleObjective">
+            <div class="puzzleObjectiveName"></div>
+            <div class="puzzleObjectiveProgress">
+                <div class="puzzleObjectiveProgressBackground"></div>
+                <div class="puzzleObjectiveProgressText">1/3</div>
             </div>
         </div>
     </template>

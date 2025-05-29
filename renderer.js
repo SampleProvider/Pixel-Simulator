@@ -55,6 +55,11 @@ const timeBuffer = device.createBuffer({
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
 
+const drawPlacementRestrictionBuffer = device.createBuffer({
+    size: 4 * 4,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+});
+
 const cameraBindGroupLayout = device.createBindGroupLayout({
     entries: [{
         binding: 0,
@@ -70,6 +75,12 @@ const cameraBindGroupLayout = device.createBindGroupLayout({
         },
     }, {
         binding: 2,
+        visibility: GPUShaderStage.FRAGMENT | GPUShaderStage.COMPUTE,
+        buffer: {
+            type: "uniform",
+        },
+    }, {
+        binding: 3,
         visibility: GPUShaderStage.FRAGMENT | GPUShaderStage.COMPUTE,
         buffer: {
             type: "uniform",
@@ -92,6 +103,11 @@ const cameraBindGroup = device.createBindGroup({
         binding: 2,
         resource: {
             buffer: timeBuffer,
+        },
+    }, {
+        binding: 3,
+        resource: {
+            buffer: drawPlacementRestrictionBuffer,
         },
     }],
 });
@@ -833,11 +849,12 @@ function resizeGrid(gridWidth, gridHeight, gridStride, chunkXAmount, chunkYAmoun
     device.queue.writeBuffer(gridSizeBuffer, 0, new Uint32Array([gridWidth, gridHeight]));
     createBindGroups();
 };
-function render(camera, tick, grid, chunks, brush, selectionGrid) {
+function render(camera, drawPlacementRestriction, tick, grid, chunks, brush, selectionGrid) {
     const encoder = device.createCommandEncoder();
 
     device.queue.writeBuffer(cameraBuffer, 0, camera);
     device.queue.writeBuffer(timeBuffer, 0, new Float32Array([performance.now()]));
+    device.queue.writeBuffer(drawPlacementRestrictionBuffer, 0, new Uint32Array([drawPlacementRestriction ? 1 : 0]));
 
     device.queue.writeBuffer(tickBuffer, 0, new Uint32Array([tick]));
     device.queue.writeBuffer(gridBuffer, 0, grid);

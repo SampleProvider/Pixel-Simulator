@@ -1,10 +1,11 @@
 import { grid, gridWidth, gridHeight, gridStride, chunks, nextChunks, drawChunks, chunkWidth, chunkHeight, chunkXAmount, chunkYAmount, chunkStride, tick, modal, setBrushPixel, showTooltip, hideTooltip, moveTooltip } from "./game.js";
 // import { imageBitmap } from "./renderer.js";
+import { currentPuzzle } from "./puzzles.js";
 
-const pixelImages = await createImageBitmap(await (await fetch("pixels.png")).blob());
+const pixelTexture = await createImageBitmap(await (await fetch("pixels.png")).blob());
 const ID = 0;
 const ON_FIRE = 1;
-const HAS_TARGET = 2;
+const PUZZLE_DATA = 2;
 const UPDATED = 3;
 const COLOR_R = 4;
 const COLOR_G = 5;
@@ -21,7 +22,7 @@ function isOnGrid(x, y) {
     return x >= 0 && x < gridWidth && y >= 0 && y < gridHeight;
 };
 function isAir(x, y) {
-    return isOnGrid(x, y) && (grid[(x + y * gridWidth) * gridStride + ID] == AIR || grid[(x + y * gridWidth) * gridStride + ID] == DELETER);
+    return isOnGrid(x, y) && (grid[(x + y * gridWidth) * gridStride + ID] == AIR || grid[(x + y * gridWidth) * gridStride + ID] == DELETER || grid[(x + y * gridWidth) * gridStride + ID] == MONSTER);
 };
 function isGas(x, y) {
     return isOnGrid(x, y) && pixels[grid[(x + y * gridWidth) * gridStride + ID]].state == GAS;
@@ -842,6 +843,14 @@ function move(x, y, x1, y1) {
         grid[index + 3] = tick;
         return;
     }
+    if (grid[index1 + ID] == MONSTER) {
+        grid[index + 0] = AIR;
+        grid[index + 1] = false;
+        grid[index + 3] = tick;
+        grid[index1 + 0] = AIR;
+        grid[index1 + 3] = tick;
+        return;
+    }
     let data0 = grid[index + 0]; // id
     let data1 = grid[index + 1]; // on fire
     // let data2 = grid[index + 2]; // updated
@@ -1250,6 +1259,34 @@ function raycast2(x, y, dx, dy, isPassable) {
     }
 };
 // raytrace
+// function raytrace(x1, y1, x2, y2, isPassable) {
+//     let slope = (y2 - y1) / (x2 - x1);
+//     if (slope == 0 || !isFinite(slope)) {
+
+//     }
+//     if (Math.abs(slope) < 1) {
+//         let minY = x2 < x1 ? y2 : y1;
+//         let minX = Math.min(x1, x2);
+//         let maxX = Math.max(x1, x2);
+//         let start = Math.max(0, Math.max(minX, (-minY / slope - 0.5) + minX);
+//         let end = Math.min(gridWidth - 1, maxX);
+//         for (let x = start; x <= end; x++) {
+//             let y = Math.round(slope * (x - minX)) + minY;
+//             if (y < 0 || y >= gridHeight || isPassable(x, y)) {
+//                 break;
+//             }
+//         }
+//     } else {
+//         slope = (x2 - x1) / (y1 - y1);
+//         let xmin = y2 < y1 ? x2 : x1;
+//         let start = Math.max(0, Math.min(y2, y1));
+//         let end = Math.min(gridHeight - 1, Math.max(y2, y1));
+//         for (let y = start, x = 0; y <= end; y++) {
+//             x = Math.round(slope * (y - start)) + xmin;
+//             if (x < 0 || x >= gridWidth || cb(x, y)) break;
+//         }
+//     }
+// };
 
 function explode(x, y, radiusSquared, rays, power) {
     let changed = [];
@@ -1388,7 +1425,7 @@ function pushLeft(x, y, selfX, selfY, strength) {
                 // unnecessary
                 workedPushPixels[j + i * gridWidth] = tick;
                 let index = (j - 1 + i * gridWidth) * gridStride;
-                if (grid[index + ID] != AIR) {
+                if (grid[index + ID] != AIR && grid[index + ID] != MONSTER) {
                     addPixel(j, i, AIR);
                 }
                 else {
@@ -1396,6 +1433,9 @@ function pushLeft(x, y, selfX, selfY, strength) {
                 }
             }
         }
+        // if (grid[(x + y * gridWidth) * gridStride + ID] == MONSTER) {
+        //     addPixel(x, y, AIR);
+        // }
         return true;
     }
     else if (!pushedSelf) {
@@ -1439,7 +1479,7 @@ function pushLeftCheck(x, y, selfX, selfY, allowRecursion) {
             }
             let index1 = (x2 + y1 * gridWidth) * gridStride;
             let id = grid[index1 + ID];
-            if (id == AIR || id == DELETER) {
+            if (id == AIR || id == DELETER || id == MONSTER) {
                 // cloner can push all
                 // piston can't push piston
                 // pusher can't push piston
@@ -1679,7 +1719,7 @@ function pushRight(x, y, selfX, selfY, strength) {
                 let j2 = gridWidth - Number(j);
                 workedPushPixels[j2 + i * gridWidth] = tick;
                 let index = (j2 + 1 + i * gridWidth) * gridStride;
-                if (grid[index + ID] != AIR) {
+                if (grid[index + ID] != AIR && grid[index + ID] != MONSTER) {
                     addPixel(j2, i, AIR);
                 }
                 else {
@@ -1687,6 +1727,9 @@ function pushRight(x, y, selfX, selfY, strength) {
                 }
             }
         }
+        // if (grid[(x + y * gridWidth) * gridStride + ID] == MONSTER) {
+        //     addPixel(x, y, AIR);
+        // }
         return true;
     }
     else if (!pushedSelf) {
@@ -1730,7 +1773,7 @@ function pushRightCheck(x, y, selfX, selfY, allowRecursion) {
             }
             let index1 = (x2 + y1 * gridWidth) * gridStride;
             let id = grid[index1 + ID];
-            if (id == AIR || id == DELETER) {
+            if (id == AIR || id == DELETER || id == MONSTER) {
                 if (pushStrength == 0 && x2 != gridWidth - 1) {
                     let index2 = (x2 + 1 + y1 * gridWidth) * gridStride;
                     let id1 = grid[index2 + ID];
@@ -1942,7 +1985,7 @@ function pushUp(x, y, selfX, selfY, strength) {
                 j = Number(j);
                 workedPushPixels[j + i * gridWidth] = tick;
                 let index = (j + (i - 1) * gridWidth) * gridStride;
-                if (grid[index + ID] != AIR) {
+                if (grid[index + ID] != AIR && grid[index + ID] != MONSTER) {
                     addPixel(j, i, AIR);
                 }
                 else {
@@ -1950,6 +1993,9 @@ function pushUp(x, y, selfX, selfY, strength) {
                 }
             }
         }
+        // if (grid[(x + y * gridWidth) * gridStride + ID] == MONSTER) {
+        //     addPixel(x, y, AIR);
+        // }
         return true;
     }
     else if (!pushedSelf) {
@@ -1993,7 +2039,7 @@ function pushUpCheck(x, y, selfX, selfY, allowRecursion) {
             }
             let index1 = (x1 + y2 * gridWidth) * gridStride;
             let id = grid[index1 + ID];
-            if (id == AIR || id == DELETER) {
+            if (id == AIR || id == DELETER || id == MONSTER) {
                 if (pushStrength == 0 && y2 != 0) {
                     let index2 = (x1 + (y2 - 1) * gridWidth) * gridStride;
                     let id1 = grid[index2 + ID];
@@ -2204,7 +2250,7 @@ function pushDown(x, y, selfX, selfY, strength) {
                 j = Number(j);
                 workedPushPixels[j + i2 * gridWidth] = tick;
                 let index = (j + (i2 + 1) * gridWidth) * gridStride;
-                if (grid[index + ID] != AIR) {
+                if (grid[index + ID] != AIR && grid[index + ID] != MONSTER) {
                     addPixel(j, i2, AIR);
                 }
                 else {
@@ -2212,6 +2258,9 @@ function pushDown(x, y, selfX, selfY, strength) {
                 }
             }
         }
+        // if (grid[(x + y * gridWidth) * gridStride + ID] == MONSTER) {
+        //     addPixel(x, y, AIR);
+        // }
         return true;
     }
     else if (!pushedSelf) {
@@ -2255,7 +2304,7 @@ function pushDownCheck(x, y, selfX, selfY, allowRecursion) {
             }
             let index1 = (x1 + y2 * gridWidth) * gridStride;
             let id = grid[index1 + ID];
-            if (id == AIR || id == DELETER) {
+            if (id == AIR || id == DELETER || id == MONSTER) {
                 if (pushStrength == 0 && y2 != gridHeight - 1) {
                     let index2 = (x1 + (y2 + 1) * gridWidth) * gridStride;
                     let id1 = grid[index2 + ID];
@@ -2653,6 +2702,7 @@ let pixelData = {
         subgroup: "Air",
         color: new Float32Array([255, 255, 255, 0.5]),
         // texture: new Float32Array([3, 0, 0, 0]),
+        amountColor: "black",
         state: GAS,
         flammability: 0,
         blastResistance: 0,
@@ -2912,7 +2962,7 @@ let pixelData = {
                 return isOnGrid(x, y) && pixels[grid[(x + y * gridWidth) * gridStride + ID]].state != SOLID;
             };
             function isMoveable(x, y) {
-                return isOnGrid(x, y) && grid[(x + y * gridWidth) * gridStride + UPDATED] != tick && (grid[(x + y * gridWidth) * gridStride + ID] == AIR || grid[(x + y * gridWidth) * gridStride + ID] == DELETER || pixels[grid[(x + y * gridWidth) * gridStride + ID]].state == LIQUID);
+                return isOnGrid(x, y) && grid[(x + y * gridWidth) * gridStride + UPDATED] != tick && (grid[(x + y * gridWidth) * gridStride + ID] == AIR || grid[(x + y * gridWidth) * gridStride + ID] == DELETER || grid[(x + y * gridWidth) * gridStride + ID] == MONSTER || pixels[grid[(x + y * gridWidth) * gridStride + ID]].state == LIQUID);
             };
             rise(x, y, gridWidth, 1, isPassable, isMoveable);
             addUpdatedChunk(x, y);
@@ -3436,6 +3486,7 @@ let pixelData = {
         group: "General",
         subgroup: "Glass",
         texture: new Float32Array([204, 40, 25, 25]),
+        amountColor: "black",
         state: SOLID,
         flammability: 0,
         blastResistance: 20,
@@ -4123,7 +4174,7 @@ let pixelData = {
         description: "Unrealistically flows and may or may not be wet",
         group: "Mechanical",
         subgroup: "Sticky Piston",
-        texture: new Float32Array([42, 14, 6, 6]),
+        texture: new Float32Array([54, 14, 6, 6]),
         state: SOLID,
         flammability: 10,
         blastResistance: 0,
@@ -4271,10 +4322,14 @@ let pixelData = {
                 return;
             }
             let index = (x + 1 + y * gridWidth) * gridStride;
-            if (pixels[grid[index + ID]].cloneable && grid[index + UPDATED] != tick) {
+            if (!pixels[grid[index + ID]].cloneable) {
+                return;
+            }
+            if (grid[index + UPDATED] != tick) {
                 let index1 = (x - 1 + y * gridWidth) * gridStride;
                 if (grid[index1 + ID] != AIR) {
                     if (!pushLeft(x - 1, y, x, y, 2)) {
+                        addUpdatedChunk(x, y);
                         return;
                     }
                 }
@@ -4304,10 +4359,14 @@ let pixelData = {
                 return;
             }
             let index = (x + (y + 1) * gridWidth) * gridStride;
-            if (pixels[grid[index + ID]].cloneable && grid[index + UPDATED] != tick) {
+            if (!pixels[grid[index + ID]].cloneable) {
+                return;
+            }
+            if (grid[index + UPDATED] != tick) {
                 let index1 = (x + (y - 1) * gridWidth) * gridStride;
                 if (grid[index1 + ID] != AIR) {
                     if (!pushUp(x, y - 1, x, y, 2)) {
+                        addUpdatedChunk(x, y);
                         return;
                     }
                 }
@@ -4337,10 +4396,14 @@ let pixelData = {
                 return;
             }
             let index = (x - 1 + y * gridWidth) * gridStride;
-            if (pixels[grid[index + ID]].cloneable && grid[index + UPDATED] != tick) {
+            if (!pixels[grid[index + ID]].cloneable) {
+                return;
+            }
+            if (grid[index + UPDATED] != tick) {
                 let index1 = (x + 1 + y * gridWidth) * gridStride;
                 if (grid[index1 + ID] != AIR) {
                     if (!pushRight(x + 1, y, x, y, 2)) {
+                        addUpdatedChunk(x, y);
                         return;
                     }
                 }
@@ -4370,10 +4433,14 @@ let pixelData = {
                 return;
             }
             let index = (x + (y - 1) * gridWidth) * gridStride;
-            if (pixels[grid[index + ID]].cloneable && grid[index + UPDATED] != tick) {
+            if (!pixels[grid[index + ID]].cloneable) {
+                return;
+            }
+            if (grid[index + UPDATED] != tick) {
                 let index1 = (x + (y + 1) * gridWidth) * gridStride;
                 if (grid[index1 + ID] != AIR) {
                     if (!pushDown(x, y + 1, x, y, 2)) {
+                        addUpdatedChunk(x, y);
                         return;
                     }
                 }
@@ -4962,7 +5029,7 @@ let pixelData = {
         },
     },
     activated_gunpowder: {
-        name: "Gunpowder",
+        name: "Gunpowder (Activated)",
         description: "Unrealistically flows and may or may not be wet",
         group: "Destruction",
         subgroup: "Gunpowder",
@@ -4981,16 +5048,18 @@ let pixelData = {
         group: "Destruction",
         subgroup: "C-4",
         color: new Float32Array([245, 245, 200, 1]),
+        amountColor: "black",
         state: SOLID,
         flammability: 0,
         blastResistance: 20,
     },
     activated_c4: {
-        name: "C-4",
+        name: "C-4 (Activated)",
         description: "Unrealistically flows and may or may not be wet",
         group: "Destruction",
         subgroup: "C-4",
         color: new Float32Array([245, 245, 200, 1]),
+        amountColor: "black",
         state: SOLID,
         flammability: 0,
         blastResistance: 20,
@@ -5008,18 +5077,8 @@ let pixelData = {
         flammability: 0,
         blastResistance: 20,
         update: function(x, y) {
-            let exploding = false;
-            forTouching(x, y, (x1, y1) => {
-                let index1 = (x1 + y1 * gridWidth) * gridStride;
-                if (grid[index1 + ID] != AIR && grid[index1 + ID] != NUKE) {
-                    exploding = true;
-                }
-            });
             if (isTouching(x, y, [GUNPOWDER, ACTIVATED_GUNPOWDER, C4, ACTIVATED_C4])) {
                 explode(x, y, 3 * 3, 3 * 8, 800);
-            }
-            else {
-                addUpdatedChunk(x, y);
             }
         },
     },
@@ -5249,7 +5308,7 @@ let pixelData = {
         },
     },
     activated_nuke: {
-        name: "Nuke",
+        name: "Nuke (Activated)",
         description: "Unrealistically flows and may or may not be wet",
         group: "Destruction",
         subgroup: "Nuke",
@@ -5536,35 +5595,6 @@ let pixelData = {
         blastResistance: 0,
         rotatable: true,
         rotations: ["mirror_1", "mirror_2"],
-    },
-    goal: {
-        name: "Goal",
-        description: "Unrealistically flows and may or may not be wet",
-        group: "General",
-        subgroup: "Goal",
-        color: new Float32Array([255, 255, 0, 1]),
-        state: SOLID,
-        flammability: 0,
-        blastResistance: 0,
-        update: function(x, y) {
-            addDrawingChunk(x, y);
-            addUpdatedChunk(x, y);
-        },
-        draw: function(ctx, cameraScale, x, y) {
-            let size = (Math.sin(performance.now() / 1000 * Math.PI / 2) + 1) / 4 * cameraScale;
-            ctx.fillStyle = "rgba(255, 180, 0, 0.2)";
-            ctx.fillRect(x * cameraScale - size, y * cameraScale - size, cameraScale + size * 2, cameraScale + size * 2);
-        },
-    },
-    target: {
-        name: "Target",
-        description: "Unrealistically flows and may or may not be wet",
-        group: "General",
-        subgroup: "Target",
-        color: new Float32Array([255, 255, 0, 1]),
-        state: SOLID,
-        flammability: 0,
-        blastResistance: 0,
     },
     lag_spike_generator: {
         name: "lag_spike_generator",
@@ -6204,6 +6234,70 @@ let pixelData = {
             });
         },
     },
+    monster: {
+        name: "Monster",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Puzzles",
+        subgroup: "Monster",
+        texture: new Float32Array([240, 80, 60, 60]),
+        state: GAS,
+        flammability: 20,
+        blastResistance: 20,
+        cloneable: false,
+        update: function(x, y) {
+            function isMoveable(x, y) {
+                return isOnGrid(x, y) && grid[(x + y * gridWidth) * gridStride + UPDATED] != tick && pixels[grid[(x + y * gridWidth) * gridStride + ID]].state != SOLID && grid[(x + y * gridWidth) * gridStride + ID] != MONSTER;
+            };
+            fall(x, y, isMoveable);
+            addUpdatedChunk(x, y);
+        },
+    },
+    placement_restriction: {
+        name: "Placement Restriction",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Puzzles",
+        subgroup: "Placement Restriction",
+        texture: new Float32Array([240, 140, 50, 50]),
+        amountColor: "black",
+        state: GAS,
+        flammability: 0,
+        blastResistance: 0,
+    },
+    goal: {
+        name: "Goal",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Puzzles",
+        subgroup: "Goal",
+        texture: new Float32Array([10, 9, 5, 5]),
+        state: SOLID,
+        flammability: 0,
+        blastResistance: 0,
+        update: function(x, y) {
+            addDrawingChunk(x, y);
+            addUpdatedChunk(x, y);
+        },
+        draw: function(ctx, cameraScale, x, y) {
+            let size = (Math.sin(performance.now() / 1000 * Math.PI / 2) + 1) / 4 * cameraScale;
+            ctx.fillStyle = "rgba(255, 180, 0, 0.2)";
+            ctx.fillRect(x * cameraScale - size, y * cameraScale - size, cameraScale + size * 2, cameraScale + size * 2);
+        },
+    },
+    target: {
+        name: "Target",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Puzzles",
+        subgroup: "Goal",
+        texture: new Float32Array([15, 9, 5, 5]),
+        state: GAS,
+        flammability: 0,
+        blastResistance: 0,
+        // oopsies draw is hardcoded
+        // draw: function(ctx, cameraScale, x, y) {
+        //     let size = (Math.sin(performance.now() / 1000 * Math.PI / 2) + 1) / 4 * cameraScale;
+        //     ctx.fillStyle = "rgba(0, 255, 255, 0.2)";
+        //     ctx.fillRect(x * cameraScale - size, y * cameraScale - size, cameraScale + size * 2, cameraScale + size * 2);
+        // },
+    },
 };
 
 for (let i in pixelData) {
@@ -6260,6 +6354,13 @@ for (let i = 0; i < pixels.length; i++) {
 let pixelPicker = document.getElementById("pixelPicker");
 let pixelGroups = [];
 let pixelSubgroups = [];
+let pixelImageData = [];
+let pixelDivs = [];
+let pixelImages = [];
+let pixelAmounts = [];
+let pixelSubgroupToId = [];
+let pixelDivToId = [];
+let pixelIdToDiv = [];
 let canvas = document.createElement("canvas");
 let ctx = canvas.getContext("2d");
 canvas.width = 48;
@@ -6283,9 +6384,10 @@ for (let i = 0; i < pixels.length; i++) {
         ctx.fillRect(0, 0, 48, 48);
     }
     else {
-        ctx.drawImage(pixelImages, pixels[i].texture[0], pixels[i].texture[1], pixels[i].texture[2], pixels[i].texture[3], 0, 0, 48, 48);
+        ctx.drawImage(pixelTexture, pixels[i].texture[0], pixels[i].texture[1], pixels[i].texture[2], pixels[i].texture[3], 0, 0, 48, 48);
     }
     let data = canvas.toDataURL("image/png");
+    pixelImageData.push(data);
     if (pixelGroups[pixels[i].group] == null) {
         let group = document.createElement("div");
         group.classList.add("pixelGroup");
@@ -6298,9 +6400,6 @@ for (let i = 0; i < pixels.length; i++) {
         groupImg.onclick = function() {
             if (group.classList.contains("pixelGroupSelected")) {
                 group.classList.remove("pixelGroupSelected");
-                for (let j in pixelSubgroups[pixels[i].group]) {
-                    pixelSubgroups[pixels[i].group][j].classList.remove("pixelSubgroupSelected");
-                }
             }
             else {
                 for (let j in pixelGroups) {
@@ -6329,26 +6428,21 @@ for (let i = 0; i < pixels.length; i++) {
         subgroup.classList.add("pixelSubgroup");
         pixelGroups[pixels[i].group].children[1].appendChild(subgroup);
         pixelSubgroups[pixels[i].group][pixels[i].subgroup] = subgroup;
+        pixelSubgroupToId[pixels[i].subgroup] = i;
+        pixelDivs.push(subgroup);
         let subgroupImg = document.createElement("div");
         subgroupImg.classList.add("pixelSubgroupImg");
         subgroupImg.style.backgroundImage = "url(" + data + ")";
         subgroupImg.onclick = function() {
-            if (subgroup.classList.contains("pixelSubgroupSelected")) {
-                subgroup.classList.remove("pixelSubgroupSelected");
-            }
-            else {
-                for (let j in pixelSubgroups[pixels[i].group]) {
-                    pixelSubgroups[pixels[i].group][j].classList.remove("pixelSubgroupSelected");
-                }
-                subgroup.classList.add("pixelSubgroupSelected");
-            }
+            let id = pixelDivToId[i];
             selectedDiv.classList.remove("pixelSelected");
             selectedDiv = subgroupImg;
             selectedDiv.classList.add("pixelSelected");
-            setBrushPixel(i);
+            setBrushPixel(id);
         };
         subgroupImg.onmouseover = function() {
-            showTooltip(pixels[i].name, pixels[i].description);
+            let id = pixelDivToId[i];
+            showTooltip(pixels[id].name, pixels[id].description);
             moveTooltip();
         };
         subgroupImg.onmouseout = function() {
@@ -6358,6 +6452,12 @@ for (let i = 0; i < pixels.length; i++) {
             moveTooltip();
         };
         subgroup.appendChild(subgroupImg);
+        pixelImages.push(subgroupImg);
+        let pixelAmount = document.createElement("div");
+        pixelAmount.classList.add("pixelAmount");
+        pixelAmount.style.color = pixels[i].amountColor ?? "white";
+        pixelAmounts.push(pixelAmount);
+        subgroupImg.appendChild(pixelAmount);
 
         if (selectedDiv == null) {
             selectedDiv = subgroupImg;
@@ -6367,17 +6467,20 @@ for (let i = 0; i < pixels.length; i++) {
         let pixel = document.createElement("div");
         pixel.classList.add("pixel");
         pixelSubgroups[pixels[i].group][pixels[i].subgroup].appendChild(pixel);
+        pixelDivs.push(pixel);
         let pixelImg = document.createElement("div");
         pixelImg.classList.add("pixelImg");
         pixelImg.style.backgroundImage = "url(" + data + ")";
         pixelImg.onclick = function() {
+            let id = pixelDivToId[i];
             selectedDiv.classList.remove("pixelSelected");
             selectedDiv = pixelImg;
             selectedDiv.classList.add("pixelSelected");
-            setBrushPixel(i);
+            setBrushPixel(id);
         };
         pixelImg.onmouseover = function() {
-            showTooltip(pixels[i].name, pixels[i].description);
+            let id = pixelDivToId[i];
+            showTooltip(pixels[id].name, pixels[id].description);
             moveTooltip();
         };
         pixelImg.onmouseout = function() {
@@ -6387,7 +6490,81 @@ for (let i = 0; i < pixels.length; i++) {
             moveTooltip();
         };
         pixel.appendChild(pixelImg);
+        pixelImages.push(pixelImg);
+        let pixelAmount = document.createElement("div");
+        pixelAmount.classList.add("pixelAmount");
+        pixelAmount.style.color = pixels[i].amountColor ?? "white";
+        pixelAmounts.push(pixelAmount);
+        pixelImg.appendChild(pixelAmount);
     }
 }
 
-export { pixels, addPixel, addFire, addUpdatedChunk, addUpdatedChunk2, resetPushPixels, pixelImages };
+let pixelInventory = [];
+let pixelInventoryUpdates = [];
+function resetPixelInventory() {
+    if (currentPuzzle == null) {
+        for (let i in pixelGroups) {
+            pixelGroups[i].style.display = "";
+            for (let j in pixelSubgroups[i]) {
+                pixelSubgroups[i][j].style.display = "";
+            }
+        }
+        for (let i in pixels) {
+            pixelDivToId[i] = i;
+            pixelIdToDiv[i] = i;
+            pixelDivs[i].classList.add("shown");
+            pixelAmounts[i].style.display = "none";
+            pixelImages[i].classList.remove("disabled");
+            pixelImages[i].style.backgroundImage = "url(" + pixelImageData[i] + ")";
+        }
+    }
+    else {
+        for (let i in pixelGroups) {
+            pixelGroups[i].style.display = "none";
+            for (let j in pixelSubgroups[i]) {
+                pixelSubgroups[i][j].style.display = "none";
+            }
+        }
+        let pixelSubgroupIds = [];
+        for (let i in pixels) {
+            pixelDivToId[i] = i;
+            pixelIdToDiv[i] = i;
+            pixelDivs[i].classList.remove("shown");
+            if (pixelSubgroupIds[pixels[i].subgroup] == null) {
+                pixelSubgroupIds[pixels[i].subgroup] = [i];
+            }
+            else {
+                pixelSubgroupIds[pixels[i].subgroup].push(i);
+            }
+        }
+        for (let i in pixels) {
+            if (pixelInventory[i] == 0) {
+                continue;
+            }
+            let div = pixelSubgroupIds[pixels[i].subgroup].shift();
+            pixelDivToId[div] = i;
+            pixelIdToDiv[i] = div;
+            pixelDivs[div].classList.add("shown");
+            pixelAmounts[div].style.display = "";
+            pixelAmounts[div].innerText = pixelInventory[i] == Infinity ? "∞" : pixelInventory[i];
+            pixelImages[div].style.backgroundImage = "url(" + pixelImageData[i] + ")";
+            if (pixelImages[div].classList.contains("disabled")) {
+                pixelImages[div].classList.remove("disabled");
+            }
+            pixelGroups[pixels[i].group].style.display = "";
+            pixelSubgroups[pixels[i].group][pixels[i].subgroup].style.display = "";
+        }
+    }
+};
+function updatePixelInventory() {
+    for (let i in pixelInventoryUpdates) {
+        let div = pixelIdToDiv[i];
+        pixelAmounts[div].innerText = pixelInventory[i] == Infinity ? "∞" : pixelInventory[i];
+        if ((pixelInventory[i] == 0) != pixelImages[div].classList.contains("disabled")) {
+            pixelImages[div].classList.toggle("disabled");
+        }
+    }
+    pixelInventoryUpdates = [];
+};
+
+export { pixels, addPixel, addFire, addUpdatedChunk, addUpdatedChunk2, resetPushPixels, pixelTexture, pixelInventory, pixelInventoryUpdates, resetPixelInventory, updatePixelInventory };

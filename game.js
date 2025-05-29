@@ -1,6 +1,7 @@
-import { pixels, addPixel, addFire, addUpdatedChunk, addUpdatedChunk2, resetPushPixels, pixelImages } from "./pixels.js";
+import { pixels, addPixel, addFire, addUpdatedChunk, addUpdatedChunk2, resetPushPixels, pixelTexture, pixelInventory, pixelInventoryUpdates, resetPixelInventory, updatePixelInventory } from "./pixels.js";
 import { resizeCanvas, resizeGrid, render } from "./renderer.js";
-import { resizeMenuCanvases, transitionIn, transitionOut, slideInMenu, updateMenu } from "./menu.js";
+import { resizeMenuCanvases, transitionIn, transitionOut, slideInTitle, updateMenu } from "./menu.js";
+import { puzzles, puzzleProgress, currentPuzzle, targets, resetTargets, updateObjectives } from "./puzzles.js";
 
 /*
 
@@ -12,7 +13,7 @@ none! yay
 features:
 history of savecodes/grid???
 undo
-blueprints
+blueprints - DONE
 port to rust for webassembly
 
 pixels:
@@ -38,7 +39,7 @@ deterministic random
 lava cooling? and lava heater heating stone
 lava heater raycasts for some reason
 
-shader hardcoding pixel ids
+shader hardcoding pixel ids - DONE
 
 transparency rendering - DONE
 
@@ -49,9 +50,29 @@ why are observers deactivatable that is dumb - DONE
 water/flow code is kind of bad
 water needs to check for acid in ispassible
 
-button textures for 2x1 button clicked
+button textures for 2x1 button clicked - DONE
+
+why is on_fire sometimes true/false and sometimes 0/1
 
 check "for i in" stuff
+
+for transitions use css classes instead of editing css
+
+display block/revert layer
+
+menu transitions are dumb, do they just reset what changed or set everything?
+
+wgsl can definitely be optimized:
+- if statements
+- drawplacementrestriction buffer
+
+// todo: minimize mode for savecodes
+// if (currentPuzzle != null) {
+//     if ((generatingGrid[i + PUZZLE_DATA] & 1) == 1) {
+//         continue;
+//     }
+// }
+
 
 polishing:
 
@@ -69,7 +90,8 @@ ghost stuff where the fade texture off the grid is not cleared
 //     alert(a + " " + b + " " + c + " " + d + " " + e)
 // }
 window.onerror = function(message, source, lineno, colno, error) {
-    modal("ERROR BUG BUG BUG!!!", source + "<br>" + message + " " + source + " " + lineno + " " + colno, "error");
+    // modal("ERROR BUG BUG BUG!!!", source + "<br>" + message + " " + source + " " + lineno + " " + colno, "error");
+    modal("ERROR BUG BUG BUG!!!", source + "<br><br>" + error.stack, "error");
 };
 const overlayCanvas = document.getElementById("overlayCanvas");
 const overlayCtx = overlayCanvas.getContext("2d");
@@ -79,19 +101,22 @@ let HEIGHT = window.innerHeight * devicePixelRatio;
 
 const pixelPicker = document.getElementById("pixelPicker"); // spaghetti buh
 window.onresize = () => {
+    cameraX += WIDTH / 2 / cameraScale;
+    cameraY += HEIGHT / 2 / cameraScale;
     WIDTH = window.innerWidth * devicePixelRatio;
     HEIGHT = window.innerHeight * devicePixelRatio;
+    cameraX -= WIDTH / 2 / cameraScale;
+    cameraY -= HEIGHT / 2 / cameraScale;
     overlayCanvas.width = WIDTH;
     overlayCanvas.height = HEIGHT;
     resizeMenuCanvases(WIDTH, HEIGHT);
     resizeCanvas(WIDTH, HEIGHT);
     document.body.style.setProperty("--border-size", Number(getComputedStyle(pixelPicker).getPropertyValue("border-left-width").replaceAll("px", "")) / 2 + "px");
 };
-window.onresize();
 
 const ID = 0;
 const ON_FIRE = 1;
-const HAS_TARGET = 2;
+const PUZZLE_DATA = 2;
 const UPDATED = 3;
 const COLOR_R = 4;
 const COLOR_G = 5;
@@ -134,6 +159,9 @@ const modalNo = document.getElementById("modalNo");
 const modalOk = document.getElementById("modalOk");
 
 function modal(title, content, type) {
+    if (type == "error" && title == "Push error") {
+        return;
+    }
     modalContainer.showModal();
     modalTitle.innerHTML = title;
     modalContent.innerHTML = content;
@@ -152,10 +180,7 @@ function modal(title, content, type) {
         modalTitle.innerHTML = "An error has occured";
         modalContent.innerHTML = title + "<br><br>" + content + "<br><br>Please report this to the developers";
     }
-    runState = PAUSED;
-    playButton.classList.remove("pauseButton");
-    simulateButton.classList.remove("pauseButton");
-    slowmodeButton.classList.remove("pauseButton");
+    setRunState("paused");
     return new Promise((resolve, reject) => {
         modalContainer.onclose = () => {
             console.log(modalContainer.returnValue)
@@ -181,11 +206,7 @@ modalOk.onclick = () => {
     modalContainer.close("true");
 };
 
-const PAUSED = 0;
-const PLAYING = 1;
-const SIMULATING = 2;
-const SLOWMODE = 3;
-let runState = PAUSED;
+let runState = "paused";
 let simulateSpeed = 10;
 
 const playButton = document.getElementById("playButton");
@@ -193,73 +214,102 @@ const stepButton = document.getElementById("stepButton");
 const simulateButton = document.getElementById("simulateButton");
 const slowmodeButton = document.getElementById("slowmodeButton");
 
-playButton.onclick = () => {
-    if (runState != PLAYING) {
-        runState = PLAYING;
+function setRunState(state) {
+    runState = state;
+    if (runState == "paused") {
+        playButton.classList.remove("pauseButton");
+        simulateButton.classList.remove("pauseButton");
+        slowmodeButton.classList.remove("pauseButton");
+    }
+    else if (runState == "playing") {
         playButton.classList.add("pauseButton");
         simulateButton.classList.remove("pauseButton");
         slowmodeButton.classList.remove("pauseButton");
     }
-    else {
-        runState = PAUSED;
-        playButton.classList.remove("pauseButton");
-    }
-};
-stepButton.onclick = () => {
-    if (runState == PAUSED) {
-        updateGrid();
-    }
-};
-simulateButton.onclick = () => {
-    if (runState != SIMULATING) {
-        runState = SIMULATING;
+    else if (runState == "simulating") {
         playButton.classList.remove("pauseButton");
         simulateButton.classList.add("pauseButton");
         slowmodeButton.classList.remove("pauseButton");
     }
-    else {
-        runState = PAUSED;
-        simulateButton.classList.remove("pauseButton");
-    }
-};
-slowmodeButton.onclick = () => {
-    if (runState != SLOWMODE) {
-        runState = SLOWMODE;
+    else if (runState == "slowmode") {
         playButton.classList.remove("pauseButton");
         simulateButton.classList.remove("pauseButton");
         slowmodeButton.classList.add("pauseButton");
     }
-    else {
-        runState = PAUSED;
-        slowmodeButton.classList.remove("pauseButton");
+};
+
+playButton.onclick = () => {
+    setRunState(runState == "playing" ? "paused" : "playing");
+};
+stepButton.onclick = () => {
+    if (runState == "paused") {
+        updateGrid();
     }
+};
+simulateButton.onclick = () => {
+    setRunState(runState == "simulating" ? "paused" : "simulating");
+};
+slowmodeButton.onclick = () => {
+    setRunState(runState == "slowmode" ? "paused" : "slowmode");
 };
 
 const resetButton = document.getElementById("resetButton");
 resetButton.onclick = async () => {
     if (await modal("Reset?", "Your current simulation will be deleted!", "confirm")) {
-        loadSaveCode(saveCode.value);
+        if (currentPuzzle == null) {
+            loadSaveCode(saveCode.value);
+        }
+        else {
+            loadSaveCode(puzzles[currentPuzzle].saveCode);
+            for (let i in pixels) {
+                pixelInventory[i] = puzzles[currentPuzzle].inventory[pixels[i].id] ?? 0;
+            }
+            resetPixelInventory();
+            loadSaveCode(saveCode.value, false, true);
+        }
     }
 };
 
 const transitionContainer = document.getElementById("transitionContainer");
 const transitionTop = document.getElementById("transitionTop");
 const transitionBottom = document.getElementById("transitionBottom");
+const gameContainer = document.getElementById("gameContainer");
 const menuContainer = document.getElementById("menuContainer");
 
 const menuButton = document.getElementById("menuButton");
 menuButton.onclick = async () => {
-    runState = PAUSED;
-    playButton.classList.remove("pauseButton");
-    simulateButton.classList.remove("pauseButton");
-    slowmodeButton.classList.remove("pauseButton");
+    if (currentPuzzle == null) {
+        sandboxGrid = generateSaveCode();
+        sandboxSaveCode = saveCode.value;
+    }
+    else {
+        if (puzzleProgress[currentPuzzle] == null) {
+            puzzleProgress[currentPuzzle] = {
+                saveCode: saveCode.value,
+                completed: false,
+                ticks: -1,
+                pixels: -1,
+            };
+        }
+        else {
+            puzzleProgress[currentPuzzle].saveCode = saveCode.value;
+        }
+    }
+    setRunState("paused");
     await transitionIn();
-    transitionContainer.style.display = "none";
-    transitionTop.style.transform = "";
-    transitionBottom.style.transform = "";
+    gameContainer.style.display = "none";
     menuContainer.style.opacity = 1;
+    menuContainer.style.pointerEvents = "auto";
     menuContainer.style.display = "block";
-    slideInMenu();
+    if (currentPuzzle == null) {
+        transitionContainer.style.display = "none";
+        transitionTop.style.transform = "";
+        transitionBottom.style.transform = "";
+        slideInTitle();
+    }
+    else {
+        transitionOut();
+    }
 };
 
 const supportsFileSystemAccess = "showOpenFilePicker" in window &&
@@ -317,6 +367,9 @@ async function uploadFile(acceptedFiles) {
     });
 };
 
+let sandboxGrid = "";
+let sandboxSaveCode = "";
+
 const saveCodeSettings = document.getElementById("saveCodeSettings");
 const saveCodeSettingsToggle = document.getElementById("saveCodeSettingsToggle");
 const saveCode = document.getElementById("saveCode");
@@ -347,10 +400,7 @@ uploadSaveCodeButton.onclick = async () => {
                 saveCode.value = e.target.result;
             }
             loadSaveCode(saveCode.value);
-            runState = PAUSED;
-            playButton.classList.remove("pauseButton");
-            simulateButton.classList.remove("pauseButton");
-            slowmodeButton.classList.remove("pauseButton");
+            setRunState("paused");
         }
     };
     reader.readAsText(file);
@@ -359,12 +409,12 @@ generateSaveCodeButton.onclick = () => {
     saveCode.value = generateSaveCode();
 };
 
-if (localStorage.getItem("saveCode") != null) {
+if (localStorage.getItem("sandboxSaveCode") != null) {
     try {
-        saveCode.value = localStorage.getItem("saveCode");
+        sandboxSaveCode = localStorage.getItem("sandboxSaveCode");
     }
     catch (err) {
-        modal("Save Code Error", "The stored save code was unable to be loaded.", "error");
+        modal("Save Code Error", "The stored sandbox save code was unable to be loaded.<br><br>" + err.stack, "error");
     }
 }
 
@@ -435,7 +485,7 @@ if (localStorage.getItem("blueprints") != null) {
         }
     }
     catch (err) {
-        modal("Blueprint Error", "The stored blueprints were unable to be loaded.", "error");
+        modal("Blueprint Error", "The stored blueprints were unable to be loaded.<br><br>" + err.stack, "error");
     }
 }
 
@@ -450,14 +500,13 @@ function generateSaveCode(selection = false) {
     }
 
     let string = "";
-    string += "V1;";
+    string += "V2;";
+    string += tick + ";";
     string += generatingGridWidth + "-" + generatingGridHeight + ";";
 
     let id = generatingGrid[ID];
-    let amount = -1;
-
+    let amount = 0;
     for (let i = 0; i < generatingGridWidth * generatingGridHeight * gridStride; i += gridStride) {
-        amount += 1;
         if (generatingGrid[i + ID] != id) {
             string += pixels[id].id;
             if (amount > 1) {
@@ -468,6 +517,7 @@ function generateSaveCode(selection = false) {
             id = generatingGrid[i + ID];
             amount = 0;
         }
+        amount += 1;
     }
     string += pixels[id].id;
     if (amount > 1) {
@@ -481,23 +531,49 @@ function generateSaveCode(selection = false) {
     string += id + ":";
 
     for (let i = 0; i < generatingGridWidth * generatingGridHeight * gridStride; i += gridStride) {
-        amount += 1;
         if (generatingGrid[i + ON_FIRE] != id) {
             string += amount + ":";
 
             id = generatingGrid[i + ON_FIRE];
             amount = 0;
         }
+        amount += 1;
     }
     string += amount + ";";
+
+    id = generatingGrid[PUZZLE_DATA];
+    amount = 0;
+    for (let i = 0; i < generatingGridWidth * generatingGridHeight * gridStride; i += gridStride) {
+        if (generatingGrid[i + PUZZLE_DATA] != id) {
+            string += id;
+            if (amount > 1) {
+                string += "-" + amount;
+            }
+            string += ":";
+
+            id = generatingGrid[i + PUZZLE_DATA];
+            amount = 0;
+        }
+        amount += 1;
+    }
+    string += id;
+    if (amount > 1) {
+        string += "-" + amount;
+    }
+    string += ";";
 
     return string;
 };
 function parseSaveCode(string) {
     let sections = string.split(";");
-    let version = sections[0];
-    if (version == "V1") {
-        let array = sections[1].split("-");
+    let version = sections.shift();
+    if (version == "V1" || version == "V2") {
+        let tick = 1;
+        if (version == "V2") {
+            tick = Number(sections.shift());
+        }
+
+        let array = sections.shift().split("-");
         let gridWidth = Number(array[0]);
         let gridHeight = array.length > 1 ? Number(array[1]) : gridWidth;
         let gridArray = [];
@@ -508,8 +584,7 @@ function parseSaveCode(string) {
         }
         let grid = new Float32Array(gridArray);
 
-        array = sections[2].split(":");
-
+        array = sections.shift().split(":");
         let index = 0;
         for (let i in array) {
             let array2 = array[i].split("-");
@@ -531,12 +606,10 @@ function parseSaveCode(string) {
             }
         }
 
-        array = sections[3].split(":");
-
+        array = sections.shift().split(":");
         let fire = Number(array[0]);
-        index = 0;
-
         array.shift();
+        index = 0;
 
         for (let i in array) {
             let amount = Number(array[i]);
@@ -548,25 +621,111 @@ function parseSaveCode(string) {
 
             fire = (fire + 1) % 2;
         }
+
+        array = sections.shift().split(":");
+        index = 0;
+        for (let i in array) {
+            let array2 = array[i].split("-");
+            let id = Number(array2[0]);
+            let amount = 1;
+            if (array2.length > 1) {
+                amount = Number(array2[1]);
+            }
+
+            for (let j = 0; j < amount; j++) {
+                grid[index + PUZZLE_DATA] = id;
+                index += gridStride;
+            }
+        }
+
         return {
+            tick: tick,
             grid: grid,
             gridWidth: gridWidth,
             gridHeight: gridHeight,
         };
     }
 };
-function loadSaveCode(string, selection = false) {
+function loadSaveCode(string, selection = false, puzzle = false) {
     let parsed = parseSaveCode(string);
+    if (parsed == null) {
+        return;
+    }
     if (selection) {
         selectionGrid = parsed.grid;
         selectionGridWidth = parsed.gridWidth;
         selectionGridHeight = parsed.gridHeight;
     }
-    else {
+    else if (!puzzle) {
+        tick = parsed.tick;
         gridWidth = parsed.gridWidth;
         gridHeight = parsed.gridHeight;
         createGrid();
         grid = parsed.grid;
+        let sections = string.split(";");
+        let version = sections[0];
+        if (version == "V1" || version == "V2") {
+            let array = sections[version == "V2" ? 5 : 4].split(":");
+            let index = 0;
+            for (let i in array) {
+                let array2 = array[i].split("-");
+                let id = Number(array2[0]);
+                let amount = 1;
+                if (array2.length > 1) {
+                    amount = Number(array2[1]);
+                }
+
+                if ((id & 2) == 2) {
+                    for (let j = 0; j < amount; j++) {
+                        if (targets[Math.floor(index / gridWidth)] == null) {
+                            targets[Math.floor(index / gridWidth)] = [];
+                        }
+                        targets[Math.floor(index / gridWidth)][index % gridWidth] = 1;
+                        index++;
+                    }
+                }
+                else {
+                    index += amount;
+                }
+            }
+        }
+    }
+    else {
+        for (let y = 0; y < Math.min(gridHeight, parsed.gridHeight); y++) {
+            for (let x = 0; x < Math.min(gridWidth, parsed.gridWidth); x++) {
+                let index = (x + y * gridWidth) * gridStride;
+                let parsedIndex = (x + y * parsed.gridWidth) * gridStride;
+                if ((grid[index + PUZZLE_DATA] & 1) == 1) {
+                    continue;
+                }
+                let id = parsed.grid[parsedIndex + ID];
+                if (id == AIR || pixelInventory[id] != 0) {
+                    if (grid[index + ID] != 0) {
+                        pixelInventory[grid[index + ID]] += 1;
+                        pixelInventoryUpdates[grid[index + ID]] = true;
+                    }
+                    grid[index + ID] = id;
+                    if (id != AIR) {
+                        pixelInventory[id] -= 1;
+                        pixelInventoryUpdates[id] = true;
+                    }
+                }
+                let fire = parsed.grid[parsedIndex + ON_FIRE];
+                if (grid[index + ON_FIRE] != fire) {
+                    if (fire == 0) {
+                        pixelInventory[FIRE] += 1;
+                        pixelInventoryUpdates[FIRE] = true;
+                        grid[index + ON_FIRE] = fire;
+                    }
+                    else if (pixelInventory[FIRE] != 0) {
+                        pixelInventory[FIRE] -= 1;
+                        pixelInventoryUpdates[FIRE] = true;
+                        grid[index + ON_FIRE] = fire;
+                    }
+                }
+            }
+        }
+        updatePixelInventory();
     }
 };
 
@@ -637,7 +796,7 @@ function drawBlueprintImg(grid, gridWidth, gridHeight) {
             ctx.fillRect(x, y, 1, 1);
         }
         else {
-            ctx.drawImage(pixelImages, pixel.texture[0], pixel.texture[1], pixel.texture[2], pixel.texture[3], x, y, 1, 1);
+            ctx.drawImage(pixelTexture, pixel.texture[0], pixel.texture[1], pixel.texture[2], pixel.texture[3], x, y, 1, 1);
         }
         if (grid[i + ON_FIRE]) {
             ctx.fillStyle = "rgba(255, 153, 0, 0.585)";
@@ -732,6 +891,8 @@ let mouseRawY = 0;
 
 let brushSize = 1 + 4;
 let brushPixel = 1;
+let lastBrushX = 0;
+let lastBrushY = 0;
 
 function setBrushPixel(pixel) {
     brushPixel = pixel;
@@ -839,42 +1000,325 @@ function updateMouse() {
             selectionHeight = maxY - minY + 1;
         }
     }
+    let changed = false;
     if (selectionState == BRUSH) {
-        if (isKeybindPressed("Secondary Action")) {
-            if (pixels[brushPixel].id == "fire") {
-                for (let y = Math.max(brushY - (brushSize - 1), 0); y < Math.min(brushY + brushSize, gridHeight); y++) {
-                    for (let x = Math.max(brushX - (brushSize - 1), 0); x < Math.min(brushX + brushSize, gridWidth); x++) {
-                        addFire(x, y, 0);
-                        // addUpdatedChunk2(x, y);
+        function raytrace(x1, y1, x2, y2, size, action) {
+            let slope = (y2 - y1) / (x2 - x1);
+            if (slope == 0) {
+                if (y1 <= -size || y1 >= gridHeight + size) {
+                    return;
+                }
+                let minX = Math.min(x1, x2);
+                let maxX = Math.max(x1, x2);
+                let start = Math.max(1 - size, minX);
+                let end = Math.min(gridWidth - 2 + size, maxX);
+                for (let x = start; x <= end; x++) {
+                    if (!action(Math.max(x - size + 1, 0), Math.max(y1 - size + 1, 0), Math.min(x + size - 1, gridWidth - 1), Math.min(y1 + size - 1, gridHeight - 1))) {
+                        return;
                     }
                 }
             }
-            else {
-                for (let y = Math.max(brushY - (brushSize - 1), 0); y < Math.min(brushY + brushSize, gridHeight); y++) {
-                    for (let x = Math.max(brushX - (brushSize - 1), 0); x < Math.min(brushX + brushSize, gridWidth); x++) {
-                        addPixel(x, y, 0);
-                        // addUpdatedChunk2(x, y);
-                        grid[(x + y * gridWidth) * gridStride + UPDATED] = 0;
+            else if (!isFinite(slope)) {
+                if (x1 <= -size || x1 >= gridWidth + size) {
+                    return;
+                }
+                let minY = Math.min(y1, y2);
+                let maxY = Math.max(y1, y2);
+                let start = Math.max(1 - size, minY);
+                let end = Math.min(gridHeight - 2 + size, maxY);
+                for (let y = start; y <= end; y++) {
+                    if (!action(Math.max(x1 - size + 1, 0), Math.max(y - size + 1, 0), Math.min(x1 + size - 1, gridWidth - 1), Math.min(y + size - 1, gridHeight - 1))) {
+                        return;
                     }
+                }
+            }
+            else if (Math.abs(slope) < 1) {
+                let startY = x2 < x1 ? y2 : y1;
+                let endY = x2 < x1 ? y1 : y2;
+                let minX = Math.min(x1, x2);
+                let maxX = Math.max(x1, x2);
+                let start = Math.max(1 - size, minX);
+                if (slope < 0) {
+                    start = Math.max(start, Math.ceil((gridWidth - 2 + size + 0.5 - startY) / slope) + minX);
+                }
+                else {
+                    start = Math.max(start, Math.ceil((1 - size - 0.5 - startY) / slope) + minX);
+                }
+                let end = Math.min(gridWidth - 2 + size, maxX);
+                if (slope < 0) {
+                    end = Math.min(end, maxX - Math.ceil((endY - (1 - size - 0.5)) / slope));
+                }
+                else {
+                    end = Math.min(end, maxX - Math.ceil((endY - (gridWidth - 2 + size) - 0.5) / slope));
+                }
+                let lastY = 0;
+                for (let x = start; x <= end; x++) {
+                    let y = Math.round(slope * (x - minX)) + startY;
+                    if (x == start) {
+                        if (!action(Math.max(x - size + 1, 0), Math.max(y - size + 1, 0), Math.min(x + size - 1, gridWidth - 1), Math.min(y + size - 1, gridHeight - 1))) {
+                            return;
+                        }
+                    }
+                    else {
+                        if (!action(Math.max(x + size - 1, 0), Math.max(y - size + 1, 0), Math.min(x + size - 1, gridWidth - 1), Math.min(y + size - 1, gridHeight - 1))) {
+                            return;
+                        }
+                        if (y != lastY) {
+                            if (!action(Math.max(x - size + 1, 0), Math.min(Math.max(y + (size - 1) * (y - lastY), 0), gridHeight - 1), Math.min(x + size - 1, gridWidth - 1), Math.min(Math.max(y + (size - 1) * (y - lastY), 0), gridHeight - 1))) {
+                                return;
+                            }
+                        }
+                    }
+                    lastY = y;
+                }
+            }
+            else {
+                slope = (x2 - x1) / (y2 - y1);
+                let startX = y2 < y1 ? x2 : x1;
+                let endX = y2 < y1 ? x1 : x2;
+                let minY = Math.min(y1, y2);
+                let maxY = Math.max(y1, y2);
+                let start = Math.max(1 - size, minY);
+                if (slope < 0) {
+                    start = Math.max(start, Math.ceil((gridHeight - 2 + size + 0.5 - startX) / slope) + minY);
+                }
+                else {
+                    start = Math.max(start, Math.ceil((1 - size - 0.5 - startX) / slope) + minY);
+                }
+                let end = Math.min(gridHeight - 2 + size, maxY);
+                if (slope < 0) {
+                    end = Math.min(end, maxY - Math.ceil((endX - (1 - size - 0.5)) / slope));
+                }
+                else {
+                    end = Math.min(end, maxY - Math.ceil((endX - (gridHeight - 2 + size) - 0.5) / slope));
+                }
+                let lastX = 0;
+                for (let y = start; y <= end; y++) {
+                    let x = Math.round(slope * (y - minY)) + startX;
+                    if (y == start) {
+                        if (!action(Math.max(x - size + 1, 0), Math.max(y - size + 1, 0), Math.min(x + size - 1, gridWidth - 1), Math.min(y + size - 1, gridHeight - 1))) {
+                            return;
+                        }
+                    }
+                    else {
+                        if (!action(Math.max(x - size + 1, 0), Math.max(y + size - 1, 0), Math.min(x + size - 1, gridWidth - 1), Math.min(y + size - 1, gridHeight - 1))) {
+                            return;
+                        }
+                        if (x != lastX) {
+                            if (!action(Math.min(Math.max(x + (size - 1) * (x - lastX), 0), gridWidth - 1), Math.max(y - size + 1, 0), Math.min(Math.max(x + (size - 1) * (x - lastX), 0), gridWidth - 1), Math.min(y + size - 1, gridHeight - 1))) {
+                                return;
+                            }
+                        }
+                    }
+                    lastX = x;
+                }
+            }
+        }
+        if (isKeybindPressed("Secondary Action")) {
+            if (pixels[brushPixel].id == "fire") {
+                if (currentPuzzle == null) {
+                    raytrace(lastBrushX, lastBrushY, brushX, brushY, brushSize, (x1, y1, x2, y2) => {
+                        for (let y = y1; y <= y2; y++) {
+                            for (let x = x1; x <= x2; x++) {
+                                addFire(x, y, 0);
+                                // addUpdatedChunk2(x, y);
+                                changed = true;
+                            }
+                        }
+                        return true;
+                    });
+                }
+                else if (tick == 1) {
+                    raytrace(lastBrushX, lastBrushY, brushX, brushY, brushSize, (x1, y1, x2, y2) => {
+                        for (let y = y1; y <= y2; y++) {
+                            for (let x = x1; x <= x2; x++) {
+                                if ((grid[(x + y * gridWidth) * gridStride + PUZZLE_DATA] & 1) == 1) {
+                                    continue;
+                                }
+                                if (grid[(x + y * gridWidth) * gridStride + ON_FIRE] == 1) {
+                                    pixelInventory[brushPixel] += 1;
+                                }
+                                addFire(x, y, 0);
+                                // addUpdatedChunk2(x, y);
+                                changed = true;
+                            }
+                        }
+                        return true;
+                    });
+                    pixelInventoryUpdates[brushPixel] = true;
+                    updatePixelInventory();
+                }
+            }
+            else if (pixels[brushPixel].id == "placement_restriction") {
+                raytrace(lastBrushX, lastBrushY, brushX, brushY, brushSize, (x1, y1, x2, y2) => {
+                    for (let y = y1; y <= y2; y++) {
+                        for (let x = x1; x <= x2; x++) {
+                            grid[(x + y * gridWidth) * gridStride + PUZZLE_DATA] -= grid[(x + y * gridWidth) * gridStride + PUZZLE_DATA] & 1;
+                            changed = true;
+                        }
+                    }
+                    return true;
+                });
+            }
+            else if (pixels[brushPixel].id == "target") {
+                raytrace(lastBrushX, lastBrushY, brushX, brushY, brushSize, (x1, y1, x2, y2) => {
+                    for (let y = y1; y <= y2; y++) {
+                        if (targets[y] == null) {
+                            continue;
+                        }
+                        for (let x = x1; x <= x2; x++) {
+                            grid[(x + y * gridWidth) * gridStride + PUZZLE_DATA] -= grid[(x + y * gridWidth) * gridStride + PUZZLE_DATA] & 2;
+                            delete targets[y][x];
+                            changed = true;
+                        }
+                        if (targets[y].length == 0) {
+                            delete targets[y];
+                        }
+                    }
+                    return true;
+                });
+            }
+            else {
+                if (currentPuzzle == null) {
+                    raytrace(lastBrushX, lastBrushY, brushX, brushY, brushSize, (x1, y1, x2, y2) => {
+                        for (let y = y1; y <= y2; y++) {
+                            for (let x = x1; x <= x2; x++) {
+                                addPixel(x, y, 0);
+                                // addUpdatedChunk2(x, y);
+                                changed = true;
+                            }
+                        }
+                        return true;
+                    });
+                }
+                else if (tick == 1) {
+                    raytrace(lastBrushX, lastBrushY, brushX, brushY, brushSize, (x1, y1, x2, y2) => {
+                        for (let y = y1; y <= y2; y++) {
+                            for (let x = x1; x <= x2; x++) {
+                                if ((grid[(x + y * gridWidth) * gridStride + PUZZLE_DATA] & 1) == 1) {
+                                    continue;
+                                }
+                                let index = (x + y * gridWidth) * gridStride;
+                                if (grid[index + ID] != 0) {
+                                    pixelInventory[grid[index + ID]] += 1;
+                                    pixelInventoryUpdates[grid[index + ID]] = true;
+                                }
+                                addPixel(x, y, 0);
+                                // addUpdatedChunk2(x, y);
+                                grid[index + UPDATED] = 0;
+                                changed = true;
+                            }
+                        }
+                        return true;
+                    });
+                    updatePixelInventory();
                 }
             }
         }
         else if (isKeybindPressed("Main Action")) {
             if (pixels[brushPixel].id == "fire") {
-                for (let y = Math.max(brushY - (brushSize - 1), 0); y < Math.min(brushY + brushSize, gridHeight); y++) {
-                    for (let x = Math.max(brushX - (brushSize - 1), 0); x < Math.min(brushX + brushSize, gridWidth); x++) {
-                        addFire(x, y, 1);
-                        // addUpdatedChunk2(x, y);
-                    }
+                if (currentPuzzle == null) {
+                    raytrace(lastBrushX, lastBrushY, brushX, brushY, brushSize, (x1, y1, x2, y2) => {
+                        for (let y = y1; y <= y2; y++) {
+                            for (let x = x1; x <= x2; x++) {
+                                addFire(x, y, 1);
+                                // addUpdatedChunk2(x, y);
+                                changed = true;
+                            }
+                        }
+                        return true;
+                    });
+                }
+                else if (tick == 1) {
+                    raytrace(lastBrushX, lastBrushY, brushX, brushY, brushSize, (x1, y1, x2, y2) => {
+                        for (let y = y1; y <= y2; y++) {
+                            for (let x = x1; x <= x2; x++) {
+                                if (pixelInventory[brushPixel] == 0) {
+                                    return false;
+                                }
+                                if ((grid[(x + y * gridWidth) * gridStride + PUZZLE_DATA] & 1) == 1) {
+                                    continue;
+                                }
+                                if (grid[(x + y * gridWidth) * gridStride + ON_FIRE] == 0) {
+                                    pixelInventory[brushPixel] -= 1;
+                                }
+                                addFire(x, y, 1);
+                                // addUpdatedChunk2(x, y);
+                                changed = true;
+                            }
+                        }
+                        return true;
+                    });
+                    pixelInventoryUpdates[brushPixel] = true;
+                    updatePixelInventory();
                 }
             }
-            else {
-                for (let y = Math.max(brushY - (brushSize - 1), 0); y < Math.min(brushY + brushSize, gridHeight); y++) {
-                    for (let x = Math.max(brushX - (brushSize - 1), 0); x < Math.min(brushX + brushSize, gridWidth); x++) {
-                        addPixel(x, y, brushPixel);
-                        // addUpdatedChunk2(x, y);
-                        grid[(x + y * gridWidth) * gridStride + UPDATED] = 0;
+            else if (pixels[brushPixel].id == "placement_restriction") {
+                raytrace(lastBrushX, lastBrushY, brushX, brushY, brushSize, (x1, y1, x2, y2) => {
+                    for (let y = y1; y <= y2; y++) {
+                        for (let x = x1; x <= x2; x++) {
+                            grid[(x + y * gridWidth) * gridStride + PUZZLE_DATA] |= 1;
+                            changed = true;
+                        }
                     }
+                    return true;
+                });
+            }
+            else if (pixels[brushPixel].id == "target") {
+                raytrace(lastBrushX, lastBrushY, brushX, brushY, brushSize, (x1, y1, x2, y2) => {
+                    for (let y = y1; y <= y2; y++) {
+                        if (targets[y] == null) {
+                            targets[y] = [];
+                        }
+                        for (let x = x1; x <= x2; x++) {
+                            grid[(x + y * gridWidth) * gridStride + PUZZLE_DATA] |= 2;
+                            targets[y][x] = 1;
+                            changed = true;
+                        }
+                    }
+                    return true;
+                });
+            }
+            else {
+                if (currentPuzzle == null) {
+                    raytrace(lastBrushX, lastBrushY, brushX, brushY, brushSize, (x1, y1, x2, y2) => {
+                        for (let y = y1; y <= y2; y++) {
+                            for (let x = x1; x <= x2; x++) {
+                                addPixel(x, y, brushPixel);
+                                // addUpdatedChunk2(x, y);
+                                grid[(x + y * gridWidth) * gridStride + UPDATED] = 0;
+                                changed = true;
+                            }
+                        }
+                        return true;
+                    });
+                }
+                else if (tick == 1) {
+                    raytrace(lastBrushX, lastBrushY, brushX, brushY, brushSize, (x1, y1, x2, y2) => {
+                        for (let y = y1; y <= y2; y++) {
+                            for (let x = x1; x <= x2; x++) {
+                                if (pixelInventory[brushPixel] == 0) {
+                                    return false;
+                                }
+                                if ((grid[(x + y * gridWidth) * gridStride + PUZZLE_DATA] & 1) == 1) {
+                                    continue;
+                                }
+                                let index = (x + y * gridWidth) * gridStride;
+                                if (grid[index + ID] != 0) {
+                                    pixelInventory[grid[index + ID]] += 1;
+                                    pixelInventoryUpdates[grid[index + ID]] = true;
+                                }
+                                addPixel(x, y, brushPixel);
+                                // addUpdatedChunk2(x, y);
+                                grid[index + UPDATED] = 0;
+                                pixelInventory[brushPixel] -= 1;
+                                changed = true;
+                            }
+                        }
+                        return true;
+                    });
+                    pixelInventoryUpdates[brushPixel] = true;
+                    updatePixelInventory();
                 }
             }
         }
@@ -887,7 +1331,12 @@ function updateMouse() {
             for (let y = Math.max(selectionY, 0); y < Math.min(selectionY + selectionHeight, gridHeight); y++) {
                 for (let x = Math.max(selectionX, 0); x < Math.min(selectionX + selectionWidth, gridWidth); x++) {
                     for (let i = 0; i < gridStride; i++) {
-                        array.push(grid[(x + y * gridWidth) * gridStride + i]);
+                        if (i == PUZZLE_DATA) {
+                            array.push(0);
+                        }
+                        else {
+                            array.push(grid[(x + y * gridWidth) * gridStride + i]);
+                        }
                     }
                 }
             }
@@ -895,16 +1344,22 @@ function updateMouse() {
             selectionGridWidth = Math.min(selectionX + selectionWidth, gridWidth) - Math.max(selectionX, 0);
             selectionGridHeight = Math.min(selectionY + selectionHeight, gridHeight) - Math.max(selectionY, 0);
         }
-        else if (isKeybindJustPressed("Cut Selection")) {
+        else if (isKeybindJustPressed("Cut Selection") && (currentPuzzle == null || tick == 1)) {
             let array = [];
             for (let y = Math.max(selectionY, 0); y < Math.min(selectionY + selectionHeight, gridHeight); y++) {
                 for (let x = Math.max(selectionX, 0); x < Math.min(selectionX + selectionWidth, gridWidth); x++) {
                     for (let i = 0; i < gridStride; i++) {
-                        array.push(grid[(x + y * gridWidth) * gridStride + i]);
+                        if (i == PUZZLE_DATA) {
+                            array.push(0);
+                        }
+                        else {
+                            array.push(grid[(x + y * gridWidth) * gridStride + i]);
+                        }
                     }
                     addPixel(x, y, 0);
                     addFire(x, y, 0);
                     // addUpdatedChunk2(x, y);
+                    changed = true;
                 }
             }
             selectionGrid = new Float32Array(array);
@@ -921,14 +1376,58 @@ function updateMouse() {
         let startY = Math.floor(cameraY + mouseY / cameraScale - (selectionHeight - 1) / 2);
         if (isKeybindPressed("Main Action")) {
             // pasting settings
-            for (let y = Math.max(startY, 0); y < Math.min(startY + selectionHeight, gridHeight); y++) {
-                for (let x = Math.max(startX, 0); x < Math.min(startX + selectionWidth, gridWidth); x++) {
-                    for (let i = 0; i < gridStride; i++) {
-                        grid[(x + y * gridWidth) * gridStride + i] = selectionGrid[(x - startX + (y - startY) * selectionWidth) * gridStride + i];
+            if (currentPuzzle == null) {
+                for (let y = Math.max(startY, 0); y < Math.min(startY + selectionHeight, gridHeight); y++) {
+                    for (let x = Math.max(startX, 0); x < Math.min(startX + selectionWidth, gridWidth); x++) {
+                        for (let i = 0; i < gridStride; i++) {
+                            if (i != PUZZLE_DATA) {
+                                grid[(x + y * gridWidth) * gridStride + i] = selectionGrid[(x - startX + (y - startY) * selectionWidth) * gridStride + i];
+                            }
+                        }
+                        addUpdatedChunk(x, y);
+                        // addUpdatedChunk2(x, y);
+                        changed = true;
                     }
-                    addUpdatedChunk(x, y);
-                    // addUpdatedChunk2(x, y);
                 }
+            }
+            else if (tick == 1) {
+                for (let y = Math.max(startY, 0); y < Math.min(startY + selectionHeight, gridHeight); y++) {
+                    for (let x = Math.max(startX, 0); x < Math.min(startX + selectionWidth, gridWidth); x++) {
+                        let index = (x + y * gridWidth) * gridStride;
+                        if ((grid[index + PUZZLE_DATA] & 1) == 1) {
+                            continue;
+                        }
+                        let id = selectionGrid[(x - startX + (y - startY) * selectionWidth) * gridStride + ID];
+                        if (id == AIR || pixelInventory[id] != 0) {
+                            if (grid[index + ID] != 0) {
+                                pixelInventory[grid[index + ID]] += 1;
+                                pixelInventoryUpdates[grid[index + ID]] = true;
+                            }
+                            grid[index + ID] = id;
+                            if (id != AIR) {
+                                pixelInventory[id] -= 1;
+                                pixelInventoryUpdates[id] = true;
+                            }
+                        }
+                        let fire = selectionGrid[(x - startX + (y - startY) * selectionWidth) * gridStride + ON_FIRE];
+                        if (grid[index + ON_FIRE] != fire) {
+                            if (fire == 0) {
+                                pixelInventory[FIRE] += 1;
+                                pixelInventoryUpdates[FIRE] = true;
+                                grid[index + ON_FIRE] = fire;
+                            }
+                            else if (pixelInventory[FIRE] != 0) {
+                                pixelInventory[FIRE] -= 1;
+                                pixelInventoryUpdates[FIRE] = true;
+                                grid[index + ON_FIRE] = fire;
+                            }
+                        }
+                        addUpdatedChunk(x, y);
+                        // addUpdatedChunk2(x, y);
+                        changed = true;
+                    }
+                }
+                updatePixelInventory();
             }
         }
         if (isKeybindJustPressed("Rotate Selection")) {
@@ -1008,6 +1507,11 @@ function updateMouse() {
             selectionGrid = new Float32Array(array);
         }
     }
+    lastBrushX = brushX;
+    lastBrushY = brushY;
+    if (currentPuzzle != null && changed) {
+        saveCode.value = generateSaveCode();
+    }
 };
 
 let tooltip = document.getElementById("tooltip");
@@ -1055,7 +1559,6 @@ let cameraScaleY = 0;
 let cameraScale = 3;
 let cameraScaleTarget = 3;
 let cameraLerpSpeed = 0.25;
-
 function updateCamera() {
     // cameraSpeedX *= 0;
     // cameraSpeedY *= 0;
@@ -1130,6 +1633,10 @@ document.oncontextmenu = (e) => {
 };
 
 document.onkeydown = (e) => {
+    // congratulationsContainer dumb
+    if (modalContainer.open || !congratulationsContainer.classList.contains("hidden")) {
+        return;
+    }
     var key = e.key;
     if (key == " ") {
         key = "Space";
@@ -1157,14 +1664,14 @@ document.onkeydown = (e) => {
         if (key == keybinds["Play"][i].key) {
             if (isKeybindPressed("Play")) {
                 switch (runState) {
-                    case PAUSED:
-                    case PLAYING:
+                    case "paused":
+                    case "playing":
                         playButton.click();
                         break;
-                    case SIMULATING:
+                    case "simulating":
                         simulateButton.click();
                         break;
-                    case SLOWMODE:
+                    case "slowmode":
                         slowmodeButton.click();
                         break;
                 }
@@ -1172,12 +1679,19 @@ document.onkeydown = (e) => {
             }
         }
     }
-    if (runState == PAUSED) {
+    if (runState == "paused") {
         for (let i in keybinds["Step"]) {
             if (key == keybinds["Step"][i].key) {
                 if (isKeybindPressed("Step")) {
                     updateGrid();
                 }
+            }
+        }
+    }
+    for (let i in keybinds["Draw Updating Chunks"]) {
+        if (key == keybinds["Draw Updating Chunks"][i].key) {
+            if (isKeybindJustPressed("Draw Updating Chunks")) {
+                drawUpdatingChunks = !drawUpdatingChunks;
             }
         }
     }
@@ -1227,8 +1741,28 @@ overlayCanvas.addEventListener("wheel", (e) => {
 });
 
 window.onbeforeunload = () => {
-    localStorage.setItem("grid", generateSaveCode());
-    localStorage.setItem("saveCode", saveCode.value);
+    if (gameContainer.style.display != "none") {
+        if (currentPuzzle == null) {
+            sandboxGrid = generateSaveCode();
+            sandboxSaveCode = saveCode.value;
+        }
+        else {
+            if (puzzleProgress[currentPuzzle] == null) {
+                puzzleProgress[currentPuzzle] = {
+                    saveCode: saveCode.value,
+                    completed: false,
+                    ticks: -1,
+                    pixels: -1,
+                };
+            }
+            else {
+                puzzleProgress[currentPuzzle].saveCode = saveCode.value;
+            }
+        }
+    }
+    localStorage.setItem("sandboxGrid", sandboxGrid);
+    localStorage.setItem("sandboxSaveCode", sandboxSaveCode);
+    localStorage.setItem("puzzleProgress", JSON.stringify(puzzleProgress));
     localStorage.setItem("selectionGrid", generateSaveCode(true));
     localStorage.setItem("blueprints", JSON.stringify(blueprints));
 };
@@ -1281,6 +1815,8 @@ function createGrid() {
     resetPushPixels();
     resizeGrid(gridWidth, gridHeight, gridStride, chunkXAmount, chunkYAmount, chunkStride);
 
+    resetTargets();
+
     cameraScale = Math.min(WIDTH / gridWidth, HEIGHT / gridHeight);
     cameraScaleTarget = cameraScale;
     cameraX = -WIDTH / cameraScale / 2 + gridWidth / 2;
@@ -1289,12 +1825,12 @@ function createGrid() {
     cameraSpeedY = 0;
 };
 createGrid();
-if (localStorage.getItem("grid") != null) {
+if (localStorage.getItem("sandboxGrid") != null) {
     try {
-        loadSaveCode(localStorage.getItem("grid"));
+        sandboxGrid = localStorage.getItem("sandboxGrid");
     }
     catch (err) {
-        modal("Grid Error", "The stored grid was unable to be loaded.", "error");
+        modal("Grid Error", "The stored sandbox grid was unable to be loaded.<br><br>" + err.stack, "error");
     }
 }
 if (localStorage.getItem("selectionGrid") != null) {
@@ -1302,7 +1838,7 @@ if (localStorage.getItem("selectionGrid") != null) {
         loadSaveCode(localStorage.getItem("selectionGrid"), true);
     }
     catch (err) {
-        modal("Selection Grid Error", "The stored selection grid was unable to be loaded.", "error");
+        modal("Selection Grid Error", "The stored selection grid was unable to be loaded.<br><br>" + err.stack, "error");
     }
 }
 
@@ -1366,8 +1902,25 @@ function drawGrid(ctx) {
             }
         }
     }
-    if (debug && controls["b"]) {
-    // if (isKeybindPressed("Draw Updating Chunks")) {
+    for (let y in targets) {
+        if (y < Math.round(cameraY * cameraScale) / cameraScale - 1.5 || y > (Math.round(cameraY * cameraScale) + HEIGHT) / cameraScale + 0.5) {
+            continue;
+        }
+        for (let x in targets[y]) {
+            if (x < Math.round(cameraX * cameraScale) / cameraScale - 1.5 || x > (Math.round(cameraX * cameraScale) + WIDTH) / cameraScale + 0.5) {
+                continue;
+            }
+            // ctx.fillStyle = "rgb(0, 204, 255)";
+            // ctx.fillRect(x * cameraScale, y * cameraScale, cameraScale, cameraScale / 5);
+            // ctx.fillRect(x * cameraScale, y * cameraScale + cameraScale * 4 / 5, cameraScale, cameraScale / 5);
+            // ctx.fillRect(x * cameraScale, y * cameraScale + cameraScale / 5, cameraScale / 5, cameraScale * 3 / 5);
+            // ctx.fillRect(x * cameraScale + cameraScale * 4 / 5, y * cameraScale + cameraScale / 5, cameraScale / 5, cameraScale * 3 / 5);
+            let size = (Math.sin(performance.now() / 1000 * Math.PI / 2) + 1) / 4 * cameraScale;
+            ctx.fillStyle = "rgba(0, 255, 255, 0.2)";
+            ctx.fillRect(x * cameraScale - size, y * cameraScale - size, cameraScale + size * 2, cameraScale + size * 2);
+        }
+    }
+    if (debug && drawUpdatingChunks) {
         ctx.strokeStyle = "rgba(0, 0, 0)";
         ctx.lineWidth = cameraScale / 10;
         ctx.setLineDash([cameraScale, 3 * cameraScale]);
@@ -1409,6 +1962,18 @@ function drawGrid(ctx) {
 
 function updateGrid() {
     console.log(tick)
+    if (gridWidth % chunkWidth != 0) {
+        for (let chunkY = 0; chunkY < chunkYAmount; chunkY++) {
+            nextChunks[(chunkXAmount - 1 + chunkY * chunkXAmount) * chunkStride + 1] = Math.min(nextChunks[(chunkXAmount - 1 + chunkY * chunkXAmount) * chunkStride + 1], gridWidth - 1);
+            drawChunks[(chunkXAmount - 1 + chunkY * chunkXAmount) * chunkStride + 1] = Math.min(drawChunks[(chunkXAmount - 1 + chunkY * chunkXAmount) * chunkStride + 1], gridWidth - 1);
+        }
+    }
+    if (gridHeight % chunkHeight != 0) {
+        for (let chunkX = 0; chunkX < chunkXAmount; chunkX++) {
+            nextChunks[(chunkX + (chunkYAmount - 1) * chunkXAmount) * chunkStride + 3] = Math.min(nextChunks[(chunkX + (chunkYAmount - 1) * chunkXAmount) * chunkStride + 3], gridHeight - 1);
+            drawChunks[(chunkX + (chunkYAmount - 1) * chunkXAmount) * chunkStride + 3] = Math.min(drawChunks[(chunkX + (chunkYAmount - 1) * chunkXAmount) * chunkStride + 3], gridHeight - 1);
+        }
+    }
     let lastChunks = chunks;
     chunks = nextChunks;
     nextChunks = lastChunks;
@@ -1765,9 +2330,14 @@ function updateGrid() {
             drawChunks[(chunkX + (chunkYAmount - 1) * chunkXAmount) * chunkStride + 3] = Math.min(drawChunks[(chunkX + (chunkYAmount - 1) * chunkXAmount) * chunkStride + 3], gridHeight - 1);
         }
     }
+
+    if (currentPuzzle != null) {
+        updateObjectives();
+    }
 };
 
 let debug = true;
+let drawUpdatingChunks = false;
 
 let fpsTimes = [];
 let fpsHistory = [];
@@ -1819,10 +2389,10 @@ function updateGame() {
     }
     let updateStart = performance.now();
     updateCamera();
-    if (runState == PLAYING) {
+    if (runState == "playing") {
         updateGrid();
     }
-    else if (runState == SIMULATING) {
+    else if (runState == "simulating") {
         if (fpsTimes.length >= 50 * simulateSpeed) {
             simulateSpeed += 1;
         }
@@ -1833,7 +2403,7 @@ function updateGame() {
             updateGrid();
         }
     }
-    else if (runState == SLOWMODE && frame % 10 == 0) {
+    else if (runState == "slowmode" && frame % 10 == 0) {
         updateGrid();
     }
     let updateEnd = performance.now();
@@ -1841,25 +2411,27 @@ function updateGame() {
     // drawGrid(offscreenCtx);
     // ctx.drawImage(offscreenCanvas, 0, 0);
 
-    if (runState != SIMULATING || frame % 10 == 0) {
+    if (runState != "simulating" || frame % 10 == 0) {
         overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
         let brushX = Math.floor(cameraX + mouseX / cameraScale);
         let brushY = Math.floor(cameraY + mouseY / cameraScale);
+        let cameraArray = new Float32Array([cameraX, cameraY, cameraScale, cameraScale]);
+        let drawPlacementRestriction = currentPuzzle == null || tick == 1;
         if (selectionState == BRUSH) {
             if (isKeybindPressed("Secondary Action")) {
-                render(new Float32Array([cameraX, cameraY, cameraScale, cameraScale]), tick, grid, nextChunks, new Float32Array([brushX, brushY, brushSize, 0, 1, 0, 0, 1, 0, 0, 0, 0]), new Float32Array([-1]));
+                render(cameraArray, drawPlacementRestriction, tick, grid, nextChunks, new Float32Array([brushX, brushY, brushSize, 0, 1, 0, 0, 1, 0, 0, 0, 0]), new Float32Array([-1]));
             }
             else {
-                render(new Float32Array([cameraX, cameraY, cameraScale, cameraScale]), tick, grid, nextChunks, new Float32Array([brushX, brushY, brushSize, brushPixel, pixels[brushPixel].color != null ? pixels[brushPixel].color[0] / 255 : 0, pixels[brushPixel].color != null ? pixels[brushPixel].color[1] / 255 : 0, pixels[brushPixel].color != null ? pixels[brushPixel].color[2] / 255 : 0, pixels[brushPixel].color != null ? pixels[brushPixel].color[3] / 255 : 0, pixels[brushPixel].noise != null ? pixels[brushPixel].noise[0] / 255 : 0, pixels[brushPixel].noise != null ? pixels[brushPixel].noise[1] / 255 : 0, pixels[brushPixel].noise != null ? pixels[brushPixel].noise[2] / 255 : 0, pixels[brushPixel].noise != null ? pixels[brushPixel].noise[3] / 255 : 0]), new Float32Array([-1]));
+                render(cameraArray, drawPlacementRestriction, tick, grid, nextChunks, new Float32Array([brushX, brushY, brushSize, brushPixel, pixels[brushPixel].color != null ? pixels[brushPixel].color[0] / 255 : 0, pixels[brushPixel].color != null ? pixels[brushPixel].color[1] / 255 : 0, pixels[brushPixel].color != null ? pixels[brushPixel].color[2] / 255 : 0, pixels[brushPixel].color != null ? pixels[brushPixel].color[3] / 255 : 0, pixels[brushPixel].noise != null ? pixels[brushPixel].noise[0] / 255 : 0, pixels[brushPixel].noise != null ? pixels[brushPixel].noise[1] / 255 : 0, pixels[brushPixel].noise != null ? pixels[brushPixel].noise[2] / 255 : 0, pixels[brushPixel].noise != null ? pixels[brushPixel].noise[3] / 255 : 0]), new Float32Array([-1]));
             }
         }
         else if (selectionState == PASTING) {
             let startX = Math.floor(cameraX + mouseX / cameraScale - (selectionWidth - 1) / 2);
             let startY = Math.floor(cameraY + mouseY / cameraScale - (selectionHeight - 1) / 2);
-            render(new Float32Array([cameraX, cameraY, cameraScale, cameraScale]), tick, grid, nextChunks, new Float32Array([startX, startY, selectionWidth, selectionHeight, 0, 0, 0, 0, 0, 0, 0, 0]), selectionGrid);
+            render(cameraArray, drawPlacementRestriction, tick, grid, nextChunks, new Float32Array([startX, startY, selectionWidth, selectionHeight, 0, 0, 0, 0, 0, 0, 0, 0]), selectionGrid);
         }
         else {
-            render(new Float32Array([cameraX, cameraY, cameraScale, cameraScale]), tick, grid, nextChunks, new Float32Array([brushX, brushY, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), new Float32Array([-1]));
+            render(cameraArray, drawPlacementRestriction, tick, grid, nextChunks, new Float32Array([brushX, brushY, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), new Float32Array([-1]));
         }
 
         updateMouse();
@@ -1976,5 +2548,6 @@ function update() {
 window.requestAnimationFrame(update);
 
 // setInterval(update, 100);
+window.onresize();
 
-export { grid, gridWidth, gridHeight, gridStride, chunks, nextChunks, drawChunks, chunkWidth, chunkHeight, chunkXAmount, chunkYAmount, chunkStride, tick, modal, setBrushPixel, showTooltip, hideTooltip, moveTooltip };
+export { grid, gridWidth, gridHeight, gridStride, chunks, nextChunks, drawChunks, chunkWidth, chunkHeight, chunkXAmount, chunkYAmount, chunkStride, tick, modal, setRunState, sandboxGrid, sandboxSaveCode, generateSaveCode, parseSaveCode, loadSaveCode, mouseX, mouseY, setBrushPixel, showTooltip, hideTooltip, moveTooltip };

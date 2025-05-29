@@ -1,4 +1,4 @@
-/* helper classes: hidden, expanded */
+/* helper classes: hidden, expanded, disabled */
 
 @font-face {
     font-family: "Noto Sans";
@@ -8,7 +8,7 @@
 body {
     margin: 0px;
     overflow: hidden;
-    --border-size: 1;
+    --border-size: 1px;
     font-family: "Noto Sans";
     /* font-family: "Source Code Pro"; */
 }
@@ -23,7 +23,7 @@ button {
     padding: 0px;
 }
 
-#menuContainer, #gameContainer, #transitionContainer {
+#menuContainer, #gameContainer, #congratulationsContainer, #transitionContainer {
     position: absolute;
     width: 100vw;
     height: 100vh;
@@ -99,6 +99,10 @@ button {
     /* transition: 1500ms cubic-bezier(0.3, 0, 0.3, 1) transform;
     transform: translateY(15vh); */
 }
+#titleContainer {
+    transition: 500ms cubic-bezier(0.5, 0, 0.5, 1) transform;
+    transform: translateX(0px);
+}
 .menuButton {
     position: absolute;
     left: 50vw;
@@ -120,7 +124,7 @@ button {
     border-style: inset;
     transform: translate(-50%, -50%) translateY(2px);
 }
-#sandboxButtonContainer, #puzzlesButtonContainer {
+.menuButtonContainer {
     transition: 1500ms cubic-bezier(0.2, 0.2, 0, 1) transform;
     transform: translateY(50vh);
 }
@@ -129,6 +133,89 @@ button {
 }
 #puzzlesButton {
     top: 70vh;
+}
+
+#puzzlesContainer {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    left: 50vw;
+    top: 50vh;
+    width: calc(100vw - 200px);
+    height: calc(100vh - 200px);
+    border: 4px solid white;
+    background-color: lightgray;
+    transition: 500ms cubic-bezier(0.5, 0, 0.5, 1) transform;
+    transform: translate(-50%, -50%) translateX(100vw);
+}
+#puzzlesTitle {
+    font-size: 40px;
+    text-align: center;
+}
+.puzzlesHeaderButton {
+    appearance: none;
+    border: 2px solid black;
+    flex-grow: 1;
+    margin: 4px;
+    cursor: pointer;
+    font-size: 18px;
+    background-color: white;
+}
+#officialPuzzlesList, #customPuzzlesList {
+    border: 2px solid black;
+    margin: 4px;
+    text-align: center;
+    overflow-y: scroll;
+}
+.puzzleWorld {
+    display: block;
+    text-align: center;
+    font-size: 24px;
+}
+.puzzle {
+    display: inline-block;
+    border: 2px solid black;
+    margin: 4px;
+    width: 120px;
+    height: 120px;
+    cursor: pointer;
+}
+.puzzleCompleted {
+    background-color: lime;
+}
+#puzzlesCloseButton {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    transform: translate(-50%, -50%);
+    background-position: -100% -200%;
+}
+#puzzlesCloseButton:hover {
+    transform: translate(-50%, -50%) translateY(-2px);
+}
+#puzzlesCloseButton:active {
+    background-position: -100% -300%;
+    transform: translate(-50%, -50%) translateY(2px);
+}
+
+#puzzleTooltip {
+    position: absolute;
+    opacity: 0;
+    background-color: #ffffffaa;
+    border: 2px solid black;
+    /* border-radius: 8px; */
+    pointer-events: none;
+    /* max-width: 200px;
+    min-width: min-content; */
+    max-width: max-content;
+    width: 200px;
+}
+#puzzleTooltipName {
+    border-bottom: 2px solid black;
+    font-weight: bold;
+}
+#puzzleTooltipName, #puzzleTooltipDescription {
+    padding: 4px;
 }
 
 #transitionTop, #transitionBottom {
@@ -509,12 +596,16 @@ button {
     cursor: pointer;
     transform: translateY(0px);
 }
+.pixelSubgroupImg.disabled {
+    opacity: 0.5;
+}
 
 .pixelSubgroup:hover .pixel {
     height: 56px;
 }
 
 .pixel {
+    display: none;
     width: 64px;
     height: 0px;
     padding: 0px;
@@ -526,19 +617,23 @@ button {
     border-left: 2px solid black;
     border-right: 2px solid black;
 }
+.pixel.shown {
+    display: block;
+}
 /* .pixel:first-child {
     border-top: 2px solid black;
 } */
-.pixelSubgroup:hover .pixel:nth-child(2) {
+.pixelSubgroup:hover .pixel.shown:nth-child(2) {
     /* height: 64px; */
     /* padding-bottom: 8px; */
     padding-bottom: 8px;
     border-bottom: 2px solid black;
 }
-.pixel:last-child {
+.pixel.shown:not(:has(~.pixel.shown)) {
     border-top: 2px solid black;
 }
 .pixelImg {
+    position: relative;
     width: 48px;
     /* height: 48px; */
     height: calc(100% - 8px);
@@ -553,10 +648,26 @@ button {
     background-size: 100% 100%;
     outline: 0px solid white;
 }
+.pixelImg.disabled {
+    opacity: 0.5;
+}
 /* .pixel:nth-child(2) .pixelImg {
     height: calc(100% - 16px);
     margin-bottom: 8px;
 } */
+.pixelAmount {
+    position: absolute;
+    bottom: 0px;
+    right: 2px;
+    pointer-events: none;
+}
+.pixelImg .pixelAmount {
+    transition: 200ms ease opacity;
+    opacity: 0;
+}
+.pixelSubgroup:hover .pixelAmount {
+    opacity: 1;
+}
 .pixelGroupImg:hover, .pixelSubgroupImg:hover, .pixelImg:hover {
     transform: translateY(-4px);
     outline: 2px solid white;
@@ -573,6 +684,139 @@ button {
 }
 .pixelGroupSelected .pixelGroupImg:hover, .pixelSubgroup:hover .pixelSelected:hover, .pixelSubgroupImg.pixelSelected:hover {
     outline: 4px solid gold;
+}
+
+#puzzleOverlay {
+    display: grid;
+    position: absolute;
+    right: 0px;
+    top: 0px;
+}
+#puzzleInformation {
+    grid-column: span 2;
+    /* position: absolute;
+    right: 0px;
+    top: 0px; */
+    /* width: 200px;
+    height: 200px; */
+    padding: 4px;
+    background-color: #00000066;
+    border-left: 2px solid black;
+    border-bottom: 2px solid black;
+}
+#puzzleName {
+    font-size: 20px;
+    color: white;
+}
+#puzzleAuthor {
+    font-size: 12px;
+    color: white;
+    margin-top: -2px;
+}
+#puzzleObjectives {
+    grid-column: 2;
+    /* position: absolute;
+    right: 0px;
+    top: calc(50px + var(--border-size)); */
+    padding: 4px;
+    background-color: #00000066;
+    border-left: 2px solid black;
+    border-bottom: 2px solid black;
+}
+.puzzleObjectiveName {
+    color: white;
+    text-align: center;
+}
+.puzzleObjectiveProgress {
+    position: relative;
+    height: 20px;
+    width: 100%;
+    border: 2px solid black;
+    text-align: center;
+}
+.puzzleObjectiveProgressBackground {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 50%;
+    height: 100%;
+    background-color: green;
+    transition: 200ms ease width;
+}
+.puzzleObjectiveProgressText {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+#congratulationsContainer {
+    background-color: rgba(255, 255, 255, 0.2);
+    opacity: 1;
+    transition: 250ms linear opacity;
+}
+#congratulationsContainer.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+#congratulations {
+    position: absolute;
+    left: 50vw;
+    top: 30vh;
+    transform: translate(-50%, -50%);
+    transition: 500ms ease-in-out transform;
+    text-align: center;
+}
+#congratulationsContainer.hidden #congratulations {
+    transform: translate(-50%, calc(-50% - 50vh));
+}
+#congratulationsTitle {
+    /* position: absolute;
+    left: 50vw;
+    top: 25vh;
+    transform: translate(-50%, -50%); */
+    /* color: black; */
+    /* font-size: 8vh; */
+    font-size: 50px;
+}
+#congratulationsSubtitle {
+    /* position: absolute;
+    left: 50vw;
+    top: 25vh;
+    transform: translateX(-50%); */
+    /* color: black; */
+    /* font-size: 8vh; */
+    font-size: 18px;
+    margin-bottom: 14px;
+}
+#congratulationsButtons {
+    /* position: absolute;
+    left: 50vw;
+    top: 25vh;
+    transform: translate(-50%, 20px); */
+}
+.congratulationsButton {
+    width: 120px;
+    border: 4px solid gray;
+    border-style: outset;
+    /* box-shadow: 0px 0px 5px #ffffff; */
+    background-color: #ffffff33;
+    color: black;
+    /* font-size: 3.5vh; */
+    /* font-size: 20px; */
+    /* font-size: 16px; */
+    margin: 4px;
+    font-size: 18px;
+    cursor: pointer;
+    transition: 50ms linear transform;
+}
+.congratulationsButton:hover {
+    transform: translateY(-2px);
+}
+.congratulationsButton:active {
+    border-style: inset;
+    transform: translateY(2px);
 }
 
 #tooltip {
@@ -697,7 +941,7 @@ because the nesting selector cannot represent pseudo-elements. */
     width: 96px;
     background-size: 750% 400%;
     /* font-family: "Noto Sans"; */
-    font-family: "Source Code Pro";
+    /* font-family: "Source Code Pro"; */
     font-weight: 500;
     font-size: 24px;
 }

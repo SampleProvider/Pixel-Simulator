@@ -1,6 +1,7 @@
 @group(0) @binding(0) var<uniform> viewport: vec2<f32>;
 @group(0) @binding(1) var<uniform> camera: vec4<f32>;
 @group(0) @binding(2) var<uniform> time: f32;
+@group(0) @binding(3) var<uniform> draw_placement_restriction: u32;
 @group(1) @binding(0) var<uniform> tick: u32;
 @group(1) @binding(1) var<uniform> grid_size: vec2<u32>;
 @group(1) @binding(2) var<storage, read> grid: array<f32>;
@@ -273,18 +274,18 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
     //     new_pos.y -= 0.01;
     // }
     // massive spaghetti but it fixes bug
-    if ((new_pos - floor(new_pos)).x >= 0.99) {
-        new_pos.x -= 0.01;
-    }
-    if ((new_pos - floor(new_pos)).y >= 0.99) {
-        new_pos.y -= 0.01;
-    }
-    if ((new_pos - floor(new_pos)).x <= 0.01) {
-        new_pos.x += 0.01;
-    }
-    if ((new_pos - floor(new_pos)).y <= 0.01) {
-        new_pos.y += 0.01;
-    }
+    // if ((new_pos - floor(new_pos)).x >= 0.99) {
+    //     new_pos.x -= 0.01;
+    // }
+    // if ((new_pos - floor(new_pos)).y >= 0.99) {
+    //     new_pos.y -= 0.01;
+    // }
+    // if ((new_pos - floor(new_pos)).x <= 0.01) {
+    //     new_pos.x += 0.01;
+    // }
+    // if ((new_pos - floor(new_pos)).y <= 0.01) {
+    //     new_pos.y += 0.01;
+    // }
     if (new_pos.x < 0 || u32(new_pos.x) >= grid_size.x || new_pos.y < 0 || u32(new_pos.y) >= grid_size.y) {
         //return vec4<f32>(0.0, 0.0, 0.0, 1.0);
         //return vec4<f32>(0.2, 0.2, 0.2, 1.0);
@@ -359,6 +360,12 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
     if (grid[index + 1] == 1.0) {
         color = get_fire_color(color, new_pos);
     }
+    if (draw_placement_restriction == 1 && (u32(grid[index + 2]) & 1) == 1 && abs(new_pos.x + new_pos.y - round(new_pos.x + new_pos.y)) > 0.1) {
+        color = mix(color, vec4<f32>(0.0, 0.0, 0.0, 1.0), 0.2);
+    }
+    if ((u32(grid[index + 2]) & 2) == 2 && (abs(new_pos.x - round(new_pos.x)) < 0.2 || abs(new_pos.y - round(new_pos.y)) < 0.2)) {
+        color = vec4<f32>(0.0, 200.0 / 255.0, 1.0, 1.0);
+    }
     //if (grid[index] != 0) {
     //color.r = abs(grid[index + 1] / 10);
     //color.g = abs(grid[index + 2] / 10);
@@ -405,12 +412,21 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
             if (selection_grid[index_2] == LASER_DOWN && floor_pos.x * 6 >= 2 && floor_pos.x * 6 <= 4 && floor_pos.y * 6 >= 3) {
                 color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 2) + 1) / 2);
             }
+            if (selection_grid[index_2] == DELETER && floor_pos.x * 4 >= 1 && floor_pos.x * 4 <= 3 && floor_pos.y * 4 >= 1 && floor_pos.y * 4 <= 3) {
+                color_2 = mix(vec4<f32>(0.8, 0.0, 1.0, 1.0), vec4<f32>(1.0, 0.0, 1.0, 1.0), (sin(time * 0.001 * 3.1415) + 1) / 2);
+            }
             if (color_2.w != 1.0) {
                 color_2 = mix(background_color, color_2, color_2.w);
                 color_2.w = 1.0;
             }
             if (selection_grid[index_2 + 1] == 1.0) {
                 color_2 = get_fire_color(color_2, new_pos);
+            }
+            if ((u32(selection_grid[index_2 + 2]) & 1) == 1 && abs(new_pos.x + new_pos.y - round(new_pos.x + new_pos.y)) > 0.1) {
+                color_2 = mix(color_2, vec4<f32>(0.0, 0.0, 0.0, 1.0), 0.2);
+            }
+            if ((u32(selection_grid[index_2 + 2]) & 2) == 2 && (abs(new_pos.x - round(new_pos.x)) < 0.2 || abs(new_pos.y - round(new_pos.y)) < 0.2)) {
+                color_2 = vec4<f32>(0.0, 0.8, 1.0, 1.0);
             }
             color = mix(color, color_2, 0.5 * color_2.w);
         }
@@ -419,6 +435,11 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
         if (new_pos.x >= brush[0] - brush[2] + 1 && new_pos.x < brush[0] + brush[2] && new_pos.y >= brush[1] - brush[2] + 1 && new_pos.y < brush[1] + brush[2]) {
             if (brush[3] == FIRE) {
                 color = get_fire_color(color, new_pos);
+            }
+            else if (brush[3] == PLACEMENT_RESTRICTION) {
+                if (abs(new_pos.x + new_pos.y - round(new_pos.x + new_pos.y)) > 0.1) {
+                    color = mix(color, vec4<f32>(0.0, 0.0, 0.0, 1.0), 0.5);
+                }
             }
             else {
                 var color_2: vec4<f32>;
@@ -442,6 +463,9 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
                 }
                 if (id == LASER_DOWN && floor_pos.x * 6 >= 2 && floor_pos.x * 6 <= 4 && floor_pos.y * 6 >= 3) {
                     color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 2) + 1) / 2);
+                }
+                if (id == DELETER && floor_pos.x * 4 >= 1 && floor_pos.x * 4 <= 3 && floor_pos.y * 4 >= 1 && floor_pos.y * 4 <= 3) {
+                    color_2 = mix(vec4<f32>(0.8, 0.0, 1.0, 1.0), vec4<f32>(1.0, 0.0, 1.0, 1.0), (sin(time * 0.001 * 3.1415) + 1) / 2);
                 }
                 if (color_2.w != 1.0) {
                     color_2 = mix(background_color, color_2, color_2.w);
