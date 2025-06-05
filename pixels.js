@@ -1,4 +1,4 @@
-import { grid, gridWidth, gridHeight, gridStride, chunks, nextChunks, drawChunks, chunkWidth, chunkHeight, chunkXAmount, chunkYAmount, chunkStride, tick, modal, setBrushPixel, showTooltip, hideTooltip, moveTooltip } from "./game.js";
+import { grid, gridWidth, gridHeight, gridStride, chunks, nextChunks, drawChunks, chunkWidth, chunkHeight, chunkXAmount, chunkYAmount, chunkStride, tick, modal, brushPixel, setBrushPixel, showTooltip, hideTooltip, moveTooltip } from "./game.js";
 // import { imageBitmap } from "./renderer.js";
 import { currentPuzzle } from "./puzzles.js";
 
@@ -1944,7 +1944,7 @@ function pushRightCheck(x, y, selfX, selfY, allowRecursion) {
                     if (pixels[id].sticky == 1 && canUnstick(slimeX, slimeY)) {
                         break stick;
                     }
-                    if (pixels[grid[slimeIndex + ID]].stickableLeft && grid[slimeIndex + UPDATED] != tick && (pushPixels[slimeY] == null || pushPixels[slimeY][gridWidth - slimeX] == null)) {
+                    if (pixels[grid[slimeIndex + ID]].stickableRight && grid[slimeIndex + UPDATED] != tick && (pushPixels[slimeY] == null || pushPixels[slimeY][gridWidth - slimeX] == null)) {
                         queue.push(slimeX + slimeY * gridWidth + (pixels[grid[slimeIndex + ID]].sticky && stronglyConnected ? (gridWidth * gridHeight) : 0));
                     }
                 }
@@ -2211,7 +2211,7 @@ function pushUpCheck(x, y, selfX, selfY, allowRecursion) {
                     if (pixels[id].sticky == 1 && canUnstick(slimeX, slimeY)) {
                         break stick;
                     }
-                    if (pixels[grid[slimeIndex + ID]].stickableDown && grid[slimeIndex + UPDATED] != tick && (pushPixels[slimeY] == null || pushPixels[slimeY][slimeX] == null)) {
+                    if (pixels[grid[slimeIndex + ID]].stickableUp && grid[slimeIndex + UPDATED] != tick && (pushPixels[slimeY] == null || pushPixels[slimeY][slimeX] == null)) {
                         queue.push(slimeX + slimeY * gridWidth + (pixels[grid[slimeIndex + ID]].sticky && stronglyConnected ? (gridWidth * gridHeight) : 0));
                     }
                 }
@@ -2238,7 +2238,7 @@ function pushDown(x, y, selfX, selfY, strength) {
                 workedPushPixels[Number(j) + (gridHeight - Number(i)) * gridWidth] = tick;
             }
         }
-        [worked, pushPixels] = pushDownCheck(x, y, -1, -1, true);
+        [worked, pushPixels] = pushDownCheck(x, y, selfX, selfY, true);
     }
     if (worked) {
         for (let i in pushPixels) {
@@ -2475,7 +2475,7 @@ function pushDownCheck(x, y, selfX, selfY, allowRecursion) {
                     if (pixels[id].sticky == 1 && canUnstick(slimeX, slimeY)) {
                         break stick;
                     }
-                    if (pixels[grid[slimeIndex + ID]].stickableUp && grid[slimeIndex + UPDATED] != tick && (pushPixels[gridHeight - slimeY] == null || pushPixels[gridHeight - slimeY][slimeX] == null)) {
+                    if (pixels[grid[slimeIndex + ID]].stickableDown && grid[slimeIndex + UPDATED] != tick && (pushPixels[gridHeight - slimeY] == null || pushPixels[gridHeight - slimeY][slimeX] == null)) {
                         queue.push(slimeX + slimeY * gridWidth + (pixels[grid[slimeIndex + ID]].sticky && stronglyConnected ? (gridWidth * gridHeight) : 0));
                     }
                 }
@@ -2733,9 +2733,19 @@ let pixelData = {
         flammability: 1,
         blastResistance: 75,
         update: function(x, y) {
-            if (isTouching(x, y, [WATER])) {
-                addPixel(x, y, MUD);
-                // oops
+            let changed = false;
+            forTouching(x, y, (x1, y1) => {
+                let index1 = (x1 + y1 * gridWidth) * gridStride;
+                if (grid[index1 + UPDATED] == tick) {
+                    return;
+                }
+                if (grid[index1 + ID] == WATER) {
+                    addPixel(x, y, MUD);
+                    changed = true;
+                }
+            });
+            if (changed) {
+                pixels[MUD].update(x, y);
                 return;
             }
             flow(x, y, 1, 2, isPassableSolid, isMoveableSolid);
@@ -2828,9 +2838,18 @@ let pixelData = {
         flammability: 0,
         blastResistance: 100,
         update: function(x, y) {
-            if (isTouching(x, y, [WATER])) {
-                addPixel(x, y, CONCRETE);
-                // oops
+            let changed = false;
+            forTouching(x, y, (x1, y1) => {
+                let index1 = (x1 + y1 * gridWidth) * gridStride;
+                if (grid[index1 + UPDATED] == tick) {
+                    return;
+                }
+                if (grid[index1 + ID] == WATER) {
+                    addPixel(x, y, CONCRETE);
+                    changed = true;
+                }
+            });
+            if (changed) {
                 return;
             }
             flow(x, y, 1, 2, isPassableSolid, isMoveableSolid);
@@ -2859,16 +2878,22 @@ let pixelData = {
             let changed = false;
             forTouching(x, y, (x1, y1) => {
                 let index1 = (x1 + y1 * gridWidth) * gridStride;
-                if (grid[index1 + ID] != LAVA) {
+                if (grid[index1 + UPDATED] == tick) {
                     return;
                 }
-                addPixel(x1, y1, STONE);
-                changed = true;
+                if (grid[index1 + ID] == LAVA) {
+                    addPixel(x1, y1, STONE);
+                    changed = true;
+                }
+                else if (grid[index1 + ID] == CONCRETE_POWDER) {
+                    addPixel(x1, y1, CONCRETE);
+                }
             });
 
             if (changed) {
                 if (Math.random() < 0.8) {
                     addPixel(x, y, STEAM);
+                    pixels[STEAM].update(x, y);
                 }
                 else {
                     addPixel(x, y, AIR);
@@ -2956,6 +2981,7 @@ let pixelData = {
             });
             if (changed) {
                 addPixel(x, y, WATER);
+                pixels[WATER].update(x, y);
                 return;
             }
             function isPassable(x, y) {
@@ -3272,7 +3298,7 @@ let pixelData = {
         subgroup: "Water Pump",
         texture: new Float32Array([3, 2, 3, 3]),
         state: SOLID,
-        flammability: 8,
+        flammability: 0,
         blastResistance: 100,
         update: function(x, y) {
             if (isTouching(x, y, [WATER])) {
@@ -3663,6 +3689,7 @@ let pixelData = {
             });
             if (changed) {
                 addPixel(x, y, WATER);
+                pixels[WATER].update(x, y);
                 return;
             }
             let isMoveable = (x1, y1) => {
@@ -5402,200 +5429,6 @@ let pixelData = {
         blastResistance: -1,
         cloneable: false,
     },
-    laser_left: {
-        name: "Laser (Left)",
-        description: "Unrealistically flows and may or may not be wet",
-        group: "Lasers",
-        subgroup: "Goal",
-        texture: new Float32Array([108, 14, 6, 6]),
-        state: SOLID,
-        flammability: 0,
-        blastResistance: 0,
-        rotatable: true,
-        rotations: ["laser_left", "laser_up", "laser_right", "laser_down"],
-        update: function(x, y) {
-            let path = getLaserPath(x, y, 0);
-            let x1 = path[path.length - 1][0];
-            let y1 = path[path.length - 1][1];
-            if (isOnGrid(x1, y1)) {
-                let index1 = (x1 + y1 * gridWidth) * gridStride;
-                if (grid[index1 + ID] != LASER_SCATTERER) {
-                    // if (Math.random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
-                    if (Math.random() < pixels[grid[index1 + ID]].flammability / 100) {
-                        addFire(x1, y1, true);
-                    }
-                    if (Math.random() < 10 / pixels[grid[index1 + ID]].blastResistance) {
-                        if (grid[index1 + ID] == LASER_LEFT || grid[index1 + ID] == LASER_UP || grid[index1 + ID] == LASER_RIGHT || grid[index1 + ID] == LASER_DOWN) {
-                            explode(x1, y1, 5 * 5, 5 * 8, 3000);
-                        }
-                        addPixel(x1, y1, AIR);
-                    }
-                    // if (Math.random() < pixelAt(last[0], last[1]).flammability / 100) nextFireGrid[last[1]][last[0]] = true;
-                }
-            }
-            addDrawingChunk(x, y);
-            addUpdatedChunk(x, y);
-        },
-        draw: function(ctx, cameraScale, x, y) {
-            let path = getLaserPath(x, y, 0);
-            ctx.strokeStyle = "rgb(70, 215, 160)";
-            drawLaserPath(ctx, cameraScale, path);
-        },
-    },
-    laser_up: {
-        name: "Laser (Up)",
-        description: "Unrealistically flows and may or may not be wet",
-        group: "Lasers",
-        subgroup: "Goal",
-        texture: new Float32Array([114, 14, 6, 6]),
-        state: SOLID,
-        flammability: 0,
-        blastResistance: 0,
-        rotatable: true,
-        rotations: ["laser_left", "laser_up", "laser_right", "laser_down"],
-        update: function(x, y) {
-            let path = getLaserPath(x, y, 1);
-            let x1 = path[path.length - 1][0];
-            let y1 = path[path.length - 1][1];
-            if (isOnGrid(x1, y1)) {
-                let index1 = (x1 + y1 * gridWidth) * gridStride;
-                if (grid[index1 + ID] != LASER_SCATTERER) {
-                    // if (Math.random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
-                    if (Math.random() < pixels[grid[index1 + ID]].flammability / 100) {
-                        addFire(x1, y1, true);
-                    }
-                    if (Math.random() < 10 / pixels[grid[index1 + ID]].blastResistance) {
-                        if (grid[index1 + ID] == LASER_LEFT || grid[index1 + ID] == LASER_UP || grid[index1 + ID] == LASER_RIGHT || grid[index1 + ID] == LASER_DOWN) {
-                            explode(x1, y1, 5 * 5, 5 * 8, 3000);
-                        }
-                        addPixel(x1, y1, AIR);
-                    }
-                    // if (Math.random() < pixelAt(last[0], last[1]).flammability / 100) nextFireGrid[last[1]][last[0]] = true;
-                }
-            }
-            addDrawingChunk(x, y);
-            addUpdatedChunk(x, y);
-        },
-        draw: function(ctx, cameraScale, x, y) {
-            let path = getLaserPath(x, y, 1);
-            ctx.strokeStyle = "rgb(70, 215, 160)";
-            drawLaserPath(ctx, cameraScale, path);
-        },
-    },
-    laser_right: {
-        name: "Laser (Right)",
-        description: "Unrealistically flows and may or may not be wet",
-        group: "Lasers",
-        subgroup: "Goal",
-        texture: new Float32Array([120, 14, 6, 6]),
-        state: SOLID,
-        flammability: 0,
-        blastResistance: 0,
-        rotatable: true,
-        rotations: ["laser_left", "laser_up", "laser_right", "laser_down"],
-        update: function(x, y) {
-            let path = getLaserPath(x, y, 2);
-            let x1 = path[path.length - 1][0];
-            let y1 = path[path.length - 1][1];
-            if (isOnGrid(x1, y1)) {
-                let index1 = (x1 + y1 * gridWidth) * gridStride;
-                if (grid[index1 + ID] != LASER_SCATTERER) {
-                    // if (Math.random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
-                    if (Math.random() < pixels[grid[index1 + ID]].flammability / 100) {
-                        addFire(x1, y1, true);
-                    }
-                    if (Math.random() < 10 / pixels[grid[index1 + ID]].blastResistance) {
-                        if (grid[index1 + ID] == LASER_LEFT || grid[index1 + ID] == LASER_UP || grid[index1 + ID] == LASER_RIGHT || grid[index1 + ID] == LASER_DOWN) {
-                            explode(x1, y1, 5 * 5, 5 * 8, 3000);
-                        }
-                        addPixel(x1, y1, AIR);
-                    }
-                    // if (Math.random() < pixelAt(last[0], last[1]).flammability / 100) nextFireGrid[last[1]][last[0]] = true;
-                }
-            }
-            addDrawingChunk(x, y);
-            addUpdatedChunk(x, y);
-        },
-        draw: function(ctx, cameraScale, x, y) {
-            let path = getLaserPath(x, y, 2);
-            ctx.strokeStyle = "rgb(70, 215, 160)";
-            drawLaserPath(ctx, cameraScale, path);
-        },
-    },
-    laser_down: {
-        name: "Laser (Down)",
-        description: "Unrealistically flows and may or may not be wet",
-        group: "Lasers",
-        subgroup: "Goal",
-        texture: new Float32Array([126, 14, 6, 6]),
-        state: SOLID,
-        flammability: 0,
-        blastResistance: 0,
-        rotatable: true,
-        rotations: ["laser_left", "laser_up", "laser_right", "laser_down"],
-        update: function(x, y) {
-            let path = getLaserPath(x, y, 3);
-            let x1 = path[path.length - 1][0];
-            let y1 = path[path.length - 1][1];
-            if (isOnGrid(x1, y1)) {
-                let index1 = (x1 + y1 * gridWidth) * gridStride;
-                if (grid[index1 + ID] != LASER_SCATTERER) {
-                    // if (Math.random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
-                    if (Math.random() < pixels[grid[index1 + ID]].flammability / 100) {
-                        addFire(x1, y1, true);
-                    }
-                    if (Math.random() < 10 / pixels[grid[index1 + ID]].blastResistance) {
-                        if (grid[index1 + ID] == LASER_LEFT || grid[index1 + ID] == LASER_UP || grid[index1 + ID] == LASER_RIGHT || grid[index1 + ID] == LASER_DOWN) {
-                            explode(x1, y1, 5 * 5, 5 * 8, 3000);
-                        }
-                        addPixel(x1, y1, AIR);
-                    }
-                    // if (Math.random() < pixelAt(last[0], last[1]).flammability / 100) nextFireGrid[last[1]][last[0]] = true;
-                }
-            }
-            addDrawingChunk(x, y);
-            addUpdatedChunk(x, y);
-        },
-        draw: function(ctx, cameraScale, x, y) {
-            let path = getLaserPath(x, y, 3);
-            ctx.strokeStyle = "rgb(70, 215, 160)";
-            drawLaserPath(ctx, cameraScale, path);
-        },
-    },
-    laser_scatterer: {
-        name: "Laser Scatterer",
-        description: "Unrealistically flows and may or may not be wet",
-        group: "Lasers",
-        subgroup: "Laser Scatterer",
-        texture: new Float32Array([12, 5, 4, 4]),
-        state: SOLID,
-        flammability: 0,
-        blastResistance: 0,
-    },
-    mirror_1: {
-        name: "Mirror",
-        description: "Unrealistically flows and may or may not be wet",
-        group: "Lasers",
-        subgroup: "Mirror",
-        texture: new Float32Array([0, 320, 60, 60]),
-        state: SOLID,
-        flammability: 0,
-        blastResistance: 0,
-        rotatable: true,
-        rotations: ["mirror_1", "mirror_2"],
-    },
-    mirror_2: {
-        name: "Mirror",
-        description: "Unrealistically flows and may or may not be wet",
-        group: "Lasers",
-        subgroup: "Mirror",
-        texture: new Float32Array([60, 320, 60, 60]),
-        state: SOLID,
-        flammability: 0,
-        blastResistance: 0,
-        rotatable: true,
-        rotations: ["mirror_1", "mirror_2"],
-    },
     lag_spike_generator: {
         name: "lag_spike_generator",
         description: "Unrealistically flows and may or may not be wet",
@@ -5783,7 +5616,7 @@ let pixelData = {
         color: new Float32Array([50, 225, 0, 1]),
         state: SOLID,
         flammability: 0,
-        blastResistance: 0,
+        blastResistance: 50,
         update5: function(x, y) {
             if (Math.random() < 0.1) {
                 if (Math.random() < 0.01) {
@@ -5818,7 +5651,7 @@ let pixelData = {
         color: new Float32Array([75, 255, 30, 1]),
         state: SOLID,
         flammability: 0,
-        blastResistance: 0,
+        blastResistance: 50,
         update4: function(x, y) {
             if (Math.random() < 0.1) {
                 if (Math.random() < 0.01) {
@@ -5845,6 +5678,179 @@ let pixelData = {
         },
         update5: function(x, y) {
             addUpdatedChunk(x, y);
+        },
+    },
+    spongy_rice: {
+        name: "Spongy Rice",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Destruction",
+        subgroup: "Spongy Rice",
+        color: new Float32Array([230, 230, 230, 1]),
+        noise: new Float32Array([10, 10, -5, 1]),
+        state: SOLID,
+        flammability: 0,
+        blastResistance: 60,
+        update: function(x, y) {
+            if (isTouching(x, y, [WATER])) {
+                if (x != 0) {
+                    pushLeft(x - 1, y, x, y, 2);
+                    if (grid[(x - 1 + y * gridWidth) * gridStride + ID] == AIR) {
+                        addPixel(x - 1, y, ACTIVATED_SPONGY_RICE);
+                    }
+                }
+                if (x != gridWidth - 1) {
+                    pushRight(x + 1, y, x, y, 2);
+                    if (grid[(x + 1 + y * gridWidth) * gridStride + ID] == AIR) {
+                        addPixel(x + 1, y, ACTIVATED_SPONGY_RICE);
+                    }
+                }
+                if (y != 0) {
+                    pushUp(x, y - 1, x, y, 2);
+                    if (grid[(x + (y - 1) * gridWidth) * gridStride + ID] == AIR) {
+                        addPixel(x, y - 1, ACTIVATED_SPONGY_RICE);
+                    }
+                }
+                if (y != gridHeight - 1) {
+                    pushDown(x, y + 1, x, y, 2);
+                    if (grid[(x + (y + 1) * gridWidth) * gridStride + ID] == AIR) {
+                        addPixel(x, y + 1, ACTIVATED_SPONGY_RICE);
+                    }
+                }
+                addPixel(x, y, ACTIVATED_SPONGY_RICE);
+            }
+            else {
+                flow(x, y, 1, 1, isPassableSolid, isMoveableSolid);
+            }
+        },
+    },
+    activated_spongy_rice: {
+        name: "Spongy Rice (Activated)",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Destruction",
+        subgroup: "Spongy Rice",
+        color: new Float32Array([230, 230, 230, 1]),
+        noise: new Float32Array([10, 10, -5, 1]),
+        state: SOLID,
+        flammability: 0,
+        blastResistance: 60,
+        update: function(x, y) {
+            if (x != 0) {
+                pushLeft(x - 1, y, x, y, 2);
+                if (grid[(x - 1 + y * gridWidth) * gridStride + ID] == AIR) {
+                    addPixel(x - 1, y, ACTIVATED_SPONGY_RICE);
+                }
+            }
+            if (x != gridWidth - 1) {
+                pushRight(x + 1, y, x, y, 2);
+                if (grid[(x + 1 + y * gridWidth) * gridStride + ID] == AIR) {
+                    addPixel(x + 1, y, ACTIVATED_SPONGY_RICE);
+                }
+            }
+            if (y != 0) {
+                pushUp(x, y - 1, x, y, 2);
+                if (grid[(x + (y - 1) * gridWidth) * gridStride + ID] == AIR) {
+                    addPixel(x, y - 1, ACTIVATED_SPONGY_RICE);
+                }
+            }
+            if (y != gridHeight - 1) {
+                pushDown(x, y + 1, x, y, 2);
+                if (grid[(x + (y + 1) * gridWidth) * gridStride + ID] == AIR) {
+                    addPixel(x, y + 1, ACTIVATED_SPONGY_RICE);
+                }
+            }
+        },
+    },
+    recursive_sapling: {
+        name: "Recursive Sapling",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Destruction",
+        subgroup: "Recursive Sapling",
+        texture: new Float32Array([6, 14, 6, 6]),
+        state: SOLID,
+        flammability: 0,
+        blastResistance: 60,
+        update: function(x, y) {
+            fall(x, y, isMoveableSolid);
+        },
+        randomUpdate: function(x, y) {
+            if (y == gridHeight - 1) {
+                addPixel(x, y, DIRT);
+            }
+            else {
+                let id = grid[(x + (y + 1) * gridWidth) * gridStride + ID];
+                if (id != DIRT && id != GRASS && id != MUD) {
+                    addPixel(x, y, DIRT);
+                    return;
+                }
+                let growth = 0;
+                let growthFactor = 1;
+                // check for water in future
+                for (let y1 = y + 1; y1 < gridHeight && (y1 - y) < 6; y1++) {
+                    let index1 = (x + y1 * gridWidth) * gridStride;
+                    if (grid[index1 + ID] == DIRT || grid[index1 + ID] == GRASS) {
+                        growth += 2;
+                    }
+                    else if (grid[index1 + ID] == MUD) {
+                        growth += 1;
+                    }
+                    else {
+                        break;
+                    }
+                }
+                let addBranch = (x1, y1, angle, size, length) => {
+                    // alert(x1 + " " + y1 + " " + angle + " " + size + " " + length);
+                    let x3 = x1;
+                    let y3 = y1;
+                    // let finalSize = size * (0.2 + Math.random() * 0.4);
+                    let finalSize = size;
+                    let branchOffset = Math.random() < 0.5;
+                    raycast2(x1, y1, Math.cos(angle), Math.sin(angle), (x2, y2) => {
+                        let dist = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+                        if (dist > length) {
+                            if (finalSize > 1) {
+                                // addBranch(x3, y3, angle - (15 + Math.random() * 30) / 180 * Math.PI, finalSize, length * (0.2 + Math.random() * 0.4));
+                                // addBranch(x3, y3, angle + (15 + Math.random() * 30) / 180 * Math.PI, finalSize, length * (0.2 + Math.random() * 0.4));
+                                addBranch(x3, y3, angle - (15 + Math.random() * 30) / 180 * Math.PI, finalSize * (0.6 + Math.random() * 0.4), length * (0.4 + Math.random() * 0.4));
+                                addBranch(x3, y3, angle + (15 + Math.random() * 30) / 180 * Math.PI, finalSize * (0.6 + Math.random() * 0.4), length * (0.4 + Math.random() * 0.4));
+                                // let continueAngle = random(0.2, 0.4) * (Math.round(random()) * 2 - 1);
+                                // branch(x2, y2, angle + continueAngle, size * random(0.5, 0.9), length * random(0.5, 1));
+                                // let forcedBranch = random() < 0.5 - continueAngle * 0.8 + (((Math.PI / 2) - angle) * 0.5);
+                                // if (random() < 0.2 || forcedBranch) branch(x2, y2, angle + random(0.6, 1.6) + (((Math.PI / 2) - angle) * 0.2), size * random(0.2, 0.6), length * random(0.5, 1));
+                                // if (random() < 0.2 || !forcedBranch) branch(x2, y2, angle - random(0.6, 1.6) - (((Math.PI / 2) - angle) * 0.2), size * random(0.2, 0.6), length * random(0.5, 1));
+                            }
+                            else {
+                                fillEllipse(x3, y3, (2 + Math.random() * 0.5) * growthFactor, (1.5 + Math.random() * 0.5) * growthFactor, (x4, y4) => {
+                                    let index1 = (x4 + y4 * gridWidth) * gridStride;
+                                    if (grid[index1 + ID] != DIRT) {
+                                        addPixel(x4, y4, RECURSIVE_SAPLING);
+                                    }
+                                });
+                            }
+                            return false;
+                        }
+                        let branchWidth = Math.max(1, (size * (1 - dist / length) + finalSize * dist / length) * Math.abs(Math.sin(angle)));
+                        let branchHeight = Math.max(1, (size * (1 - dist / length) + finalSize * dist / length) * Math.abs(Math.cos(angle)));
+                        // alert(branchWidth + " " + branchHeight + " " + (size * (1 - dist / length) + finalSize * dist / length) + " " + Math.sin(angle));
+                        x3 = x2;
+                        y3 = y2;
+                        // branchOffset = false;
+                        x2 -= Math.floor(Math.round(branchWidth - (branchOffset ? Math.abs(Math.sin(angle)) : 0)) / 2);
+                        y2 -= Math.floor(Math.round(branchHeight - (branchOffset ? Math.abs(Math.cos(angle)) : 0)) / 2);
+                        for (let y4 = Math.max(y2, 0); y4 < Math.min(y2 + Math.round(branchHeight), gridHeight); y4++) {
+                            for (let x4 = Math.max(x2, 0); x4 < Math.min(x2 + Math.round(branchWidth), gridWidth); x4++) {
+                                let index1 = (x4 + y4 * gridWidth) * gridStride;
+                                addPixel(x4, y4, DIRT);
+                            }
+                        }
+                        return true;
+                    });
+                };
+                // growth = 10;
+                if (Math.random() < growth / 10) {
+                    growthFactor = (Math.log(growth) / Math.log(4)) + 0.5;
+                    addBranch(x, y, -Math.PI / 2, growth * (0.2 + Math.random() * 0.1), growth * (0.8 + Math.random() * 0.7));
+                }
+            }
         },
     },
     random: {
@@ -6234,6 +6240,200 @@ let pixelData = {
             });
         },
     },
+    laser_left: {
+        name: "Laser (Left)",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Lasers",
+        subgroup: "Goal",
+        texture: new Float32Array([108, 14, 6, 6]),
+        state: SOLID,
+        flammability: 0,
+        blastResistance: 0,
+        rotatable: true,
+        rotations: ["laser_left", "laser_up", "laser_right", "laser_down"],
+        update: function(x, y) {
+            let path = getLaserPath(x, y, 0);
+            let x1 = path[path.length - 1][0];
+            let y1 = path[path.length - 1][1];
+            if (isOnGrid(x1, y1)) {
+                let index1 = (x1 + y1 * gridWidth) * gridStride;
+                if (grid[index1 + ID] != LASER_SCATTERER) {
+                    // if (Math.random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
+                    if (Math.random() < pixels[grid[index1 + ID]].flammability / 100) {
+                        addFire(x1, y1, true);
+                    }
+                    if (Math.random() < 10 / pixels[grid[index1 + ID]].blastResistance) {
+                        if (grid[index1 + ID] == LASER_LEFT || grid[index1 + ID] == LASER_UP || grid[index1 + ID] == LASER_RIGHT || grid[index1 + ID] == LASER_DOWN) {
+                            explode(x1, y1, 5 * 5, 5 * 8, 3000);
+                        }
+                        addPixel(x1, y1, AIR);
+                    }
+                    // if (Math.random() < pixelAt(last[0], last[1]).flammability / 100) nextFireGrid[last[1]][last[0]] = true;
+                }
+            }
+            addDrawingChunk(x, y);
+            addUpdatedChunk(x, y);
+        },
+        draw: function(ctx, cameraScale, x, y) {
+            let path = getLaserPath(x, y, 0);
+            ctx.strokeStyle = "rgb(70, 215, 160)";
+            drawLaserPath(ctx, cameraScale, path);
+        },
+    },
+    laser_up: {
+        name: "Laser (Up)",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Lasers",
+        subgroup: "Goal",
+        texture: new Float32Array([114, 14, 6, 6]),
+        state: SOLID,
+        flammability: 0,
+        blastResistance: 0,
+        rotatable: true,
+        rotations: ["laser_left", "laser_up", "laser_right", "laser_down"],
+        update: function(x, y) {
+            let path = getLaserPath(x, y, 1);
+            let x1 = path[path.length - 1][0];
+            let y1 = path[path.length - 1][1];
+            if (isOnGrid(x1, y1)) {
+                let index1 = (x1 + y1 * gridWidth) * gridStride;
+                if (grid[index1 + ID] != LASER_SCATTERER) {
+                    // if (Math.random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
+                    if (Math.random() < pixels[grid[index1 + ID]].flammability / 100) {
+                        addFire(x1, y1, true);
+                    }
+                    if (Math.random() < 10 / pixels[grid[index1 + ID]].blastResistance) {
+                        if (grid[index1 + ID] == LASER_LEFT || grid[index1 + ID] == LASER_UP || grid[index1 + ID] == LASER_RIGHT || grid[index1 + ID] == LASER_DOWN) {
+                            explode(x1, y1, 5 * 5, 5 * 8, 3000);
+                        }
+                        addPixel(x1, y1, AIR);
+                    }
+                    // if (Math.random() < pixelAt(last[0], last[1]).flammability / 100) nextFireGrid[last[1]][last[0]] = true;
+                }
+            }
+            addDrawingChunk(x, y);
+            addUpdatedChunk(x, y);
+        },
+        draw: function(ctx, cameraScale, x, y) {
+            let path = getLaserPath(x, y, 1);
+            ctx.strokeStyle = "rgb(70, 215, 160)";
+            drawLaserPath(ctx, cameraScale, path);
+        },
+    },
+    laser_right: {
+        name: "Laser (Right)",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Lasers",
+        subgroup: "Goal",
+        texture: new Float32Array([120, 14, 6, 6]),
+        state: SOLID,
+        flammability: 0,
+        blastResistance: 0,
+        rotatable: true,
+        rotations: ["laser_left", "laser_up", "laser_right", "laser_down"],
+        update: function(x, y) {
+            let path = getLaserPath(x, y, 2);
+            let x1 = path[path.length - 1][0];
+            let y1 = path[path.length - 1][1];
+            if (isOnGrid(x1, y1)) {
+                let index1 = (x1 + y1 * gridWidth) * gridStride;
+                if (grid[index1 + ID] != LASER_SCATTERER) {
+                    // if (Math.random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
+                    if (Math.random() < pixels[grid[index1 + ID]].flammability / 100) {
+                        addFire(x1, y1, true);
+                    }
+                    if (Math.random() < 10 / pixels[grid[index1 + ID]].blastResistance) {
+                        if (grid[index1 + ID] == LASER_LEFT || grid[index1 + ID] == LASER_UP || grid[index1 + ID] == LASER_RIGHT || grid[index1 + ID] == LASER_DOWN) {
+                            explode(x1, y1, 5 * 5, 5 * 8, 3000);
+                        }
+                        addPixel(x1, y1, AIR);
+                    }
+                    // if (Math.random() < pixelAt(last[0], last[1]).flammability / 100) nextFireGrid[last[1]][last[0]] = true;
+                }
+            }
+            addDrawingChunk(x, y);
+            addUpdatedChunk(x, y);
+        },
+        draw: function(ctx, cameraScale, x, y) {
+            let path = getLaserPath(x, y, 2);
+            ctx.strokeStyle = "rgb(70, 215, 160)";
+            drawLaserPath(ctx, cameraScale, path);
+        },
+    },
+    laser_down: {
+        name: "Laser (Down)",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Lasers",
+        subgroup: "Goal",
+        texture: new Float32Array([126, 14, 6, 6]),
+        state: SOLID,
+        flammability: 0,
+        blastResistance: 0,
+        rotatable: true,
+        rotations: ["laser_left", "laser_up", "laser_right", "laser_down"],
+        update: function(x, y) {
+            let path = getLaserPath(x, y, 3);
+            let x1 = path[path.length - 1][0];
+            let y1 = path[path.length - 1][1];
+            if (isOnGrid(x1, y1)) {
+                let index1 = (x1 + y1 * gridWidth) * gridStride;
+                if (grid[index1 + ID] != LASER_SCATTERER) {
+                    // if (Math.random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
+                    if (Math.random() < pixels[grid[index1 + ID]].flammability / 100) {
+                        addFire(x1, y1, true);
+                    }
+                    if (Math.random() < 10 / pixels[grid[index1 + ID]].blastResistance) {
+                        if (grid[index1 + ID] == LASER_LEFT || grid[index1 + ID] == LASER_UP || grid[index1 + ID] == LASER_RIGHT || grid[index1 + ID] == LASER_DOWN) {
+                            explode(x1, y1, 5 * 5, 5 * 8, 3000);
+                        }
+                        addPixel(x1, y1, AIR);
+                    }
+                    // if (Math.random() < pixelAt(last[0], last[1]).flammability / 100) nextFireGrid[last[1]][last[0]] = true;
+                }
+            }
+            addDrawingChunk(x, y);
+            addUpdatedChunk(x, y);
+        },
+        draw: function(ctx, cameraScale, x, y) {
+            let path = getLaserPath(x, y, 3);
+            ctx.strokeStyle = "rgb(70, 215, 160)";
+            drawLaserPath(ctx, cameraScale, path);
+        },
+    },
+    laser_scatterer: {
+        name: "Laser Scatterer",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Lasers",
+        subgroup: "Laser Scatterer",
+        texture: new Float32Array([12, 5, 4, 4]),
+        state: SOLID,
+        flammability: 0,
+        blastResistance: 0,
+    },
+    mirror_1: {
+        name: "Mirror",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Lasers",
+        subgroup: "Mirror",
+        texture: new Float32Array([0, 320, 60, 60]),
+        state: SOLID,
+        flammability: 0,
+        blastResistance: 0,
+        rotatable: true,
+        rotations: ["mirror_1", "mirror_2"],
+    },
+    mirror_2: {
+        name: "Mirror",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Lasers",
+        subgroup: "Mirror",
+        texture: new Float32Array([60, 320, 60, 60]),
+        state: SOLID,
+        flammability: 0,
+        blastResistance: 0,
+        rotatable: true,
+        rotations: ["mirror_1", "mirror_2"],
+    },
     monster: {
         name: "Monster",
         description: "Unrealistically flows and may or may not be wet",
@@ -6435,10 +6635,8 @@ for (let i = 0; i < pixels.length; i++) {
         subgroupImg.style.backgroundImage = "url(" + data + ")";
         subgroupImg.onclick = function() {
             let id = pixelDivToId[i];
-            selectedDiv.classList.remove("pixelSelected");
-            selectedDiv = subgroupImg;
-            selectedDiv.classList.add("pixelSelected");
             setBrushPixel(id);
+            updatePixelImage();
         };
         subgroupImg.onmouseover = function() {
             let id = pixelDivToId[i];
@@ -6473,10 +6671,8 @@ for (let i = 0; i < pixels.length; i++) {
         pixelImg.style.backgroundImage = "url(" + data + ")";
         pixelImg.onclick = function() {
             let id = pixelDivToId[i];
-            selectedDiv.classList.remove("pixelSelected");
-            selectedDiv = pixelImg;
-            selectedDiv.classList.add("pixelSelected");
             setBrushPixel(id);
+            updatePixelImage();
         };
         pixelImg.onmouseover = function() {
             let id = pixelDivToId[i];
@@ -6498,6 +6694,13 @@ for (let i = 0; i < pixels.length; i++) {
         pixelImg.appendChild(pixelAmount);
     }
 }
+
+// buh this name is kind of bad
+function updatePixelImage() {
+    selectedDiv.classList.remove("pixelSelected");
+    selectedDiv = pixelImages[pixelIdToDiv[brushPixel]];
+    selectedDiv.classList.add("pixelSelected");
+};
 
 let pixelInventory = [];
 let pixelInventoryUpdates = [];
@@ -6559,6 +6762,41 @@ function resetPixelInventory() {
 function updatePixelInventory() {
     for (let i in pixelInventoryUpdates) {
         let div = pixelIdToDiv[i];
+        if (pixelInventory[i] != 0 && !pixelImages[div].classList.contains("shown")) {
+            let pixelSubgroupIds = [];
+            for (let j = 0; j < pixels.length; j++) {
+                if (j < Number(i)) {
+                    continue;
+                }
+                if (pixels[j].subgroup == pixels[i].subgroup) {
+                    pixelSubgroupIds.push(j);
+                }
+            }
+            for (let j = 0; j < pixels.length; j++) {
+                if (j < Number(i)) {
+                    continue;
+                }
+                if (pixelInventory[j] == 0) {
+                    continue;
+                }
+                if (pixels[j].subgroup != pixels[i].subgroup) {
+                    continue;
+                }
+                let div = pixelSubgroupIds.shift();
+                pixelDivToId[div] = j;
+                pixelIdToDiv[j] = div;
+                pixelDivs[div].classList.add("shown");
+                pixelAmounts[div].style.display = "";
+                pixelAmounts[div].innerText = pixelInventory[j] == Infinity ? "∞" : pixelInventory[j];
+                pixelImages[div].style.backgroundImage = "url(" + pixelImageData[j] + ")";
+                if (pixelImages[div].classList.contains("disabled")) {
+                    pixelImages[div].classList.remove("disabled");
+                }
+                pixelGroups[pixels[j].group].style.display = "";
+                pixelSubgroups[pixels[j].group][pixels[j].subgroup].style.display = "";
+            }
+            div = pixelIdToDiv[i];
+        }
         pixelAmounts[div].innerText = pixelInventory[i] == Infinity ? "∞" : pixelInventory[i];
         if ((pixelInventory[i] == 0) != pixelImages[div].classList.contains("disabled")) {
             pixelImages[div].classList.toggle("disabled");
@@ -6567,4 +6805,4 @@ function updatePixelInventory() {
     pixelInventoryUpdates = [];
 };
 
-export { pixels, addPixel, addFire, addUpdatedChunk, addUpdatedChunk2, resetPushPixels, pixelTexture, pixelInventory, pixelInventoryUpdates, resetPixelInventory, updatePixelInventory };
+export { pixels, addPixel, addFire, addUpdatedChunk, addUpdatedChunk2, resetPushPixels, pixelTexture, pixelInventory, pixelInventoryUpdates, updatePixelImage, resetPixelInventory, updatePixelInventory };

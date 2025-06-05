@@ -1,4 +1,4 @@
-import { grid, gridWidth, gridHeight, gridStride, chunks, nextChunks, chunkWidth, chunkHeight, chunkXAmount, chunkYAmount, chunkStride, tick, modal, setRunState, generateSaveCode, parseSaveCode, loadSaveCode, mouseX, mouseY } from "./game.js";
+import { grid, gridWidth, gridHeight, gridStride, chunks, nextChunks, chunkWidth, chunkHeight, chunkXAmount, chunkYAmount, chunkStride, tick, modal, setRunState, generateSaveCode, parseSaveCode, loadSaveCode, mouseX, mouseY, resetGrid } from "./game.js";
 import { pixels, pixelInventory, resetPixelInventory, pixelInventoryUpdates, updatePixelInventory } from "./pixels.js";
 import { transitionIn, transitionOut, slideInPuzzles } from "./menu.js";
 
@@ -76,7 +76,7 @@ let puzzles = {
             water: 100,
             stone: 100,
         },
-        img: "sdf",
+        img: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAAAAXNSR0IArs4c6QAABaFJREFUeF7t3D1uJUUYheHrgJgYB5MgJBbBDsYBIeSWkAgck8wEsAIT4MSLIPA6ZgdkaJAQyazgIoGFBHLb+lpVdPf5nkldf+c9r2uuS5Yvzufz+eQfAiEELggd0qQYfxEgNBGiCBA6qk5hCM2BKAKEjqpTGEJzIIoAoaPqFIbQHIgiQOioOoUhNAeiCBA6qk5hCM2BKAKEjqpTGEJzIIoAoaPqFIbQHIgiQOioOoUhNAeiCBA6qk5hCM2BKAKEjqpTGEJzIIoAoaPqFIbQHIgiQOioOoUhNAeiCBA6qk5hCM2BKAKEjqpTGEJzIIoAoaPqFIbQHIgiQOioOoUhNAeiCBA6qk5hCM2BKAKEjqpTGEJzIIoAoaPqFIbQHIgiQOioOoUhNAcOSeDu7u7JcxP6kHU6NKE5EEWA0FF1CkNoDkQRIHRUncIQmgNRBAgdVacwhOZAFAFCR9UpDKE5EEWA0FF1CkNoDhySwJK4S2H8Lscha+5zaEL36bpFUkK3qLlPSEL36bpFUkK3qLlPSEL36bpFUkK3qLlPSEL36bpFUkK3qLlPSEL36bpFUkK3qLlPSEL36ToqaVVcv8sRVX9eGELnddo6EaFb158XntB5nbZOROjW9eeFJ3Rep60TEbp1/XnhCZ3XaetEhG5df154Qud12joRoVvXnxee0Hmdtkg0Sly/y9FCl/2HJPT+O3LCAgFCF2AZun8ChN5/R05YIEDoAixD90+A0PvvKOqEV1dXh87jr48eur7xhyf0eKZW3JAAoTeEb+vxBAg9nqkVNyRA6A3h23o8AUKPZ2rFhgSWvpEeHh5KNLxylHAZPIsAoWeRte4mBAi9CXabziJA6FlkrbsJAUJvgt2mswgQehZZ6+6KQFV0rxy7qs9h/kuA0JyIIkDoqDqFITQHoggQOqpOYQjNgRYElkT3ytGi/ryQhM7rtHUiQreuPy88ofM6bZ2I0K3rzwtP6LxOJXqCgFcOWkQRIHRUncIQmgNRBAgdVacwhOZAFAFCR9UpDKE5EEWA0FF1CkNoDkQRIHRUncIQmgNRBC5eX5/PUYlWhnl487Y289X3tfFGryJw+fNlaR6hH3ERuuTN/zaY0CtRE3oluMnTCL0SMKFXgps8jdArARN6JbjJ0wi9EjChV4KbPK0s9DdfnEqvHL9+Xho+OW59+bK4C1tcvruvb36AGe+/fD/klFURlza9vv+tdJ4LQpd4/TOY0M9zI/Q6r8qz3NDPI3NDl5XadgKhCf0vAj5D/43DRw4fOba9mh93d0OH39BvXtdeOX7/MNfLUf8DvPro6ycP+tN3n5UCvP32h9L4ow++v/5kSITq68SQTU+n0wWhn0dJ6HWqEfqRmxt6nUCjZrmhR5Ek9GCS65Yj9Dpui7Pc0IOBFpcjdBHYS8MJ/RKhuV9vJ/RcnKfTH6++mrrF0itHtx/+pkLecPHyK8fssxJ6NuHs9Qn92K8bOkN0QhM6w+THFIQmNKFnEvAZeibd/LV3d0MvIa+K7jUjX96nEhK6Z++xqQkdW23PYITu2XtsakLHVtszGKF79h6b+jBCxzYg2FAChB6K02JbEyD01g3YfygBQg/FabGtCRB66wbsP5QAoYfitNjWBC5ubm5Kf070419+3PrM9p9I4MOnNxNXX156lFeE3qS+/W5K6P1242QrCBB6BTRT9kuA0PvtxslWECD0Cmim7JdAO6GXqqj+lLoVuKpK1VzV9avjj8KtmmvU+PIrB6FHoV+3DqGf50boF7xyQ6/7xttqFqEJvZV7U/YlNKGniLXVooQm9FbuTdl3mNBTTmdRBIoECF0EZvi+CRB63/04XZEAoYvADN83AULvux+nKxIgdBGY4fsmQOh99+N0CwRub2+f/AqhKXNIAoQ+ZG0OvUSA0NyIIkDoqDqFITQHoggsCf0nilHYlNZ4kzEAAAAASUVORK5CYII=",
         official: true,
     },
     "gravity": {
@@ -84,13 +84,13 @@ let puzzles = {
         name: "Gravity",
         author: "sp",
         world: "A Grid of Numbers",
-        saveCode: "V2;1;30-30;air-490:leaves-3:air-8:leaves-3:air-15:leaves-5:air-5:leaves-6:air-14:leaves-2:wood:leaves-2:air-4:leaves-3:wood:leaves-3:air-15:leaves:wood:leaves:air-5:leaves-3:wood:leaves-3:air-4:sand:air-11:wood:air-7:leaves:wood:leaves-3:air-4:sand-2:grass-2:air-9:wood:air-8:wood:air-6:sand-3:dirt-2:grass:air-8:wood:air-8:wood:air-5:sand-4:dirt-3:grass-2:air:monster:air-4:grass-8:air:wood:air-4:sand-5:dirt-5:grass-6:dirt-8:monster:grass:air-2:monster:sand-4:dirt-23:grass-5:dirt-123;0:900;0-450:1-449;",
+        saveCode: "V2;1;30-30;air-490:leaves-3:air-8:leaves-3:air-15:leaves-5:air-5:leaves-6:air-14:leaves-2:wood:leaves-2:air-4:leaves-3:wood:leaves-3:air-15:leaves:wood:leaves:air-5:leaves-3:wood:leaves-3:air-4:sand:air-11:wood:air-7:leaves:wood:leaves-3:air-4:sand-2:grass-2:air-9:wood:air-8:wood:air-6:sand-3:dirt-2:grass:air-8:wood:air-8:wood:air-5:sand-4:dirt-3:grass-2:air:monster:air-4:grass-8:air:wood:air-4:sand-5:dirt-5:grass-6:dirt-8:monster:grass:air-2:monster:sand-4:dirt-23:grass-5:dirt-124;0:900;0-450:1-450;",
         inventory: {
             dirt: 1,
             sand: 1,
             water: 1,
         },
-        img: "sdf",
+        img: "data:image/png;base64,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",
         official: true,
     },
     "mudslide": {
@@ -102,7 +102,7 @@ let puzzles = {
         inventory: {
             wood: 10,
         },
-        img: "sdf",
+        img: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAAAAAXNSR0IArs4c6QAAA4dJREFUeF7t3T1y1EAQxfFRSmwCHHANcwf7GOYYEHAN+xAEOgROfAgSAohJRfkDV61Lo1Vb86zX47/jUW/r/aYlWVDrYZqmqfDTbQIDwN3a3p8YwH37Aty5L8AA955A5+fHPRjgzhPo/PSYYIA7T6Dz02OCAe48gc5PLzzBF5/nExmvOk8q6ekBnBRubdsAr00q6TqAk8KtbRvgtUklXQdwUri1bYeB1xZmnUcCAHs4yLoAWBatR2GAPRxkXQAsi9ajMMAeDrIuAJZF61EYYA8HWRcAy6L1KAywh4OsC4Bl0XoUBtjDQdYFwLJoPQoD7OEg6wJgWbQehQH2cJB1AbAsWo/CAHs4yLoAWBatR2GAPRxkXQAsi9ajMMAeDrIuAJZF61EYYA8HWRcAy6L1KAywh4OsC4Bl0XoUBtjDQdYFwLJoPQoD7OEg6wJgWbQehQH2cJB1AbAsWo/CAHs4yLoAWBatR2GAPRxkXQAsi9ajMMAeDrIuAJZF61EYYA8HWRcAy6L1KAywh4OsizTAXy+G2RC+jfzpxaXdAbBsdjwKA+zhIOsCYFm0HoUB9nCQdQGwLFqPwnbAtaflaFw8XT8kBnB05yRbD3AysGi7AEcTS7Ye4GRg0XYBjiaWbD3AycCi7QIcTSzZeoCTgUXbBTiaWLL1ACcDi7YLcDSxZOt3A271zjma91t7Rw1wdIckWw9wMrBouwBHE0u2HuBkYNF2AY4mlmz9mwO+LeezROM4JqM7bPf0++ls/wA/xgJw4/291+/BTHBjyFo5gNsGzSX6MU8muO3GqlZjgtsGvdsE7wVZi48JbruxCsCNA62UY4K5B2t2GhOsyfV5VSaYCdbsNCZYk+urT7AbZK9P0bVL8eX1L+27aID3nVSAO7kHM8FHBin7iw6AAT5IoNm/B3MP7uQenAUy+hTdiqf2Hwdu3s9/U9/Z7/lv6oteimv9hycY4OWtsAT86U8p08eH44efpfw4KQXgVqN15Cm61ccsAZ+9O/yUm78At8r9qU7tKbrVBwHcKskX1tkT+O4S/f/n7lLNBL8QcemwPYHn+pLfg7+cF75wueFGur78MFut9ioxuj7a6gBwNLLl9VGw6PpotwBHEzuyPgoWXR9tF+BoYgA3TixZuehERtdH42CCo4kxwY0To9ymBJjgTfH5Hwywv9GmDgHeFJ//wQD7G23qEOBN8fkf/A83u+ZvMKuvoQAAAABJRU5ErkJggg==",
         official: true,
     },
     "lava": {
@@ -114,7 +114,89 @@ let puzzles = {
         inventory: {
             lava: 1,
         },
-        img: "sdf",
+        img: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAAAAAXNSR0IArs4c6QAAAxtJREFUeF7tmzFyE0EQRWdTYhwo4RrmDjjwIcwxSLgEie9A4kPY1yCwA4hJl1pcwgJ2ND1jUWw/P0UqVe9U///297ZUpWme57n4wjowCRjL9qcwAbP5ChjOV8ACpjsA1+czWMBwB+DyTLCA4Q7A5ZlgAcMdgMszwQKGOwCXZ4IFDHcALs8ECxjuAFyeCRYw3AG4PBMsYLgDcHkmWMBwB+DyTLCA4Q7A5ZlgAcMdgMszwQKGOwCXZ4IFDHcALs8ECxjuAFyeCRYw3AG4PBMsYLgDcHkmWMBwB+DyTLCA4Q7A5ZlgAcMdgMszwQKGOwCXZ4IFDHcALs8ECxjuAFyeCRYw3AG4PBMsYLgDcHkmWMBwB+DyTLCA4Q7A5ZlgAcMdgMszwQKGOwCXZ4IFDHcALs8ECxjuAFyeCW4A/vT+4lfFbvdU/PDw9H7LnwtYwPAZJmAB7x3Y8iiuPTIc0SbYBJtg8D1Q26IvP96kUO2IHhzRAk5xf7ebNMFtj1JXCDg1vnbzAm57lLpCwKnxtZsXcNuj1BUCTo2v3byA2x6lrhBwanzt5gXc9ih1hYBT42s3vzXAd2fTatPnX+fVz/0tOtlv0Qvgt99Kmd88Nj59KeX2dSkCbod1tWKLCT5/9Xurd98FPIi3FAEPW5fjwi0CXkb0/rWMahP8jHtpi4DX5FSfwbvPu/X16xmmbOHS+8v7k7TRC7h3y601WTunVi/gQdwjgHu23GOA185Z6nvOn0zwcfIjgHu23GOA185Z6nvOF/CJvwcvo7UHgIAHR+v/fAb3bLmtEf3ntrwf0eEt2hF9+hHds+X+8yXrw7uC3KKvrw7+Cjg4BZbLrq4P/kZ4cE7t/N76Wmu1c2r1tX4mAR+n3wust17Ag+kzwY/GmeDGDdSbyN56E2yCQw74DA7Z9HdRbyJ7603wIBgvgz+DBSzgF3EPYLfoF0EvIFLAAZMylwg4M71A7wIOmJS5RMCZ6QV6F3DApMwlAs5ML9C7gAMmZS4RcGZ6gd4FHDApc4mAM9ML9C7ggEmZSwScmV6gdwEHTMpcIuDM9AK9/wBOUfEx1WTICAAAAABJRU5ErkJggg==",
+        official: true,
+    },
+    "breaking_game": {
+        id: "breaking_game",
+        name: "Breaking Game",
+        author: "sp",
+        world: "A Grid of Numbers",
+        saveCode: "V2;1;30-30;air-433:concrete-13:air-17:concrete-13:air-17:concrete-13:air-17:concrete-13:air-7:leaves-3:air-7:concrete-4:wood-5:concrete-4:air-6:leaves-5:air-6:concrete-4:wood:air-3:wood:concrete-4:air-6:leaves-2:wood:leaves-2:air-6:concrete-4:wood:air-3:wood:concrete-4:air-7:leaves:wood:leaves:air-7:concrete-4:wood:air:monster:air:wood:concrete-4:air-8:wood:air-8:concrete-4:wood-5:concrete-4:air-8:wood:air-8:concrete-13:air-8:wood:air:grass-7:concrete-13:grass-4:air:grass-5:dirt-7:concrete-13:dirt-4:grass:dirt-12:concrete-13:dirt-94;0:900;0-390:1-510;",
+        inventory: {
+            lava: 1,
+            wood: 8, // unnecessary
+            plant: 1,
+            sponge: 1,
+        },
+        img: "data:image/png;base64,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",
+        official: true,
+    },
+    "platformer": {
+        id: "platformer",
+        name: "Platformer",
+        author: "sp",
+        world: "A Grid of Numbers",
+        saveCode: "V2;1;30-30;air-275:monster:air-2:monster:air:monster:air-22:wood-9:air-25:wood:air-29:wood:air-29:wood:air-29:wood:air-29:wood:air-29:wood:air-29:wood:air-29:wood:air-29:wood:air-29:wood:air-29:wood:air-29:wood:air-29:wood:air-29:wood:air-14:concrete:air-14:wood:air-10:grass-4:concrete:lava-7:water-7:wood:water-7:mud:grass-2:dirt-4:concrete:lava-7:mud-2:water-5:wood:water-4:mud-3:dirt-7:concrete-8:dirt-2:mud-5:dirt:mud-4:dirt-48;0:900;1-520:0-20:1-10:0-20:1-10:0-20:1-10:0-20:1-10:0-20:1-240;",
+        inventory: {
+            sand: 15,
+            wood: 25,
+        },
+        img: "data:image/png;base64,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",
+        official: true,
+    },
+    "rafting": {
+        id: "rafting",
+        name: "Rafting",
+        author: "sp",
+        world: "A Grid of Numbers",
+        saveCode: "V2;1;30-30;air-604:monster:air:monster:air-2:monster:air-23:wood-9:air-18:water-3:wood-9:water-228;0:900;1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-420;",
+        inventory: {
+            sand: 6,
+            concrete_powder: 6,
+            wood: 5,
+        },
+        img: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAAAAXNSR0IArs4c6QAABLhJREFUeF7t2jFyG2QUhVG5pYYiDdsIewgFi4CNsAkalsEiyDZoXEBNKyYEyDAjy+iNkJ6+Oa4yHv3Sf+89dmSPn47H4/HgQwORBp6Ajiwpxp8NAA1CqgGgU3MKAzQDqQaATs0pDNAMpBoAOjWnMEAzkGoA6NScwgDNQKoBoFNzCgM0A6kGgE7NKQzQDKQaADo1pzBAM5BqAOjUnMIAzUCqAaBTcwoDNAOpBoBOzSkM0AykGgA6NacwQDOQagDo1JzCAM1AqgGgU3MKAzQDqQaATs0pDNAMpBoAOjWnMEAzkGoA6NScwgDNQKoBoFNzCgM0A6kGgE7NKQzQDKQaADo1pzBAM5BqAOjUnMIAzUCqAaBTcwoDNAOpBoBOzSkM0AykGgA6NacwQDOQagDo1JzCAM1AqgGgU3MKAzQDqQaATs0pDNAMpBoAOjWnMEAzkGoA6NScwgDNQKoBoFNzCgM0A6kGgE7NKQzQDKQaADo1pzBAM5BqAOjUnMIAzUCqAaBTcwoDNAOpBoBOzSkM0AykGgA6NacwQDOQagDo1JzCAM1AqgGgU3MKAzQDqQaATs0pDNAMpBoAOjWnMEAzkGoA6NScwgDNQKoBoFNzCgM0A6kGgE7NKQzQDKQaADo1pzBAM5BqAOjUnMIAzUCqAaBTcwoDNAOpBoBOzSkM0AykGgA6NacwQDOQagDo1JzCAM1AqgGgU3MKAzQDqQaATs0pDNAMpBoAOjWnMEAzkGoA6NScwgDNQKoBoFNzCgM0A6kGgE7NKQzQDKQaADo1pzBAM5BqAOjUnMIAzUCqAaBTcwoDNAOpBoBOzSkM0AykGgA6Nacw/zvo9188nWz57a/Hk5+/9PEvTXit50HksRq4Ceivfjscjl9+LObpl8Ph588Ph3OgL3n8OdDXeJ7HmtNtbwL67Wf/Lvr97+dBX/L4c6Cv8TyIPFYDQD/WXm77SgM3Af3hv/6/Pz689XjtO/Qlj3/tLcd/fV1SGg3cBPSpqvxQ2AC0LcXVQP/w3df/ZHvz5lPM5+dP/37Ez3/z/U/bNnOfMw0A/Vc5L33hAf1YXz9AA/1YYm/1Q6G3HCkXDxvGd2jfoR8W76mLAw10C/S7b4+n/6jiwpjvDs3fcvz47LccF1K468OfgP7Y/0u/5QD6rj4vfnGgX3nLAfTFpu56AGig7wrw2i8ONNDXNnXX5wMa6LsCvPaLXw30tS/m+TQwaQDoSWvOrG0A6LXTuNikAaAnrTmztgGg107jYpMGgJ605szaBoBeO42LTRoAetKaM2sbAHrtNC42aQDoSWvOrG0A6LXTuNikAaAnrTmztgGg107jYpMGgJ605szaBoBeO42LTRoAetKaM2sbAHrtNC42aQDoSWvOrG0A6LXTuNikAaAnrTmztgGg107jYpMGgJ605szaBoBeO42LTRoAetKaM2sbAHrtNC42aQDoSWvOrG0A6LXTuNikAaAnrTmztgGg107jYpMGgJ605szaBoBeO42LTRoAetKaM2sbAHrtNC42aQDoSWvOrG0A6LXTuNikAaAnrTmztgGg107jYpMGgJ605szaBoBeO42LTRoAetKaM2sbAHrtNC42aQDoSWvOrG3gD2vKzUK/FSmzAAAAAElFTkSuQmCC",
+        official: true,
+    },
+    "raining": {
+        id: "raining",
+        name: "Raining",
+        author: "sp",
+        world: "A Grid of Numbers",
+        saveCode: "V2;1;30-30;air-429:leaves-5:air-24:leaves-7:air-23:leaves-3:wood:leaves-3:air-18:leaves-5:air:leaves-2:wood:leaves-2:air-18:leaves-7:air-2:wood:air-5:concrete:air-14:leaves-3:wood:leaves-3:air-2:wood:air-5:concrete:air-14:leaves-3:wood:leaves-3:air-2:wood:air-5:concrete:air-15:leaves-2:wood:leaves-2:air-3:wood:air-5:concrete:air-17:wood:air-5:grass:air-5:concrete:air-17:wood:air-5:dirt:grass-2:air:monster:air:concrete:air-17:wood:air-4:grass:dirt-3:grass-3:concrete:air-13:monster:air-3:grass-5:dirt-7:concrete:air-12:grass-5:dirt-12:concrete:air-12:dirt-17:concrete-13:dirt-60;0:900;1-588:0-12:1-18:0-12:1-18:0-12:1-18:0-12:1-18:0-12:1-18:0-12:1-18:0-12:1-18:0-12:1-90;",
+        inventory: {
+            concrete: 25,
+            water_pump: 1,
+            lava_heater: 1,
+        },
+        img: "data:image/png;base64,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",
+        official: true,
+    },
+    "rafting_2": {
+        id: "rafting_2",
+        name: "Rafting 2",
+        author: "sp",
+        world: "A Grid of Numbers",
+        saveCode: "V2;1;30-30;air-514:wood:air-5:wood:air-22:wood-9:air-22:wood:air-5:wood:air-23:wood:air:monster-2:air:monster:wood:air-22:wood-9:air-18:water-3:wood-9:water-228;0:900;1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-14:0-16:1-420;",
+        inventory: {
+            dirt: 5,
+            concrete_powder: 10,
+            concrete: 3,
+            lava: 1,
+            sapling: 1,
+        },
+        img: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAAAAXNSR0IArs4c6QAABORJREFUeF7t3D1yHGUYhdGZlBgCJ2zD7EEEXgRshE04YRkswk5YBIkCiEmHMpJ/q+WucWmqu5/3OLJVrZnv3nvUHqkknS+Xy+XkjwYiDZyBjiwpxv8NAA1CqgGgU3MKAzQDqQaATs0pDNAMpBoAOjWnMEAzkGoA6NScwgDNQKoBoFNzCgM0A6kGgE7NKQzQDKQaADo1pzBAM5BqAOjUnMIAzUCqAaBTcwoDNAOpBoBOzSkM0AykGgA6NacwQDOQagDo1JzCAM1AqgGgU3MKAzQDqQaATs0pDNAMpBoAOjWnMEAzkGoA6NScwgDNQKoBoFNzCgM0A6kGgE7NKQzQDKQaADo1pzBAM5BqAOjUnMIAzUCqAaBTcwoDNAOpBoBOzSkM0AykGgA6NacwQDOQagDo1JzCAM1AqgGgU3MKAzQDqQaATs0pDNAMpBoAOjWnMEAzkGoA6NScwgDNQKoBoFNzCgM0A6kGgE7NKQzQDKQaADo1pzBAM5BqAOjUnMIAzUCqAaBTcwoDNAOpBoBOzSkM0AykGgA6NacwQDOQagDo1JzCAM1AqgGgU3MKAzQDqQaATs0pDNAMpBoAOjWnMEAzkGoA6NScwgDNQKoBoFNzCgM0A6kGgE7NKQzQDKQaADo1pzBAM5BqAOjUnMIAzUCqAaBTcwoDNAOpBoBOzSkM0AykGgA6NacwQDOQagDo1JzCAM1AqgGgU3MKAzQDqQaATs0pzM1Bv/715w8tv3jxsfBXv/2xSft7O88mJYSfFOjHcbf6AAvb2iQa0EBvAu9WTwo00LeytcnjAg30JvBu9aRAA30rW5s87rOBfuqrB/f3H3N9+lWOo7zdJ4ubuPzmJwX6sbqnPsCA/mZbm7wj0EBvAu9WTwo00LeytcnjAg30JvBu9aRAA30rW5s87rOBfur0e/veib2dZ5PVw08KtK9Dp3gDDTTQ1zSwt//i93aea7p07XoD7tDu0OtKDnQF0EAfiOv6UXcH+u0P5/VTf3LFy78vi9c/9Th/vrr7cP0efoLmqrAuXm1gl6B/+ud0uvz4cPbzX6fTm+8f/r709q+BXroe6FUTh75gl6Bffvd5p2//ffj30tu/BnrpeqAP7XX18EB7Db2K5EgX7BL0u5cK7/+8e+nx/g699Pa1lxxfPo479JF4Xn/WXYK+JoZPCq9pq3/ts4H2Eyt9LEdICPTjSn5i5Qhc188INNDrSg50BdBAH4jr+lGBBnpdyYGuABroA3FdP+r57pfL8jdDrL/vZ1fcnZZ/y+hRfv/GU+f8/X6b35J6Zf0uf2wA6JU7NNDH+lgBGuhjiV05LdBAA73UgNfQKReHDeMO7Q59WLxLB3820KlWhDlsA0AfdjoHd4dmIN+AO3R+4lkBgZ61dz4t0PmJZwUEetbe+bRA5yeeFRDoWXvn0wKdn3hWQKBn7Z1PC3R+4lkBgZ61dz4t0PmJZwUEetbe+bRA5yeeFRDoWXvn0wKdn3hWQKBn7Z1PC3R+4lkBgZ61dz4t0PmJZwUEetbe+bRA5yeeFRDoWXvn0wKdn3hWQKBn7Z1PC3R+4lkBgZ61dz4t0PmJZwUEetbe+bRA5yeeFRDoWXvn0wKdn3hWQKBn7Z1PC3R+4lkBgZ61dz4t0PmJZwUEetbe+bRA5yeeFRDoWXvn0wKdn3hWwP8Agn6NUdoswksAAAAASUVORK5CYII=",
+        official: true,
+    },
+    "resupply_needed": {
+        id: "resupply_needed",
+        name: "Resupply Needed",
+        author: "sp",
+        world: "A Grid of Numbers",
+        saveCode: "V2;1;40-40;air-267:concrete:water-3:concrete:air-35:concrete:water-3:concrete:air-35:concrete:water-3:concrete:air-34:grass:concrete-5:grass:air-32:stone:dirt-6:stone-2:air-32:stone-3:dirt-2:stone-2:air-34:stone-5:air-59:concrete:lava-3:concrete:air-35:concrete:lava-3:concrete:air-35:concrete:lava-3:concrete:air-33:grass-2:concrete-5:grass:air-31:stone:dirt-8:stone:air-30:stone-2:dirt-6:stone-2:air-31:stone-3:dirt-2:stone-3:air-34:stone-5:air-184:concrete:air-5:concrete:air-33:concrete:concrete_powder-5:concrete:air-29:leaves-3:air:concrete:concrete_powder-5:concrete:air-28:leaves-5:concrete:concrete_powder-5:concrete:air-28:leaves-2:wood:leaves-2:concrete:concrete_powder-5:concrete:air-29:leaves:wood:leaves:air:concrete:concrete_powder-5:concrete:air-30:wood:air-2:concrete:concrete_powder-5:concrete:monster:air-11:monster:air-15:monster:air:wood:air-2:concrete-7:dirt:grass-3:air-6:wood-5:air-12:grass-2:air:wood:air:monster:dirt-10:mud:water-22:mud:dirt-2:grass:dirt:grass:dirt-12:mud-2:water-16:mud-4:dirt-20:mud-3:water-9:mud-4:dirt-27:mud-9:dirt-95;0:1600;0-267:1:0-3:1:0-35:1:0-3:1:0-35:1:0-3:1:0-34:1-7:0-32:1-9:0-32:1-7:0-34:1-5:0-59:1-5:0-35:1-5:0-35:1-5:0-24:1-401:0-5:1-35:0-5:1-35:0-5:1-35:0-5:1-35:0-5:1-35:0-5:1-314;",
+        inventory: {},
+        img: "data:image/png;base64,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",
         official: true,
     },
     "race": {
@@ -396,6 +478,7 @@ function loadPuzzle(id) {
     for (let i in pixels) {
         pixelInventory[i] = puzzles[id].inventory[pixels[i].id] ?? 0;
     }
+    pixelInventory[AIR] = Infinity;
     resetPixelInventory();
     if (puzzleProgress[currentPuzzle] != null) {
         loadSaveCode(puzzleProgress[currentPuzzle].saveCode, false, true);
@@ -535,12 +618,7 @@ const congratulationsContinueButton = document.getElementById("congratulationsCo
 
 congratulationsResetButton.onclick = () => {
     congratulationsContainer.classList.add("hidden");
-    loadSaveCode(puzzles[currentPuzzle].saveCode);
-    for (let i in pixels) {
-        pixelInventory[i] = puzzles[currentPuzzle].inventory[pixels[i].id] ?? 0;
-    }
-    resetPixelInventory();
-    loadSaveCode(saveCode.value, false, true);
+    resetGrid();
 };
 congratulationsContinueButton.onclick = async () => {
     if (puzzleProgress[currentPuzzle] == null) {

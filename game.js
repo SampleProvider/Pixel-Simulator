@@ -1,4 +1,4 @@
-import { pixels, addPixel, addFire, addUpdatedChunk, addUpdatedChunk2, resetPushPixels, pixelTexture, pixelInventory, pixelInventoryUpdates, resetPixelInventory, updatePixelInventory } from "./pixels.js";
+import { pixels, addPixel, addFire, addUpdatedChunk, addUpdatedChunk2, resetPushPixels, pixelTexture, pixelInventory, pixelInventoryUpdates, updatePixelImage, resetPixelInventory, updatePixelInventory } from "./pixels.js";
 import { resizeCanvas, resizeGrid, render } from "./renderer.js";
 import { resizeMenuCanvases, transitionIn, transitionOut, slideInTitle, updateMenu } from "./menu.js";
 import { puzzles, puzzleProgress, currentPuzzle, targets, resetTargets, updateObjectives } from "./puzzles.js";
@@ -65,6 +65,24 @@ menu transitions are dumb, do they just reset what changed or set everything?
 wgsl can definitely be optimized:
 - if statements
 - drawplacementrestriction buffer
+
+alt to show pixel name - DONE
+
+concrete powder - fix pixel conversions
+
+rename drawBlueprintImg
+
+img -> image
+
+refactor code for selecting brush pixel - function for changing div styles name
+
+fps display borks in simulate mode - DONE
+
+optimize the code for when you pick up a pixel starting from 0 in inventory
+
+fix bug where loading puzzle save code on resupply needed is borken
+
+random() in shader is [-1, 1] i think, this breaks noise (ash is one of the pixels that are borken)
 
 // todo: minimize mode for savecodes
 // if (currentPuzzle != null) {
@@ -256,18 +274,14 @@ slowmodeButton.onclick = () => {
 const resetButton = document.getElementById("resetButton");
 resetButton.onclick = async () => {
     if (await modal("Reset?", "Your current simulation will be deleted!", "confirm")) {
-        if (currentPuzzle == null) {
-            loadSaveCode(saveCode.value);
-        }
-        else {
-            loadSaveCode(puzzles[currentPuzzle].saveCode);
-            for (let i in pixels) {
-                pixelInventory[i] = puzzles[currentPuzzle].inventory[pixels[i].id] ?? 0;
-            }
-            resetPixelInventory();
-            loadSaveCode(saveCode.value, false, true);
-        }
+        resetGrid();
     }
+};
+
+const screenshotButton = document.getElementById("screenshotButton");
+screenshotButton.onclick = async () => {
+    console.log(drawBlueprintImg(grid, gridWidth, gridHeight, gridWidth * 6, gridHeight * 6))
+    downloadFile(await (await fetch(drawBlueprintImg(grid, gridWidth, gridHeight, gridWidth * 6, gridHeight * 6))).blob(), "test.png");
 };
 
 const transitionContainer = document.getElementById("transitionContainer");
@@ -380,6 +394,9 @@ const generateSaveCodeButton = document.getElementById("generateSaveCodeButton")
 saveCodeSettingsToggle.onclick = () => {
     saveCodeSettings.classList.toggle("hidden");
 };
+saveCode.onkeydown = (e) => {
+    e.stopImmediatePropagation();
+};
 
 downloadSaveCodeButton.onclick = () => {
     const blob = new Blob([JSON.stringify({
@@ -435,7 +452,7 @@ blueprintSettingsToggle.onclick = () => {
 saveBlueprintButton.onclick = () => {
     if (selectionGrid != null) {
         let saveCode = generateSaveCode(true);
-        addBlueprint("New Blueprint", saveCode, drawBlueprintImg(selectionGrid, selectionGridWidth, selectionGridHeight));
+        addBlueprint("New Blueprint", saveCode, drawBlueprintImg(selectionGrid, selectionGridWidth, selectionGridHeight, 100, 100));
     }
     else {
         modal("No Selection!", "A copied selection is required to make a blueprint!", "info");
@@ -459,7 +476,7 @@ uploadBlueprintButton.onclick = async () => {
         }
         if (json.img == null) {
             let parsed = parseSaveCode(json.saveCode);
-            json.img = drawBlueprintImg(parsed.grid, parsed.gridWidth, parsed.gridHeight);
+            json.img = drawBlueprintImg(parsed.grid, parsed.gridWidth, parsed.gridHeight, 100, 100);
         }
         for (let i in blueprints) {
             if (blueprints[i].name == json.name) {
@@ -743,6 +760,9 @@ function addBlueprint(name, saveCode, img) {
     blueprintName.oninput = () => {
         data.name = blueprintName.value;
     };
+    blueprintName.onkeydown = (e) => {
+        e.stopImmediatePropagation();
+    };
     const blueprintCopyButton = blueprint.querySelector(".blueprintCopyButton");
     blueprintCopyButton.onclick = () => {
         loadSaveCode(data.saveCode, true);
@@ -774,19 +794,19 @@ function addBlueprint(name, saveCode, img) {
     data.div = blueprintImg.parentNode;
     blueprints.push(data);
 };
-function drawBlueprintImg(grid, gridWidth, gridHeight) {
+function drawBlueprintImg(grid, gridWidth, gridHeight, width, height) {
     let canvas = document.createElement("canvas");
     let ctx = canvas.getContext("2d");
-    canvas.width = 100;
-    canvas.height = 100;
+    canvas.width = width;
+    canvas.height = height;
     ctx.imageSmoothingEnabled = false;
     ctx.webkitImageSmoothingEnabled = false;
     ctx.mozImageSmoothingEnabled = false;
-    let scale = 100 / Math.max(gridWidth, gridHeight);
+    let scale = Math.min(width / gridWidth, height / gridHeight);
     ctx.scale(scale, scale);
     for (let i = 0; i < gridWidth * gridHeight * gridStride; i += gridStride) {
-        let x = 50 / scale - gridWidth / 2 + (i / gridStride) % gridWidth;
-        let y = 50 / scale - gridHeight / 2 + Math.floor(i / gridStride / gridWidth);
+        let x = width / 2 / scale - gridWidth / 2 + (i / gridStride) % gridWidth;
+        let y = height / 2 / scale - gridHeight / 2 + Math.floor(i / gridStride / gridWidth);
         let pixel = pixels[grid[i + ID]];
         if (pixel.color != null) {
             ctx.fillStyle = "rgba(" + pixel.color[0] + ", " + pixel.color[1] + ", " + pixel.color[2] + ", 1)";
@@ -816,6 +836,7 @@ let controls = {
 let keybinds = {};
 keybinds["Main Action"] = [{ key: "LMB" }];
 keybinds["Secondary Action"] = [{ key: "RMB" }];
+keybinds["Move"] = [{ key: "MMB" }];
 keybinds["Move Left"] = [{ key: "a", ctrl: false, alt: false, meta: false }];
 keybinds["Move Right"] = [{ key: "d", ctrl: false, alt: false, meta: false }];
 keybinds["Move Up"] = [{ key: "w", ctrl: false, alt: false, meta: false }];
@@ -824,6 +845,7 @@ keybinds["Zoom In"] = [{ key: "e", ctrl: false, alt: false, meta: false }, { key
 keybinds["Zoom Out"] = [{ key: "q", ctrl: false, alt: false, meta: false }, { key: "[", ctrl: false, alt: false, meta: false }];
 keybinds["Increment Brush Size"] = [{ key: "ArrowUp", ctrl: false, alt: false, meta: false }];
 keybinds["Decrement Brush Size"] = [{ key: "ArrowDown", ctrl: false, alt: false, meta: false }];
+keybinds["Pick Brush Pixel"] = [{ key: "MMB" }];
 keybinds["Begin Selection"] = [{ key: "Control", ctrl: true, alt: null, meta: null }];
 keybinds["End Selection"] = [{ key: "Escape", ctrl: false, alt: false, meta: false }];
 keybinds["Copy Selection"] = [{ key: "c", ctrl: true, alt: false, meta: false }];
@@ -868,7 +890,7 @@ function isKeybindJustPressed(keybind) {
         if (controls[keybinds[keybind][i].key] == false || controls[keybinds[keybind][i].key] < lastFrame) {
             continue;
         }
-        if (keybinds[keybind][i].key != "LMB" && keybinds[keybind][i].key != "RMB") {
+        if (keybinds[keybind][i].key != "LMB" && keybinds[keybind][i].key != "MMB" && keybinds[keybind][i].key != "RMB") {
             if (((controls["Control"] != false) && (controls["Control"] <= controls[keybinds[keybind][i].key])) != keybinds[keybind][i].ctrl) {
                 continue;
             }
@@ -1344,7 +1366,7 @@ function updateMouse() {
             selectionGridWidth = Math.min(selectionX + selectionWidth, gridWidth) - Math.max(selectionX, 0);
             selectionGridHeight = Math.min(selectionY + selectionHeight, gridHeight) - Math.max(selectionY, 0);
         }
-        else if (isKeybindJustPressed("Cut Selection") && (currentPuzzle == null || tick == 1)) {
+        else if (isKeybindJustPressed("Cut Selection")) {
             let array = [];
             for (let y = Math.max(selectionY, 0); y < Math.min(selectionY + selectionHeight, gridHeight); y++) {
                 for (let x = Math.max(selectionX, 0); x < Math.min(selectionX + selectionWidth, gridWidth); x++) {
@@ -1356,10 +1378,38 @@ function updateMouse() {
                             array.push(grid[(x + y * gridWidth) * gridStride + i]);
                         }
                     }
-                    addPixel(x, y, 0);
-                    addFire(x, y, 0);
-                    // addUpdatedChunk2(x, y);
-                    changed = true;
+                }
+            }
+            if (currentPuzzle == null) {
+                for (let y = Math.max(selectionY, 0); y < Math.min(selectionY + selectionHeight, gridHeight); y++) {
+                    for (let x = Math.max(selectionX, 0); x < Math.min(selectionX + selectionWidth, gridWidth); x++) {
+                        addPixel(x, y, 0);
+                        addFire(x, y, 0);
+                        changed = true;
+                    }
+                }
+            }
+            else if (tick == 1) {
+                for (let y = Math.max(selectionY, 0); y < Math.min(selectionY + selectionHeight, gridHeight); y++) {
+                    for (let x = Math.max(selectionX, 0); x < Math.min(selectionX + selectionWidth, gridWidth); x++) {
+                        let index = (x + y * gridWidth) * gridStride;
+                        if ((grid[index + PUZZLE_DATA] & 1) == 1) {
+                            continue;
+                        }
+                        if (grid[index + ID] != 0) {
+                            pixelInventory[grid[index + ID]] += 1;
+                            pixelInventoryUpdates[grid[index + ID]] = true;
+                        }
+                        grid[index + ID] = AIR;
+                        if (grid[index + ON_FIRE] != 0) {
+                            pixelInventory[FIRE] += 1;
+                            pixelInventoryUpdates[FIRE] = true;
+                        }
+                        grid[index + ON_FIRE] = 0;
+                        addUpdatedChunk(x, y);
+                        // addUpdatedChunk2(x, y);
+                        changed = true;
+                    }
                 }
             }
             selectionGrid = new Float32Array(array);
@@ -1609,23 +1659,67 @@ document.onmousemove = (e) => {
     var rect = canvas.getBoundingClientRect();
     mouseRawX = e.clientX;
     mouseRawY = e.clientY;
+    if (isKeybindPressed("Move")) {
+        cameraX -= (e.clientX * devicePixelRatio - mouseX) / cameraScale;
+        cameraY -= (e.clientY * devicePixelRatio - mouseY) / cameraScale;
+    }
     mouseX = e.clientX * devicePixelRatio;
     mouseY = e.clientY * devicePixelRatio;
 };
 overlayCanvas.onmousedown = (e) => {
+    let key = "";
     if (e.button == 0) {
-        controls["LMB"] = performance.now();
+        key = "LMB";
+        controls[key] = performance.now();
+    }
+    else if (e.button == 1) {
+        key = "MMB";
+        controls[key] = performance.now();
     }
     else if (e.button == 2) {
-        controls["RMB"] = performance.now();
+        key = "RMB";
+        controls[key] = performance.now();
+    }
+    for (let i in keybinds["Pick Brush Pixel"]) {
+        if (key == keybinds["Pick Brush Pixel"][i].key) {
+            if (isKeybindJustPressed("Pick Brush Pixel")) {
+                let brushX = Math.floor(cameraX + mouseX / cameraScale);
+                let brushY = Math.floor(cameraY + mouseY / cameraScale);
+                if (brushX >= 0 && brushX < gridWidth && brushY >= 0 && brushY < gridHeight) {
+                    brushPixel = grid[(brushX + brushY * gridWidth) * gridStride + ID];
+                    updatePixelImage();
+                }
+            }
+        }
+    }
+    for (let i in keybinds["Move"]) {
+        if (key == keybinds["Move"][i].key) {
+            if (isKeybindJustPressed("Move")) {
+                overlayCanvas.style.cursor = "move";
+            }
+        }
     }
 };
 document.onmouseup = (e) => {
+    let key = "";
     if (e.button == 0) {
-        controls["LMB"] = false;
+        key = "LMB";
+        controls[key] = false;
+    }
+    else if (e.button == 1) {
+        key = "MMB";
+        controls[key] = false;
     }
     else if (e.button == 2) {
-        controls["RMB"] = false;
+        key = "RMB";
+        controls[key] = false;
+    }
+    for (let i in keybinds["Move"]) {
+        if (key == keybinds["Move"][i].key) {
+            if (!isKeybindPressed("Move")) {
+                overlayCanvas.style.cursor = "";
+            }
+        }
     }
 };
 document.oncontextmenu = (e) => {
@@ -1663,17 +1757,28 @@ document.onkeydown = (e) => {
     for (let i in keybinds["Play"]) {
         if (key == keybinds["Play"][i].key) {
             if (isKeybindPressed("Play")) {
+                // e.preventDefault();
+                let button = null;
                 switch (runState) {
                     case "paused":
                     case "playing":
-                        playButton.click();
+                        button = playButton;
+                        playButton.focus();
+                        // playButton.click();
                         break;
                     case "simulating":
-                        simulateButton.click();
+                        button = simulateButton;
+                        // simulateButton.click();
                         break;
                     case "slowmode":
-                        slowmodeButton.click();
+                        button = slowmodeButton;
+                        // slowmodeButton.click();
                         break;
+                }
+                if (document.activeElement != button) {
+                    e.preventDefault();
+                    button.focus();
+                    button.click();
                 }
                 break;
             }
@@ -1763,7 +1868,9 @@ window.onbeforeunload = () => {
     localStorage.setItem("sandboxGrid", sandboxGrid);
     localStorage.setItem("sandboxSaveCode", sandboxSaveCode);
     localStorage.setItem("puzzleProgress", JSON.stringify(puzzleProgress));
-    localStorage.setItem("selectionGrid", generateSaveCode(true));
+    if (selectionGrid != null) {
+        localStorage.setItem("selectionGrid", generateSaveCode(true));
+    }
     localStorage.setItem("blueprints", JSON.stringify(blueprints));
 };
 
@@ -1958,6 +2065,22 @@ function drawGrid(ctx) {
         }
     }
     ctx.resetTransform();
+};
+
+function resetGrid() {
+    if (currentPuzzle == null) {
+        loadSaveCode(saveCode.value);
+    }
+    else {
+        loadSaveCode(puzzles[currentPuzzle].saveCode);
+        for (let i in pixels) {
+            pixelInventory[i] = puzzles[currentPuzzle].inventory[pixels[i].id] ?? 0;
+        }
+        pixelInventory[AIR] = Infinity;
+        resetPixelInventory();
+        loadSaveCode(saveCode.value, false, true);
+        updateObjectives();
+    }
 };
 
 function updateGrid() {
@@ -2351,6 +2474,7 @@ let historyLength = 100;
 
 let graphX = 5;
 let graphY = 68 + 5;
+graphY = 69 + 2;
 let graphWidth = 300;
 let graphHeight = 100;
 
@@ -2459,36 +2583,51 @@ function updateGame() {
     lastFrame = performance.now();
     frame += 1;
 
-    if (debug) {
-        let fpsText = "FPS: " + fps + "; Min: " + minFps + "; Max: " + maxFps + "; Avg: " + averageFps.toFixed(2) + ";";
-        let frameText = "Frame: " + frameTime.toFixed(2) + "ms; Min: " + minFrameTime.toFixed(2) + "ms; Max: " + maxFrameTime.toFixed(2) + "ms; Avg: " + averageFrameTime.toFixed(2) + "ms;";
-        let updateText = "Update: " + updateTime.toFixed(2) + "ms; Min: " + minUpdateTime.toFixed(2) + "ms; Max: " + maxUpdateTime.toFixed(2) + "ms; Avg: " + averageUpdateTime.toFixed(2) + "ms;";
-        let drawText = "Draw: " + drawTime.toFixed(2) + "ms; Min: " + minDrawTime.toFixed(2) + "ms; Max: " + maxDrawTime.toFixed(2) + "ms; Avg: " + averageDrawTime.toFixed(2) + "ms;";
+    if (debug && (runState != "simulating" || frame % 10 == 1)) {
+        function drawText(text, x, y) {
+            overlayCtx.fillStyle = "#ffffff55";
+            overlayCtx.fillRect(x - 2, y - 1, overlayCtx.measureText(text).width + 4, 16);
+            // overlayCtx.font = "16px Source Code Pro";
+            overlayCtx.font = "16px Noto Sans";
+            overlayCtx.textBaseline = "top";
+            overlayCtx.textAlign = "left";
+            overlayCtx.fillStyle = "#000000";
+            overlayCtx.fillText(text, x, y);
+        };
+
+        drawText("FPS: " + fps + "; Min: " + minFps + "; Max: " + maxFps + "; Avg: " + averageFps.toFixed(2) + ";", 3, 1);
+        drawText("Frame: " + frameTime.toFixed(2) + "ms; Min: " + minFrameTime.toFixed(2) + "ms; Max: " + maxFrameTime.toFixed(2) + "ms; Avg: " + averageFrameTime.toFixed(2) + "ms;", 3, 18);
+        drawText("Update: " + updateTime.toFixed(2) + "ms; Min: " + minUpdateTime.toFixed(2) + "ms; Max: " + maxUpdateTime.toFixed(2) + "ms; Avg: " + averageUpdateTime.toFixed(2) + "ms;", 3, 35);
+        drawText("Draw: " + drawTime.toFixed(2) + "ms; Min: " + minDrawTime.toFixed(2) + "ms; Max: " + maxDrawTime.toFixed(2) + "ms; Avg: " + averageDrawTime.toFixed(2) + "ms;", 3, 52);
+        // let fpsText = "FPS: " + fps + "; Min: " + minFps + "; Max: " + maxFps + "; Avg: " + averageFps.toFixed(2) + ";";
+        // let frameText = "Frame: " + frameTime.toFixed(2) + "ms; Min: " + minFrameTime.toFixed(2) + "ms; Max: " + maxFrameTime.toFixed(2) + "ms; Avg: " + averageFrameTime.toFixed(2) + "ms;";
+        // let updateText = "Update: " + updateTime.toFixed(2) + "ms; Min: " + minUpdateTime.toFixed(2) + "ms; Max: " + maxUpdateTime.toFixed(2) + "ms; Avg: " + averageUpdateTime.toFixed(2) + "ms;";
+        // let drawText = "Draw: " + drawTime.toFixed(2) + "ms; Min: " + minDrawTime.toFixed(2) + "ms; Max: " + maxDrawTime.toFixed(2) + "ms; Avg: " + averageDrawTime.toFixed(2) + "ms;";
         // let simulatingText = "TPS: " + tps + "; Min: " + minDrawTime.toFixed(2) + "ms; Max: " + maxDrawTime.toFixed(2) + "ms; Avg: " + averageDrawTime.toFixed(2) + "ms;";
 
-        overlayCtx.fillStyle = "#ffffff55";
-        // overlayCtx.fillStyle = "#00000066";
-        // overlayCtx.strokeStyle = "#000000";
-        // overlayCtx.lineWidth = 2;
-        overlayCtx.fillRect(1, 0, overlayCtx.measureText(fpsText).width + 4, 16);
-        overlayCtx.fillRect(1, 17, overlayCtx.measureText(frameText).width + 4, 16);
-        overlayCtx.fillRect(1, 34, overlayCtx.measureText(updateText).width + 4, 16);
-        overlayCtx.fillRect(1, 51, overlayCtx.measureText(drawText).width + 4, 16);
-        // overlayCtx.strokeRect(1, 0, overlayCtx.measureText(fpsText).width + 4, 16);
-        // overlayCtx.strokeRect(1, 17, overlayCtx.measureText(frameText).width + 4, 16);
-        // overlayCtx.strokeRect(1, 34, overlayCtx.measureText(updateText).width + 4, 16);
-        // overlayCtx.strokeRect(1, 51, overlayCtx.measureText(drawText).width + 4, 16);
+        // overlayCtx.fillStyle = "#ffffff55";
+        // // overlayCtx.fillStyle = "#00000066";
+        // // overlayCtx.strokeStyle = "#000000";
+        // // overlayCtx.lineWidth = 2;
+        // overlayCtx.fillRect(1, 0, overlayCtx.measureText(fpsText).width + 4, 16);
+        // overlayCtx.fillRect(1, 17, overlayCtx.measureText(frameText).width + 4, 16);
+        // overlayCtx.fillRect(1, 34, overlayCtx.measureText(updateText).width + 4, 16);
+        // overlayCtx.fillRect(1, 51, overlayCtx.measureText(drawText).width + 4, 16);
+        // // overlayCtx.strokeRect(1, 0, overlayCtx.measureText(fpsText).width + 4, 16);
+        // // overlayCtx.strokeRect(1, 17, overlayCtx.measureText(frameText).width + 4, 16);
+        // // overlayCtx.strokeRect(1, 34, overlayCtx.measureText(updateText).width + 4, 16);
+        // // overlayCtx.strokeRect(1, 51, overlayCtx.measureText(drawText).width + 4, 16);
 
-        overlayCtx.font = "16px Source Code Pro";
-        overlayCtx.font = "16px Noto Sans";
-        overlayCtx.textBaseline = "top";
-        overlayCtx.textAlign = "left";
-        overlayCtx.fillStyle = "#000000";
-        // overlayCtx.fillStyle = "#ffffff";
-        overlayCtx.fillText(fpsText, 3, 1);
-        overlayCtx.fillText(frameText, 3, 18);
-        overlayCtx.fillText(updateText, 3, 35);
-        overlayCtx.fillText(drawText, 3, 52);
+        // overlayCtx.font = "16px Source Code Pro";
+        // overlayCtx.font = "16px Noto Sans";
+        // overlayCtx.textBaseline = "top";
+        // overlayCtx.textAlign = "left";
+        // overlayCtx.fillStyle = "#000000";
+        // // overlayCtx.fillStyle = "#ffffff";
+        // overlayCtx.fillText(fpsText, 3, 1);
+        // overlayCtx.fillText(frameText, 3, 18);
+        // overlayCtx.fillText(updateText, 3, 35);
+        // overlayCtx.fillText(drawText, 3, 52);
 
         overlayCtx.fillStyle = "#7f7f7f7f";
         overlayCtx.fillRect(graphX, graphY, graphWidth, graphHeight);
@@ -2533,6 +2672,24 @@ function updateGame() {
         overlayCtx.fillText("60 FPS", graphX + 3, graphY + graphHeight - 1 - 1000 / 60 * 2 - 21);
         overlayCtx.fillText("30 FPS", graphX + 3, graphY + graphHeight - 1 - 1000 / 30 * 2 - 21);
         overlayCtx.setLineDash([]);
+
+        let brushX = Math.floor(cameraX + mouseX / cameraScale);
+        let brushY = Math.floor(cameraY + mouseY / cameraScale);
+        if (selectionState == BRUSH) {
+            drawText("Brush Size: " + (brushSize * 2 - 1), 3, graphY + graphHeight + 3);
+        }
+        else if (selectionState == SELECTING) {
+            drawText("Selection: (" + Math.min(selectionX, brushX) + ", " + Math.min(selectionY, brushY) + ") => (" + Math.max(selectionX, brushX) + ", " + Math.max(selectionY, brushY) + "), " + (Math.abs(selectionX - brushX) + 1) + "x" + (Math.abs(selectionY - brushY) + 1), 3, graphY + graphHeight + 3);
+        }
+        else if (selectionState == SELECTED) {
+            drawText("Selection: (" + selectionX + ", " + selectionY + ") => (" + (selectionX + selectionWidth - 1) + ", " + (selectionY + selectionHeight - 1) + "), " + selectionWidth + "x" + selectionHeight, 3, graphY + graphHeight + 3);
+        }
+        else if (selectionState == PASTING) {
+            drawText("Selection: " + selectionWidth + "x" + selectionHeight, 3, graphY + graphHeight + 3);
+        }
+        if (brushX >= 0 && brushX < gridWidth && brushY >= 0 && brushY < gridHeight) {
+            drawText(pixels[grid[(brushX + brushY * gridWidth) * gridStride + ID]].name + " (" + brushX + ", " + brushY + ")", 3, graphY + graphHeight + 20);
+        }
     }
 
     if (frameTime > 30) {
@@ -2550,4 +2707,4 @@ window.requestAnimationFrame(update);
 // setInterval(update, 100);
 window.onresize();
 
-export { grid, gridWidth, gridHeight, gridStride, chunks, nextChunks, drawChunks, chunkWidth, chunkHeight, chunkXAmount, chunkYAmount, chunkStride, tick, modal, setRunState, sandboxGrid, sandboxSaveCode, generateSaveCode, parseSaveCode, loadSaveCode, mouseX, mouseY, setBrushPixel, showTooltip, hideTooltip, moveTooltip };
+export { grid, gridWidth, gridHeight, gridStride, chunks, nextChunks, drawChunks, chunkWidth, chunkHeight, chunkXAmount, chunkYAmount, chunkStride, tick, modal, setRunState, sandboxGrid, sandboxSaveCode, generateSaveCode, parseSaveCode, loadSaveCode, mouseX, mouseY, brushPixel, setBrushPixel, showTooltip, hideTooltip, moveTooltip, resetGrid };

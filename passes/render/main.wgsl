@@ -401,16 +401,16 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
                 color_2 = sampledColor2;
             }
             if (selection_grid[index_2] == LASER_LEFT && floor_pos.x * 6 <= 3 && floor_pos.y * 6 >= 2 && floor_pos.y * 6 <= 4) {
-                color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 2) + 1) / 2);
+                color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 3) + 1) / 2);
             }
             if (selection_grid[index_2] == LASER_UP && floor_pos.x * 6 >= 2 && floor_pos.x * 6 <= 4 && floor_pos.y * 6 <= 3) {
-                color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 2) + 1) / 2);
+                color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 3) + 1) / 2);
             }
             if (selection_grid[index_2] == LASER_RIGHT && floor_pos.x * 6 >= 3 && floor_pos.y * 6 >= 2 && floor_pos.y * 6 <= 4) {
-                color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 2) + 1) / 2);
+                color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 3) + 1) / 2);
             }
             if (selection_grid[index_2] == LASER_DOWN && floor_pos.x * 6 >= 2 && floor_pos.x * 6 <= 4 && floor_pos.y * 6 >= 3) {
-                color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 2) + 1) / 2);
+                color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 3) + 1) / 2);
             }
             if (selection_grid[index_2] == DELETER && floor_pos.x * 4 >= 1 && floor_pos.x * 4 <= 3 && floor_pos.y * 4 >= 1 && floor_pos.y * 4 <= 3) {
                 color_2 = mix(vec4<f32>(0.8, 0.0, 1.0, 1.0), vec4<f32>(1.0, 0.0, 1.0, 1.0), (sin(time * 0.001 * 3.1415) + 1) / 2);

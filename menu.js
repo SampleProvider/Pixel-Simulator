@@ -203,13 +203,24 @@ let menuState = "title";
 let menuStateTime = 0;
 pixelateInTitle();
 
-window.onload = () => {
+function loadSandbox() {
+    try {
+        if (sandboxGrid == null) {
+            setTimeout(loadSandbox, 10);
+            return;
+        }
+    }
+    catch (err) {
+        setTimeout(loadSandbox, 10);
+        return;
+    }
     loadSaveCode(sandboxGrid);
     saveCode.value = sandboxSaveCode;
     loadPuzzle(null);
     document.getElementById("menuContainer").style.display = "none";
     document.getElementById("gameContainer").style.display = "block";
 };
+loadSandbox();
 
 const gameContainer = document.getElementById("gameContainer");
 const menuContainer = document.getElementById("menuContainer");

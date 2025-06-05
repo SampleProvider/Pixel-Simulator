@@ -14,10 +14,12 @@ fn vs_main(@location(0) pos: vec2<f32>) -> @builtin(position) vec4<f32> {
 fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
     //return textureSample(texture, texture_sampler, pos.xy / 2 + vec2<f32>(0.5, 0.5));
     let new_pos = pos.xy / camera.zw + camera.xy;
+    let sampled_color = textureSample(texture, texture_sampler, pos.xy / viewport);
     if (new_pos.x < 0 || u32(new_pos.x) >= grid_size.x || new_pos.y < 0 || u32(new_pos.y) >= grid_size.y) {
         //return vec4<f32>(0.0, 0.0, 0.0, 1.0);
+        // return vec4<f32>(1.0, 1.0, 1.0, 1.0);
         //return vec4<f32>(0.2, 0.2, 0.2, 1.0);
         discard;
     }
-    return textureSample(texture, texture_sampler, pos.xy / viewport);
+    return sampled_color;
 }
