@@ -228,6 +228,7 @@ fn get_color(id: f32, color: vec4<f32>, pos: vec2<f32>) -> vec4<f32> {
     }
     //return vec4<f32>(id, 0.0, 0.0, 1.0);
     return colors[u32(id) * 2] + random(index) * colors[u32(id) * 2 + 1];
+    // return colors[u32(id) * 2];
     //return colors[u32(id) * 2];
     //return colors[u32(id)];
     //return colors[u32(id)] + random(index) * noise_colors[u32(id)];

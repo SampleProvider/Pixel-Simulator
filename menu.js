@@ -96,6 +96,7 @@ const transitionBottom = document.getElementById("transitionBottom");
 
 function transitionIn() {
     transitionContainer.style.display = "block";
+    transitionContainer.style.pointerEvents = "auto";
     transitionTop.style.transform = "";
     transitionBottom.style.transform = "";
     transitionContainer.innerText;
@@ -109,6 +110,7 @@ function transitionIn() {
     });
 };
 function transitionOut() {
+    transitionContainer.style.pointerEvents = "none";
     transitionTop.style.transform = "translateX(0px)";
     transitionBottom.style.transform = "translateX(0px)";
     transitionContainer.innerText;
@@ -203,6 +205,8 @@ let menuState = "title";
 let menuStateTime = 0;
 pixelateInTitle();
 
+const searchParams = new URLSearchParams(window.location.search);
+
 function loadSandbox() {
     try {
         if (sandboxGrid == null) {
@@ -220,7 +224,9 @@ function loadSandbox() {
     document.getElementById("menuContainer").style.display = "none";
     document.getElementById("gameContainer").style.display = "block";
 };
-loadSandbox();
+if (searchParams.has("skipMenu")) {
+    loadSandbox();
+}
 
 const gameContainer = document.getElementById("gameContainer");
 const menuContainer = document.getElementById("menuContainer");

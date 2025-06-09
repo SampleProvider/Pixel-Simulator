@@ -183,9 +183,13 @@ button {
     height: 120px;
     cursor: pointer;
     background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 .puzzleCompleted {
     background-color: lime;
+    outline: 4px solid lime;
+    outline-offset: -6px;
 }
 #puzzlesCloseButton {
     position: absolute;

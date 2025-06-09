@@ -1,5 +1,6 @@
 import { grid, gridWidth, gridHeight, gridStride, chunks, nextChunks, drawChunks, chunkWidth, chunkHeight, chunkXAmount, chunkYAmount, chunkStride, tick, modal, brushPixel, setBrushPixel, showTooltip, hideTooltip, moveTooltip } from "./game.js";
 // import { imageBitmap } from "./renderer.js";
+import { random } from "./random.js";
 import { currentPuzzle } from "./puzzles.js";
 
 const pixelTexture = await createImageBitmap(await (await fetch("pixels.png")).blob());
@@ -206,7 +207,7 @@ function addPixel(x, y, id) {
     //     grid[index + COLOR_B] = pixels[id].color[2] / 255;
     //     grid[index + COLOR_A] = pixels[id].color[3];
     //     if (pixels[id].noise != null) {
-    //         let r = Math.random();
+    //         let r = random();
     //         grid[index + COLOR_R] += pixels[id].noise[0] / 255 * r;
     //         grid[index + COLOR_G] += pixels[id].noise[1] / 255 * r;
     //         grid[index + COLOR_B] += pixels[id].noise[2] / 255 * r;
@@ -222,6 +223,9 @@ function addFire(x, y, fire) {
 };
 
 function addUpdatedChunk(x, y) {
+    if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) {
+        alert(x + " " + y)
+    }
     let buffer = 2;
 
     let chunkX = Math.floor(x / chunkWidth);
@@ -390,7 +394,7 @@ function flow1(x, y, isPassable = isAir, slide = false, slope = 1, disperse = fa
         let side = Math.sign(shortLen);
         if (side == 0) {
             // side = 1;
-            side = Math.round(Math.random()) * 2 - 1;
+            side = Math.round(random()) * 2 - 1;
             // if ((x * x + y * y + tick * tick) % grid_size > grid_size / 2) {
             //     side = -1;
             // }
@@ -407,7 +411,7 @@ function flow1(x, y, isPassable = isAir, slide = false, slope = 1, disperse = fa
         let ix = x;
         let iy = y;
 
-        let moveStopped = Math.random() > moveChance;
+        let moveStopped = random() > moveChance;
 
         if (yLonger) {
             // get optimal stop location
@@ -952,7 +956,7 @@ function flowSearch(x, y, distance, height, isPassable = isAir, isMoveable = isP
         }
         if (left == 1 || right == 1) {
             if (left == 1 && right == 1) {
-                if (Math.random() < 0.5) {
+                if (random() < 0.5) {
                     return -i;
                 }
                 else {
@@ -1105,7 +1109,7 @@ function riseSearch(x, y, distance, height, isPassable = isAir, isMoveable = isP
         }
         if (left == 1 || right == 1) {
             if (left == 1 && right == 1) {
-                if (Math.random() < 0.5) {
+                if (random() < 0.5) {
                     return -i;
                 }
                 else {
@@ -1309,10 +1313,10 @@ function explode(x, y, radiusSquared, rays, power) {
             if (blastResistance == -1) {
                 return false;
             }
-            if (Math.random() > blastResistance / rayPower) {
+            if (random() > blastResistance / rayPower) {
                 if (!changed[x1 + y1 * gridWidth]) {
                     changed[x1 + y1 * gridWidth] = true;
-                    if (Math.random() > blastResistance / rayPower + 0.5) {
+                    if (random() > blastResistance / rayPower + 0.5) {
                         addFire(x1, y1, true);
                     }
                     if (id == AIR) {
@@ -1321,7 +1325,7 @@ function explode(x, y, radiusSquared, rays, power) {
                     else if (id == ASH) {
                         addPixel(x1, y1, AIR);
                     }
-                    else if ((id == WATER || id == ICE || id == SNOW) && Math.random() > 3200 / rayPower) {
+                    else if ((id == WATER || id == ICE || id == SNOW) && random() > 3200 / rayPower) {
                         addPixel(x1, y1, STEAM);
                     }
                     else if (id == GUNPOWDER) {
@@ -1342,8 +1346,8 @@ function explode(x, y, radiusSquared, rays, power) {
                     else if (id == ACTIVATED_NUKE) {
 
                     }
-                    // else if (Math.random() < 40 / power) {
-                    else if (Math.random() < 0.5) {
+                    // else if (random() < 40 / power) {
+                    else if (random() < 0.5) {
                         if (id == CONCRETE || id == STONE || id == BASALT || id == BRICKS) {
                             addPixel(x1, y1, GRAVEL);
                         }
@@ -1430,6 +1434,7 @@ function pushLeft(x, y, selfX, selfY, strength) {
                 }
                 else {
                     move(j, i, j - 1, i);
+                    addFire(j, i, 0);
                 }
             }
         }
@@ -1724,6 +1729,7 @@ function pushRight(x, y, selfX, selfY, strength) {
                 }
                 else {
                     move(j2, i, j2 + 1, i);
+                    addFire(j2, i, 0);
                 }
             }
         }
@@ -1990,6 +1996,7 @@ function pushUp(x, y, selfX, selfY, strength) {
                 }
                 else {
                     move(j, i, j, i - 1);
+                    addFire(j, i, 0);
                 }
             }
         }
@@ -2255,6 +2262,7 @@ function pushDown(x, y, selfX, selfY, strength) {
                 }
                 else {
                     move(j, i2, j, i2 + 1);
+                    addFire(j, i2, 0);
                 }
             }
         }
@@ -2787,7 +2795,7 @@ let pixelData = {
         group: "General",
         subgroup: "Dirt",
         color: new Float32Array([90, 50, 0, 1]),
-        noise: new Float32Array([25, 20, 0, 1]),
+        noise: new Float32Array([25, 20, 0, 0]),
         state: SOLID,
         flammability: 1,
         blastResistance: 85,
@@ -2891,7 +2899,7 @@ let pixelData = {
             });
 
             if (changed) {
-                if (Math.random() < 0.8) {
+                if (random() < 0.8) {
                     addPixel(x, y, STEAM);
                     pixels[STEAM].update(x, y);
                 }
@@ -2926,7 +2934,7 @@ let pixelData = {
             touchingIce *= 2 ** getTouching(x, y, [ICE, ICE_FREEZER]);
             touchingIce *= 1.5 ** getTouching(x, y, [SNOW]);
             touchingIce /= 2 ** getTouching(x, y, [WATER]);
-            if (Math.random() < 0.2 / touchingIce) {
+            if (random() < 0.2 / touchingIce) {
                 addPixel(x, y, WATER);
             }
         },
@@ -2949,7 +2957,7 @@ let pixelData = {
             touchingIce *= 2 ** getTouching(x, y, [ICE, ICE_FREEZER]);
             touchingIce *= 1.5 ** getTouching(x, y, [SNOW]);
             touchingIce /= 2 ** getTouching(x, y, [WATER]);
-            if (Math.random() < 0.4 / touchingIce) {
+            if (random() < 0.4 / touchingIce) {
                 addPixel(x, y, WATER);
             }
         },
@@ -2970,11 +2978,11 @@ let pixelData = {
                 if (grid[index1 + ON_FIRE]) {
                     return;
                 }
-                if (Math.random() < pixels[grid[index1 + ID]].flammability / 20) {
+                if (random() < pixels[grid[index1 + ID]].flammability / 20) {
                     addFire(x1, y1, true);
                     changed = true;
                 }
-                else if ((grid[index1 + ID] == ICE || grid[index1 + ID] == SNOW) && Math.random() < 0.1) {
+                else if ((grid[index1 + ID] == ICE || grid[index1 + ID] == SNOW) && random() < 0.1) {
                     addPixel(x1, y1, WATER);
                     changed = true;
                 }
@@ -2994,7 +3002,7 @@ let pixelData = {
             addUpdatedChunk(x, y);
         },
         randomUpdate: function(x, y) {
-            if (Math.random() < 0.5) {
+            if (random() < 0.5) {
                 addPixel(x, y, WATER);
             }
             else {
@@ -3021,30 +3029,30 @@ let pixelData = {
                 }
                 let flammability = pixels[grid[index1 + ID]].flammability;
                 let touchingAir = true;
-                if (Math.random() < flammability / (touchingAir ? 20 : 60) + (y1 < y ? 0.4 : 0) - (touchingAir ? 0 : 0.2)) {
+                if (random() < flammability / (touchingAir ? 20 : 60) + (y1 < y ? 0.4 : 0) - (touchingAir ? 0 : 0.2)) {
                     grid[index1 + ON_FIRE] = 1;
                 }
-                if (grid[index1 + ID] == SAND && Math.random() < 0.01) {
+                if (grid[index1 + ID] == SAND && random() < 0.01) {
                     addPixel(x1, y1, GLASS);
                 }
-                if (grid[index1 + ID] == GLASS && Math.random() < 0.01) {
+                if (grid[index1 + ID] == GLASS && random() < 0.01) {
                     addPixel(x1, y1, SAND);
                 }
-                if (grid[index1 + ID] == WATER && Math.random() < 0.05) {
+                if (grid[index1 + ID] == WATER && random() < 0.05) {
                     addPixel(x1, y1, STEAM);
                 }
-                if (grid[index1 + ID] == ICE && Math.random() < 0.1) {
+                if (grid[index1 + ID] == ICE && random() < 0.1) {
                     addPixel(x1, y1, WATER);
                 }
-                if (grid[index1 + ID] == SNOW && Math.random() < 0.2) {
+                if (grid[index1 + ID] == SNOW && random() < 0.2) {
                     addPixel(x1, y1, WATER);
                 }
-                if (grid[index1 + ID] == IRON && Math.random() < 0.1) {
+                if (grid[index1 + ID] == IRON && random() < 0.1) {
                     addPixel(x1, y1, STEEL);
                 }
-                if (Math.random() < flammability / 1200) {
+                if (random() < flammability / 1200) {
                     // grid[index + ON_FIRE] = 0;
-                    if (grid[index1 + ID] != ASH && Math.random() < 0.3) {
+                    if (grid[index1 + ID] != ASH && random() < 0.3) {
                         addPixel(x1, y1, ASH);
                     }
                     else {
@@ -3053,7 +3061,7 @@ let pixelData = {
                 }
             });
             for (let i = 0; i < 3; i++) {
-                let meltAngle = Math.random() * Math.PI * 2;
+                let meltAngle = random() * Math.PI * 2;
                 raycast(x, y, Math.cos(meltAngle), Math.sin(meltAngle), (x1, y1) => {
                     let dist = Math.sqrt((x1 - x) ** 2 + (y1 - y) ** 2);
                     if (dist > 10) {
@@ -3061,22 +3069,22 @@ let pixelData = {
                     }
                     let index1 = (x1 + y1 * gridWidth) * gridStride;
                     if (grid[index1 + ID] == SNOW) {
-                        if (Math.random() < (15 - dist) / 20) {
+                        if (random() < (15 - dist) / 20) {
                             addPixel(x1, y1, WATER);
                         }
                     }
                     else if (grid[index1 + ID] == ICE) {
-                        if (Math.random() < (15 - dist) / 40) {
+                        if (random() < (15 - dist) / 40) {
                             addPixel(x1, y1, WATER);
                         }
                     }
                     else if (grid[index1 + ID] == MUD) {
-                        if (Math.random() < (10 - dist) / 10) {
+                        if (random() < (10 - dist) / 10) {
                             addPixel(x1, y1, DIRT);
                         }
                     }
                     else if (grid[index1 + ID] == CLAY) {
-                        if (Math.random() < (10 - dist) / 20) {
+                        if (random() < (10 - dist) / 20) {
                             addPixel(x1, y1, BRICKS);
                         }
                     }
@@ -3087,7 +3095,7 @@ let pixelData = {
                 });
             }
             addUpdatedChunk(x, y);
-            if (Math.random() < 0.5) {
+            if (random() < 0.5) {
                 function isPassable(x, y) {
                     return isOnGrid(x, y) && (pixels[grid[(x + y * gridWidth) * gridStride + ID]].state == GAS || grid[(x + y * gridWidth) * gridStride + ID] == LAVA);
                 };
@@ -3098,10 +3106,10 @@ let pixelData = {
                 flow(x, y, gridWidth, 1, isPassable, isMoveable);
             }
             else {
-                if (Math.random() < 0.125) {
-                    let left = grid[(x - 1 + y * gridWidth) * gridStride + ID] == STONE;
-                    let right = grid[(x + 1 + y * gridWidth) * gridStride + ID] == STONE;
-                    if (left || (left && right && Math.random() < 0.5)) {
+                if (random() < 0.125) {
+                    let left = x > 0 && grid[(x - 1 + y * gridWidth) * gridStride + ID] == STONE;
+                    let right = x < gridWidth - 1 && grid[(x + 1 + y * gridWidth) * gridStride + ID] == STONE;
+                    if (left || (left && right && random() < 0.5)) {
                         move(x, y, x - 1, y);
                         return;
                     }
@@ -3110,11 +3118,11 @@ let pixelData = {
                         return;
                     }
                 }
-                if (Math.random() < 0.5 && grid[(x + (y + 1) * gridWidth) * gridStride + ID] == LAVA && grid[(x + (y - 1) * gridWidth) * gridStride + ID] == STONE) {
+                if (y > 0 && random() < 0.5 && grid[(x + (y + 1) * gridWidth) * gridStride + ID] == LAVA && grid[(x + (y - 1) * gridWidth) * gridStride + ID] == STONE) {
                     move(x, y, x, y - 1);
                     return;
                 }
-                else if (Math.random() < 0.5 && grid[(x + (y + 1) * gridWidth) * gridStride + ID] == STONE) {
+                else if (y < gridHeight - 1 && random() < 0.5 && grid[(x + (y + 1) * gridWidth) * gridStride + ID] == STONE) {
                     move(x, y, x, y + 1);
                     return;
                 }
@@ -3140,17 +3148,17 @@ let pixelData = {
                 grid[index + ON_FIRE] = 0;
                 return;
             }
-            if (flammability == 0 && (grid[index + ID] != AIR || Math.random() < 0.3)) {
+            if (flammability == 0 && (grid[index + ID] != AIR || random() < 0.3)) {
                 grid[index + ON_FIRE] = 0;
                 forTouchingDiagonal(x, y, (x1, y1) => {
                     let index1 = (x1 + y1 * gridWidth) * gridStride;
-                    if (grid[index1 + ID] == WATER && Math.random() < 0.05) {
+                    if (grid[index1 + ID] == WATER && random() < 0.05) {
                         addPixel(x1, y1, STEAM);
                     }
-                    if (grid[index1 + ID] == ICE && Math.random() < 0.1) {
+                    if (grid[index1 + ID] == ICE && random() < 0.1) {
                         addPixel(x1, y1, WATER);
                     }
-                    if (grid[index1 + ID] == SNOW && Math.random() < 0.2) {
+                    if (grid[index1 + ID] == SNOW && random() < 0.2) {
                         addPixel(x1, y1, WATER);
                     }
                 });
@@ -3160,12 +3168,12 @@ let pixelData = {
                 grid[index + ON_FIRE] = 0;
             }
             let touchingAir = grid[index + ID] == AIR || isTouching(x, y, [AIR]);
-            if (Math.random() < (20 - flammability) / (touchingAir ? 280 : 20)) {
+            if (random() < (20 - flammability) / (touchingAir ? 280 : 20)) {
                 grid[index + ON_FIRE] = 0;
             }
 
             // change to just adjacent pixels? also makes it more consistent
-            let meltAngle = Math.random() * Math.PI * 2;
+            let meltAngle = random() * Math.PI * 2;
             raycast(x, y, Math.cos(meltAngle), Math.sin(meltAngle), (x1, y1) => {
                 let dist = Math.sqrt((x1 - x) ** 2 + (y1 - y) ** 2);
                 if (dist > 5) {
@@ -3173,22 +3181,22 @@ let pixelData = {
                 }
                 let index1 = (x1 + y1 * gridWidth) * gridStride;
                 if (grid[index1 + ID] == SNOW) {
-                    if (Math.random() < (5 - dist) / 30) {
+                    if (random() < (5 - dist) / 30) {
                         addPixel(x1, y1, WATER);
                     }
                 }
                 else if (grid[index1 + ID] == ICE) {
-                    if (Math.random() < (5 - dist) / 60) {
+                    if (random() < (5 - dist) / 60) {
                         addPixel(x1, y1, WATER);
                     }
                 }
                 else if (grid[index1 + ID] == MUD) {
-                    if (Math.random() < (5 - dist) / 20) {
+                    if (random() < (5 - dist) / 20) {
                         addPixel(x1, y1, DIRT);
                     }
                 }
                 else if (grid[index1 + ID] == CLAY) {
-                    if (Math.random() < (5 - dist) / 30) {
+                    if (random() < (5 - dist) / 30) {
                         addPixel(x1, y1, BRICKS);
                     }
                 }
@@ -3207,7 +3215,7 @@ let pixelData = {
                 //     if (random() < (5 - travel) / 20) nextGrid[ay][ax] = pixNum.DIRT;
                 // } else if (grid[ay][ax] !== pixNum.AIR) return true;
             });
-            if (Math.random() < flammability / 1200) {
+            if (random() < flammability / 1200) {
                 // if (grid[y][x] >= pixNum.LASER_UP && grid[y][x] <= pixNum.LASER_RIGHT) {
                 //     nextGrid[y][x] = pixNum.AIR;
                 //     teamGrid[y][x] = 0;
@@ -3218,7 +3226,7 @@ let pixelData = {
                 //     teamGrid[y][x] = 0;
                 // }
                 // else {
-                if (grid[index + ID] != ASH && Math.random() < 0.3) {
+                if (grid[index + ID] != ASH && random() < 0.3) {
                     addPixel(x, y, ASH);
                 }
                 else {
@@ -3247,17 +3255,17 @@ let pixelData = {
                 // forTouching(x, y, (x1, y1) => {
                 let index1 = (x1 + y1 * gridWidth) * gridStride;
                 let flammability = pixels[grid[index1 + ID]].flammability;
-                if (Math.random() < flammability / (touchingAir ? 20 : 60) + (y1 < y ? 0.4 : 0) - ((x1 != x && y1 != y) ? 0.4 : 0) - (touchingAir ? 0 : 0.2)) {
+                if (random() < flammability / (touchingAir ? 20 : 60) + (y1 < y ? 0.4 : 0) - ((x1 != x && y1 != y) ? 0.4 : 0) - (touchingAir ? 0 : 0.2)) {
                     grid[index1 + ON_FIRE] = 1;
                     grid[index1 + UPDATED] = tick;
                 }
-                if (grid[index1 + ID] == WATER && Math.random() < 0.05) {
+                if (grid[index1 + ID] == WATER && random() < 0.05) {
                     addPixel(x1, y1, STEAM);
                 }
-                if (grid[index1 + ID] == ICE && Math.random() < 0.1) {
+                if (grid[index1 + ID] == ICE && random() < 0.1) {
                     addPixel(x1, y1, WATER);
                 }
-                if (grid[index1 + ID] == SNOW && Math.random() < 0.2) {
+                if (grid[index1 + ID] == SNOW && random() < 0.2) {
                     addPixel(x1, y1, WATER);
                 }
                 // if (grid[j][i] == pixNum.WATER && random() < 0.05) nextGrid[j][i] = pixNum.STEAM;
@@ -3284,7 +3292,7 @@ let pixelData = {
             }
             forTouching(x, y, function(x1, y1) {
                 let index1 = (x1 + y1 * gridWidth) * gridStride;
-                if (grid[index1 + ID] == AIR && Math.random() < 0.125) {
+                if (grid[index1 + ID] == AIR && random() < 0.125) {
                     addPixel(x1, y1, WATER);
                 }
             });
@@ -3313,13 +3321,13 @@ let pixelData = {
             }
             forTouching(x, y, function(x1, y1) {
                 let index1 = (x1 + y1 * gridWidth) * gridStride;
-                // if ((grid[index1 + ID] == AIR || grid[index1 + ID] == STONE) && Math.random() < 0.075) {
-                if (grid[index1 + ID] == AIR && Math.random() < 0.075) {
+                // if ((grid[index1 + ID] == AIR || grid[index1 + ID] == STONE) && random() < 0.075) {
+                if (grid[index1 + ID] == AIR && random() < 0.075) {
                     addPixel(x1, y1, LAVA);
                 }
             });
             for (let i = 0; i < 3; i++) {
-                let meltAngle = Math.random() * Math.PI * 2;
+                let meltAngle = random() * Math.PI * 2;
                 raycast(x, y, Math.cos(meltAngle), Math.sin(meltAngle), (x1, y1) => {
                     let dist = Math.sqrt((x1 - x) ** 2 + (y1 - y) ** 2);
                     if (dist > 10) {
@@ -3327,22 +3335,22 @@ let pixelData = {
                     }
                     let index1 = (x1 + y1 * gridWidth) * gridStride;
                     if (grid[index1 + ID] == SNOW) {
-                        if (Math.random() < (15 - dist) / 20) {
+                        if (random() < (15 - dist) / 20) {
                             addPixel(x1, y1, WATER);
                         }
                     }
                     else if (grid[index1 + ID] == ICE) {
-                        if (Math.random() < (15 - dist) / 40) {
+                        if (random() < (15 - dist) / 40) {
                             addPixel(x1, y1, WATER);
                         }
                     }
                     else if (grid[index1 + ID] == MUD) {
-                        if (Math.random() < (10 - dist) / 10) {
+                        if (random() < (10 - dist) / 10) {
                             addPixel(x1, y1, DIRT);
                         }
                     }
                     else if (grid[index1 + ID] == CLAY) {
-                        if (Math.random() < (10 - dist) / 20) {
+                        if (random() < (10 - dist) / 20) {
                             addPixel(x1, y1, BRICKS);
                         }
                     }
@@ -3371,7 +3379,7 @@ let pixelData = {
                 return;
             }
             for (let i = 0; i < 3; i++) {
-                let freezeAngle = Math.random() * Math.PI * 2;
+                let freezeAngle = random() * Math.PI * 2;
                 raycast(x, y, Math.cos(freezeAngle), Math.sin(freezeAngle), (x1, y1) => {
                     let dist = Math.sqrt((x1 - x) ** 2 + (y1 - y) ** 2);
                     if (dist > 10) {
@@ -3379,12 +3387,12 @@ let pixelData = {
                     }
                     let index1 = (x1 + y1 * gridWidth) * gridStride;
                     if (grid[index1 + ID] == WATER) {
-                        if (Math.random() < (10 - dist) / 400) {
+                        if (random() < (10 - dist) / 400) {
                             addPixel(x1, y1, ICE);
                         }
                     }
                     else if (grid[index1 + ID] == STEAM) {
-                        if (Math.random() < (10 - dist) / 200) {
+                        if (random() < (10 - dist) / 200) {
                             addPixel(x1, y1, WATER);
                         }
                     }
@@ -3417,7 +3425,7 @@ let pixelData = {
         subgroup: "Clay",
         texture: new Float32Array([0, 20, 8, 8]),
         state: SOLID,
-        flammability: 8,
+        flammability: 0,
         blastResistance: 1600,
         update: function(x, y) {
             if (isMoveableSolid(x, y + 1)) {
@@ -3481,7 +3489,7 @@ let pixelData = {
         group: "General",
         subgroup: "Iron",
         color: new Float32Array([160, 160, 180, 1]),
-        noise: new Float32Array([40, 20, -60, 1]),
+        noise: new Float32Array([40, 20, -60, 0]),
         state: SOLID,
         flammability: 0,
         blastResistance: 1250,
@@ -3545,7 +3553,7 @@ let pixelData = {
             touchingLeaves += getTouching(x, y, [WOOD, LEAVES]);
             touchingLeaves += getTouchingDiagonal(x, y, [WOOD, LEAVES]);
             if (touchingLeaves < 3) {
-                if (Math.random() < 1 / 140) {
+                if (random() < 1 / 140) {
                     addPixel(x, y, SAPLING);
                 }
                 else {
@@ -3595,17 +3603,17 @@ let pixelData = {
                     // alert(x1 + " " + y1 + " " + angle + " " + size + " " + length);
                     let x3 = x1;
                     let y3 = y1;
-                    // let finalSize = size * (0.2 + Math.random() * 0.4);
+                    // let finalSize = size * (0.2 + random() * 0.4);
                     let finalSize = size;
-                    let branchOffset = Math.random() < 0.5;
+                    let branchOffset = random() < 0.5;
                     raycast2(x1, y1, Math.cos(angle), Math.sin(angle), (x2, y2) => {
                         let dist = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
                         if (dist > length) {
                             if (finalSize > 1) {
-                                // addBranch(x3, y3, angle - (15 + Math.random() * 30) / 180 * Math.PI, finalSize, length * (0.2 + Math.random() * 0.4));
-                                // addBranch(x3, y3, angle + (15 + Math.random() * 30) / 180 * Math.PI, finalSize, length * (0.2 + Math.random() * 0.4));
-                                addBranch(x3, y3, angle - (15 + Math.random() * 30) / 180 * Math.PI, finalSize * (0.6 + Math.random() * 0.4), length * (0.4 + Math.random() * 0.4));
-                                addBranch(x3, y3, angle + (15 + Math.random() * 30) / 180 * Math.PI, finalSize * (0.6 + Math.random() * 0.4), length * (0.4 + Math.random() * 0.4));
+                                // addBranch(x3, y3, angle - (15 + random() * 30) / 180 * Math.PI, finalSize, length * (0.2 + random() * 0.4));
+                                // addBranch(x3, y3, angle + (15 + random() * 30) / 180 * Math.PI, finalSize, length * (0.2 + random() * 0.4));
+                                addBranch(x3, y3, angle - (15 + random() * 30) / 180 * Math.PI, finalSize * (0.6 + random() * 0.4), length * (0.4 + random() * 0.4));
+                                addBranch(x3, y3, angle + (15 + random() * 30) / 180 * Math.PI, finalSize * (0.6 + random() * 0.4), length * (0.4 + random() * 0.4));
                                 // let continueAngle = random(0.2, 0.4) * (Math.round(random()) * 2 - 1);
                                 // branch(x2, y2, angle + continueAngle, size * random(0.5, 0.9), length * random(0.5, 1));
                                 // let forcedBranch = random() < 0.5 - continueAngle * 0.8 + (((Math.PI / 2) - angle) * 0.5);
@@ -3613,7 +3621,7 @@ let pixelData = {
                                 // if (random() < 0.2 || !forcedBranch) branch(x2, y2, angle - random(0.6, 1.6) - (((Math.PI / 2) - angle) * 0.2), size * random(0.2, 0.6), length * random(0.5, 1));
                             }
                             else {
-                                fillEllipse(x3, y3, (2 + Math.random() * 0.5) * growthFactor, (1.5 + Math.random() * 0.5) * growthFactor, (x4, y4) => {
+                                fillEllipse(x3, y3, (2 + random() * 0.5) * growthFactor, (1.5 + random() * 0.5) * growthFactor, (x4, y4) => {
                                     let index1 = (x4 + y4 * gridWidth) * gridStride;
                                     if (pixels[grid[index1 + ID]].state == GAS) {
                                         addPixel(x4, y4, LEAVES);
@@ -3642,9 +3650,9 @@ let pixelData = {
                     });
                 };
                 // growth = 10;
-                if (Math.random() < growth / 10) {
+                if (random() < growth / 10) {
                     growthFactor = (Math.log(growth) / Math.log(4)) + 0.5;
-                    addBranch(x, y, -Math.PI / 2, growth * (0.2 + Math.random() * 0.1), growth * (0.8 + Math.random() * 0.7));
+                    addBranch(x, y, -Math.PI / 2, growth * (0.2 + random() * 0.1), growth * (0.8 + random() * 0.7));
                 }
             }
         },
@@ -3693,7 +3701,7 @@ let pixelData = {
                 return;
             }
             let isMoveable = (x1, y1) => {
-                return isOnGrid(x1, y1) && grid[(x1 + y1 * gridWidth) * gridStride + UPDATED] != tick && (pixels[grid[(x1 + y1 * gridWidth) * gridStride + ID]].state == GAS || (pixels[grid[(x1 + y1 * gridWidth) * gridStride + ID]].state == LIQUID && Math.random() < 0.5));
+                return isOnGrid(x1, y1) && grid[(x1 + y1 * gridWidth) * gridStride + UPDATED] != tick && (pixels[grid[(x1 + y1 * gridWidth) * gridStride + ID]].state == GAS || (pixels[grid[(x1 + y1 * gridWidth) * gridStride + ID]].state == LIQUID && random() < 0.5));
             };
             if (isMoveable(x, y + 1)) {
                 move(x, y, x, y + 1);
@@ -3721,7 +3729,7 @@ let pixelData = {
             }
             forTouchingDiagonal(x, y, (x1, y1) => {
                 let index1 = (x1 + y1 * gridWidth) * gridStride;
-                if (grid[index1 + ID] == STONE && Math.random() < 0.1 && isTouching(x1, y1, [AIR])) {
+                if (grid[index1 + ID] == STONE && random() < 0.1 && isTouching(x1, y1, [AIR])) {
                     addPixel(x1, y1, MOSS);
                 }
             });
@@ -3745,7 +3753,7 @@ let pixelData = {
             }
             forTouchingDiagonal(x, y, (x1, y1) => {
                 let index1 = (x1 + y1 * gridWidth) * gridStride;
-                if (grid[index1 + ID] == BASALT && Math.random() < 0.1 && isTouching(x1, y1, [AIR])) {
+                if (grid[index1 + ID] == BASALT && random() < 0.1 && isTouching(x1, y1, [AIR])) {
                     addPixel(x1, y1, LICHEN);
                 }
             });
@@ -3774,14 +3782,14 @@ let pixelData = {
                 return;
             }
             let isMoveable = (x1, y1) => {
-                return isOnGrid(x1, y1) && grid[(x1 + y1 * gridWidth) * gridStride + UPDATED] != tick && (pixels[grid[(x1 + y1 * gridWidth) * gridStride + ID]].state == GAS || (pixels[grid[(x1 + y1 * gridWidth) * gridStride + ID]].state == LIQUID && Math.random() < 0.5));
+                return isOnGrid(x1, y1) && grid[(x1 + y1 * gridWidth) * gridStride + UPDATED] != tick && (pixels[grid[(x1 + y1 * gridWidth) * gridStride + ID]].state == GAS || (pixels[grid[(x1 + y1 * gridWidth) * gridStride + ID]].state == LIQUID && random() < 0.5));
             };
             if (isMoveable(x, y + 1)) {
                 move(x, y, x, y + 1);
             }
             else {
                 let valid = isTouching(x, y, [SAND]);
-                if (!valid && Math.random() < 1 / 8) {
+                if (!valid && random() < 1 / 8) {
                     addPixel(x, y, AIR);
                     return;
                 }
@@ -3814,14 +3822,14 @@ let pixelData = {
                 return;
             }
             let isMoveable = (x1, y1) => {
-                return isOnGrid(x1, y1) && grid[(x1 + y1 * gridWidth) * gridStride + UPDATED] != tick && (pixels[grid[(x1 + y1 * gridWidth) * gridStride + ID]].state == GAS || (pixels[grid[(x1 + y1 * gridWidth) * gridStride + ID]].state == LIQUID && Math.random() < 0.5));
+                return isOnGrid(x1, y1) && grid[(x1 + y1 * gridWidth) * gridStride + UPDATED] != tick && (pixels[grid[(x1 + y1 * gridWidth) * gridStride + ID]].state == GAS || (pixels[grid[(x1 + y1 * gridWidth) * gridStride + ID]].state == LIQUID && random() < 0.5));
             };
             if (isMoveable(x, y + 1)) {
                 move(x, y, x, y + 1);
             }
             else {
                 let valid = isTouching(x, y, [SAND]);
-                if (!valid && Math.random() < 1 / 8) {
+                if (!valid && random() < 1 / 8) {
                     addPixel(x, y, AIR);
                     return;
                 }
@@ -3836,8 +3844,9 @@ let pixelData = {
         description: "Unrealistically flows and may or may not be wet",
         group: "General",
         subgroup: "Ash",
-        color: new Float32Array([80, 85, 90, 1]),
-        noise: new Float32Array([40, 45, 50, 1]),
+        // color: new Float32Array([80, 85, 90, 1]),
+        color: new Float32Array([40, 45, 45, 1]),
+        noise: new Float32Array([40, 45, 50, 0]),
         state: SOLID,
         flammability: 4,
         blastResistance: 75,
@@ -3876,8 +3885,9 @@ let pixelData = {
         subgroup: "Crate",
         texture: new Float32Array([40, 40, 40, 40]),
         state: SOLID,
-        flammability: 10,
+        flammability: 0,
         blastResistance: 1650,
+        pushable: false,
         update: function(x, y) {
             fall(x, y, isMoveableSolid);
         },
@@ -4349,7 +4359,8 @@ let pixelData = {
                 return;
             }
             let index = (x + 1 + y * gridWidth) * gridStride;
-            if (!pixels[grid[index + ID]].cloneable) {
+            let id = grid[index + ID];
+            if (!pixels[id].cloneable) {
                 return;
             }
             if (grid[index + UPDATED] != tick) {
@@ -4361,7 +4372,7 @@ let pixelData = {
                     }
                 }
                 if (grid[index1 + ID] == AIR) {
-                    addPixel(x - 1, y, grid[index + ID]);
+                    addPixel(x - 1, y, id);
                 }
             }
             addUpdatedChunk(x, y);
@@ -4386,7 +4397,8 @@ let pixelData = {
                 return;
             }
             let index = (x + (y + 1) * gridWidth) * gridStride;
-            if (!pixels[grid[index + ID]].cloneable) {
+            let id = grid[index + ID];
+            if (!pixels[id].cloneable) {
                 return;
             }
             if (grid[index + UPDATED] != tick) {
@@ -4398,7 +4410,7 @@ let pixelData = {
                     }
                 }
                 if (grid[index1 + ID] == AIR) {
-                    addPixel(x, y - 1, grid[index + ID]);
+                    addPixel(x, y - 1, id);
                 }
             }
             addUpdatedChunk(x, y);
@@ -4423,7 +4435,8 @@ let pixelData = {
                 return;
             }
             let index = (x - 1 + y * gridWidth) * gridStride;
-            if (!pixels[grid[index + ID]].cloneable) {
+            let id = grid[index + ID];
+            if (!pixels[id].cloneable) {
                 return;
             }
             if (grid[index + UPDATED] != tick) {
@@ -4435,7 +4448,7 @@ let pixelData = {
                     }
                 }
                 if (grid[index1 + ID] == AIR) {
-                    addPixel(x + 1, y, grid[index + ID]);
+                    addPixel(x + 1, y, id);
                 }
             }
             addUpdatedChunk(x, y);
@@ -4460,7 +4473,8 @@ let pixelData = {
                 return;
             }
             let index = (x + (y - 1) * gridWidth) * gridStride;
-            if (!pixels[grid[index + ID]].cloneable) {
+            let id = grid[index + ID];
+            if (!pixels[id].cloneable) {
                 return;
             }
             if (grid[index + UPDATED] != tick) {
@@ -4472,7 +4486,7 @@ let pixelData = {
                     }
                 }
                 if (grid[index1 + ID] == AIR) {
-                    addPixel(x, y + 1, grid[index + ID]);
+                    addPixel(x, y + 1, id);
                 }
             }
             addUpdatedChunk(x, y);
@@ -5037,7 +5051,7 @@ let pixelData = {
         group: "Destruction",
         subgroup: "Gunpowder",
         color: new Float32Array([40, 30, 30, 1]),
-        noise: new Float32Array([10, 10, 10, 1]),
+        noise: new Float32Array([10, 10, 10, 0]),
         state: SOLID,
         flammability: 20,
         blastResistance: 20,
@@ -5048,7 +5062,7 @@ let pixelData = {
                 exploding = true;
             }
             if (exploding) {
-                explode(x, y, 5 * 5, 5 * 8, 1500);
+                explode(x, y, 5 * 5, 5 * 8, 2000);
             }
             else {
                 flow(x, y, 1, 1, isPassableSolid, isMoveableSolid);
@@ -5061,12 +5075,12 @@ let pixelData = {
         group: "Destruction",
         subgroup: "Gunpowder",
         color: new Float32Array([40, 30, 30, 1]),
-        noise: new Float32Array([10, 10, 10, 1]),
+        noise: new Float32Array([10, 10, 10, 0]),
         state: SOLID,
         flammability: 20,
         blastResistance: 20,
         update: function(x, y) {
-            explode(x, y, 5 * 5, 5 * 8, 1500);
+            explode(x, y, 5 * 5, 5 * 8, 2000);
         },
     },
     c4: {
@@ -5122,7 +5136,7 @@ let pixelData = {
         rotations: ["flamethrower_left", "flamethrower_up", "flamethrower_right", "flamethrower_down"],
         update: function(x, y) {
             for (let i = 0; i < 3; i++) {
-                let angle = Math.PI + Math.random() * Math.PI / 6 - Math.PI / 12;
+                let angle = Math.PI + random() * Math.PI / 6 - Math.PI / 12;
                 raycast(x, y, Math.cos(angle), Math.sin(angle), (x1, y1) => {
                     let dist = Math.sqrt((x1 - x) ** 2 + (y1 - y) ** 2);
                     if (dist > 10) {
@@ -5154,7 +5168,7 @@ let pixelData = {
         rotations: ["flamethrower_left", "flamethrower_up", "flamethrower_right", "flamethrower_down"],
         update: function(x, y) {
             for (let i = 0; i < 3; i++) {
-                let angle = Math.PI * 3 / 2 + Math.random() * Math.PI / 6 - Math.PI / 12;
+                let angle = Math.PI * 3 / 2 + random() * Math.PI / 6 - Math.PI / 12;
                 raycast(x, y, Math.cos(angle), Math.sin(angle), (x1, y1) => {
                     let dist = Math.sqrt((x1 - x) ** 2 + (y1 - y) ** 2);
                     if (dist > 10) {
@@ -5186,7 +5200,7 @@ let pixelData = {
         rotations: ["flamethrower_left", "flamethrower_up", "flamethrower_right", "flamethrower_down"],
         update: function(x, y) {
             for (let i = 0; i < 3; i++) {
-                let angle = Math.random() * Math.PI / 6 - Math.PI / 12;
+                let angle = random() * Math.PI / 6 - Math.PI / 12;
                 raycast(x, y, Math.cos(angle), Math.sin(angle), (x1, y1) => {
                     let dist = Math.sqrt((x1 - x) ** 2 + (y1 - y) ** 2);
                     if (dist > 10) {
@@ -5218,7 +5232,7 @@ let pixelData = {
         rotations: ["flamethrower_left", "flamethrower_up", "flamethrower_right", "flamethrower_down"],
         update: function(x, y) {
             for (let i = 0; i < 3; i++) {
-                let angle = Math.PI / 2 + Math.random() * Math.PI / 6 - Math.PI / 12;
+                let angle = Math.PI / 2 + random() * Math.PI / 6 - Math.PI / 12;
                 raycast(x, y, Math.cos(angle), Math.sin(angle), (x1, y1) => {
                     let dist = Math.sqrt((x1 - x) ** 2 + (y1 - y) ** 2);
                     if (dist > 10) {
@@ -5284,11 +5298,11 @@ let pixelData = {
                 //         }
                 //         let id = grid[index1 + ID];
                 //         let blastResistance = pixels[id].blastResistance;
-                //         // if (Math.random() > blastResistance / power) {
-                //         if (Math.random() < 1 / blastResistance) {
+                //         // if (random() > blastResistance / power) {
+                //         if (random() < 1 / blastResistance) {
                 //             if (!changed[x1 + y1 * gridWidth]) {
                 //                 changed[x1 + y1 * gridWidth] = true;
-                //                 if (Math.random() > blastResistance / power + 0.5) {
+                //                 if (random() > blastResistance / power + 0.5) {
                 //                     addFire(x1, y1, true);
                 //                 }
                 //                 if (id == AIR) {
@@ -5297,7 +5311,7 @@ let pixelData = {
                 //                 else if (id == ASH) {
                 //                     addPixel(x1, y1, AIR);
                 //                 }
-                //                 else if ((id == WATER || id == ICE || id == SNOW) && Math.random() > 20 / power) {
+                //                 else if ((id == WATER || id == ICE || id == SNOW) && random() > 20 / power) {
                 //                     addPixel(x1, y1, STEAM);
                 //                 }
                 //                 else if (id == NUKE) {
@@ -5306,8 +5320,8 @@ let pixelData = {
                 //                 else if (id == ACTIVATED_NUKE) {
 
                 //                 }
-                //                 // else if (Math.random() < 40 / power) {
-                //                 else if (Math.random() < 0.5) {
+                //                 // else if (random() < 40 / power) {
+                //                 else if (random() < 0.5) {
                 //                     if (id == CONCRETE || id == STONE || id == BASALT || id == BRICKS) {
                 //                         addPixel(x1, y1, GRAVEL);
                 //                     }
@@ -5363,10 +5377,10 @@ let pixelData = {
             //         }
             //         let id = grid[index1 + ID];
             //         let blastResistance = pixels[id].blastResistance;
-            //         if (Math.random() > blastResistance / power) {
+            //         if (random() > blastResistance / power) {
             //             if (!changed[x1 + y1 * gridWidth]) {
             //                 changed[x1 + y1 * gridWidth] = true;
-            //                 if (Math.random() > blastResistance / power + 0.5) {
+            //                 if (random() > blastResistance / power + 0.5) {
             //                     addFire(x1, y1, true);
             //                 }
             //                 if (id == AIR) {
@@ -5375,7 +5389,7 @@ let pixelData = {
             //                 else if (id == ASH) {
             //                     addPixel(x1, y1, AIR);
             //                 }
-            //                 else if ((id == WATER || id == ICE || id == SNOW) && Math.random() > 20 / power) {
+            //                 else if ((id == WATER || id == ICE || id == SNOW) && random() > 20 / power) {
             //                     addPixel(x1, y1, STEAM);
             //                 }
             //                 else if (id == NUKE) {
@@ -5384,8 +5398,8 @@ let pixelData = {
             //                 else if (id == ACTIVATED_NUKE) {
 
             //                 }
-            //                 // else if (Math.random() < 40 / power) {
-            //                 else if (Math.random() < 0.5) {
+            //                 // else if (random() < 40 / power) {
+            //                 else if (random() < 0.5) {
             //                     if (id == CONCRETE || id == STONE || id == BASALT || id == BRICKS) {
             //                         addPixel(x1, y1, GRAVEL);
             //                     }
@@ -5437,145 +5451,145 @@ let pixelData = {
         color: new Float32Array([125, 255, 0, 1]),
         state: SOLID,
         flammability: 0,
-        blastResistance: 0,
+        blastResistance: 1600,
         update: function(x, y) {
             forTouching(x, y, (x1, y1) => {
                 let index1 = (x1 + y1 * gridWidth) * gridStride;
                 if (grid[index1 + ID] == AIR) {
-                    if (Math.random() < 0.5) {
+                    if (random() < 0.5) {
                         addPixel(x1, y1, LAG_SPIKE_GENERATOR);
                     }
-                    else if (Math.random() < 0.025) {
+                    else if (random() < 0.025) {
                         addPixel(x1, y1, WATER_PUMP);
                     }
-                    else if (Math.random() < 0.025) {
+                    else if (random() < 0.025) {
                         addPixel(x1, y1, CLONER_DOWN);
                     }
                 }
                 else if (grid[index1 + ID] == LAG_SPIKE_GENERATOR) {
-                    if (Math.random() < 0.005) {
+                    if (random() < 0.005) {
                         // addPixel(x1, y1, NUKE);
-                        let size = 5;
+                        let size = 8;
                         explode(x1, y1, size * size, size * 8, 10000);
                     }
                 }
             });
         },
     },
-    // acid: {
-    //     name: "Acid",
-    //     description: "Unrealistically flows and may or may not be wet",
-    //     group: "Destruction",
-    //     subgroup: "Acid",
-    //     color: new Float32Array([180, 255, 0, 1]),
-    //     state: LIQUID,
-    //     flammability: 0,
-    //     blastResistance: 1750,
-    //     update: function(x, y) {
-    //         let changed = false;
-    //         forTouching(x, y, (x1, y1) => {
-    //             if (changed) {
-    //                 return;
-    //             }
-    //             let index1 = (x1 + y1 * gridWidth) * gridStride;
-    //             if (grid[index1 + ID] != BASE) {
-    //                 return;
-    //             }
-    //             addPixel(x1, y1, WATER);
-    //             addPixel(x, y, WATER);
-    //             changed = true;
-    //         });
+    acid: {
+        name: "Acid",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Destruction",
+        subgroup: "Acid",
+        color: new Float32Array([180, 255, 0, 1]),
+        state: LIQUID,
+        flammability: 0,
+        blastResistance: 1750,
+        update: function(x, y) {
+            let changed = false;
+            forTouching(x, y, (x1, y1) => {
+                if (changed) {
+                    return;
+                }
+                let index1 = (x1 + y1 * gridWidth) * gridStride;
+                if (grid[index1 + ID] != BASE) {
+                    return;
+                }
+                addPixel(x1, y1, WATER);
+                addPixel(x, y, WATER);
+                changed = true;
+            });
 
-    //         if (changed) {
-    //             return;
-    //         }
+            if (changed) {
+                return;
+            }
 
-    //         function isPassable(x, y) {
-    //             return isOnGrid(x, y) && (pixels[grid[(x + y * gridWidth) * gridStride + ID]].state == GAS || grid[(x + y * gridWidth) * gridStride + ID] == WATER || grid[(x + y * gridWidth) * gridStride + ID] == ACID || grid[(x + y * gridWidth) * gridStride + ID] == BASE);
-    //         };
-    //         function isMoveable(x, y) {
-    //             return isOnGrid(x, y) && grid[(x + y * gridWidth) * gridStride + UPDATED] != tick && pixels[grid[(x + y * gridWidth) * gridStride + ID]].state == GAS;
-    //         };
+            function isPassable(x, y) {
+                return isOnGrid(x, y) && (pixels[grid[(x + y * gridWidth) * gridStride + ID]].state == GAS || grid[(x + y * gridWidth) * gridStride + ID] == WATER || grid[(x + y * gridWidth) * gridStride + ID] == ACID || grid[(x + y * gridWidth) * gridStride + ID] == BASE);
+            };
+            function isMoveable(x, y) {
+                return isOnGrid(x, y) && grid[(x + y * gridWidth) * gridStride + UPDATED] != tick && pixels[grid[(x + y * gridWidth) * gridStride + ID]].state == GAS;
+            };
 
-    //         flow(x, y, gridWidth, 1, isPassable, isMoveable);
-    //         if (grid[(x + y * gridWidth) * gridStride + UPDATED] != tick) {
-    //             let total = getTouching(x, y, [WATER]);
-    //             if (total > 0) {
-    //                 // if (Math.random() < 0.25) {
-    //                     let random = Math.floor(Math.random() * total);
-    //                     forTouching(x, y, (x1, y1) => {
-    //                         let index1 = (x1 + y1 * gridWidth) * gridStride;
-    //                         if (grid[index1 + ID] != WATER) {
-    //                             return;
-    //                         }
-    //                         if (random == 0) {
-    //                             move(x, y, x1, y1);
-    //                         }
-    //                         random -= 1;
-    //                     });
-    //                 // }
-    //                 addUpdatedChunk(x, y);
-    //             }
-    //         }
-    //     },
-    // },
-    // base: {
-    //     name: "Base",
-    //     description: "Unrealistically flows and may or may not be wet",
-    //     group: "Destruction",
-    //     subgroup: "Acid",
-    //     color: new Float32Array([160, 0, 255, 1]),
-    //     state: LIQUID,
-    //     flammability: 0,
-    //     blastResistance: 1750,
-    //     update: function(x, y) {
-    //         let changed = false;
-    //         forTouching(x, y, (x1, y1) => {
-    //             if (changed) {
-    //                 return;
-    //             }
-    //             let index1 = (x1 + y1 * gridWidth) * gridStride;
-    //             if (grid[index1 + ID] != ACID) {
-    //                 return;
-    //             }
-    //             addPixel(x1, y1, WATER);
-    //             addPixel(x, y, WATER);
-    //             changed = true;
-    //         });
+            flow(x, y, gridWidth, 1, isPassable, isMoveable);
+            if (grid[(x + y * gridWidth) * gridStride + UPDATED] != tick) {
+                let total = getTouching(x, y, [WATER]);
+                if (total > 0) {
+                    // if (random() < 0.25) {
+                        let direction = Math.floor(random() * total);
+                        forTouching(x, y, (x1, y1) => {
+                            let index1 = (x1 + y1 * gridWidth) * gridStride;
+                            if (grid[index1 + ID] != WATER) {
+                                return;
+                            }
+                            if (direction == 0) {
+                                move(x, y, x1, y1);
+                            }
+                            direction -= 1;
+                        });
+                    // }
+                    addUpdatedChunk(x, y);
+                }
+            }
+        },
+    },
+    base: {
+        name: "Base",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Destruction",
+        subgroup: "Acid",
+        color: new Float32Array([160, 0, 255, 1]),
+        state: LIQUID,
+        flammability: 0,
+        blastResistance: 1750,
+        update: function(x, y) {
+            let changed = false;
+            forTouching(x, y, (x1, y1) => {
+                if (changed) {
+                    return;
+                }
+                let index1 = (x1 + y1 * gridWidth) * gridStride;
+                if (grid[index1 + ID] != ACID) {
+                    return;
+                }
+                addPixel(x1, y1, WATER);
+                addPixel(x, y, WATER);
+                changed = true;
+            });
 
-    //         if (changed) {
-    //             return;
-    //         }
+            if (changed) {
+                return;
+            }
 
-    //         function isPassable(x, y) {
-    //             return isOnGrid(x, y) && (pixels[grid[(x + y * gridWidth) * gridStride + ID]].state == GAS || grid[(x + y * gridWidth) * gridStride + ID] == WATER || grid[(x + y * gridWidth) * gridStride + ID] == ACID || grid[(x + y * gridWidth) * gridStride + ID] == BASE);
-    //         };
-    //         function isMoveable(x, y) {
-    //             return isOnGrid(x, y) && grid[(x + y * gridWidth) * gridStride + UPDATED] != tick && pixels[grid[(x + y * gridWidth) * gridStride + ID]].state == GAS;
-    //         };
+            function isPassable(x, y) {
+                return isOnGrid(x, y) && (pixels[grid[(x + y * gridWidth) * gridStride + ID]].state == GAS || grid[(x + y * gridWidth) * gridStride + ID] == WATER || grid[(x + y * gridWidth) * gridStride + ID] == ACID || grid[(x + y * gridWidth) * gridStride + ID] == BASE);
+            };
+            function isMoveable(x, y) {
+                return isOnGrid(x, y) && grid[(x + y * gridWidth) * gridStride + UPDATED] != tick && pixels[grid[(x + y * gridWidth) * gridStride + ID]].state == GAS;
+            };
 
-    //         flow(x, y, gridWidth, 1, isPassable, isMoveable);
-    //         if (grid[(x + y * gridWidth) * gridStride + UPDATED] != tick) {
-    //             let total = getTouching(x, y, [WATER]);
-    //             if (total > 0) {
-    //                 // if (Math.random() < 0.25) {
-    //                     let random = Math.floor(Math.random() * total);
-    //                     forTouching(x, y, (x1, y1) => {
-    //                         let index1 = (x1 + y1 * gridWidth) * gridStride;
-    //                         if (grid[index1 + ID] != WATER) {
-    //                             return;
-    //                         }
-    //                         if (random == 0) {
-    //                             move(x, y, x1, y1);
-    //                         }
-    //                         random -= 1;
-    //                     });
-    //                 // }
-    //                 addUpdatedChunk(x, y);
-    //             }
-    //         }
-    //     },
-    // },
+            flow(x, y, gridWidth, 1, isPassable, isMoveable);
+            if (grid[(x + y * gridWidth) * gridStride + UPDATED] != tick) {
+                let total = getTouching(x, y, [WATER]);
+                if (total > 0) {
+                    // if (random() < 0.25) {
+                        let direction = Math.floor(random() * total);
+                        forTouching(x, y, (x1, y1) => {
+                            let index1 = (x1 + y1 * gridWidth) * gridStride;
+                            if (grid[index1 + ID] != WATER) {
+                                return;
+                            }
+                            if (direction == 0) {
+                                move(x, y, x1, y1);
+                            }
+                            direction -= 1;
+                        });
+                    // }
+                    addUpdatedChunk(x, y);
+                }
+            }
+        },
+    },
     pink_sand: {
         name: "Pink Sand",
         description: "Unrealistically flows and may or may not be wet",
@@ -5618,10 +5632,10 @@ let pixelData = {
         flammability: 0,
         blastResistance: 50,
         update5: function(x, y) {
-            if (Math.random() < 0.1) {
-                if (Math.random() < 0.01) {
-                    let x1 = Math.floor(Math.random() * gridWidth);
-                    let y1 = Math.floor(Math.random() * gridHeight);
+            if (random() < 0.1) {
+                if (random() < 0.01) {
+                    let x1 = Math.floor(random() * gridWidth);
+                    let y1 = Math.floor(random() * gridHeight);
                     if ((x1 - x) ** 2 + (y1 - y) ** 2 > 400) {
                         explode(x1, y1, 20 * 20, 20 * 8, 8000);
                         addPixel(x1, y1, PICKLE);
@@ -5629,8 +5643,8 @@ let pixelData = {
                 }
                 else {
                     for (let i = 0; i < 100; i++) {
-                        let chunkX = Math.floor(Math.random() * chunkXAmount);
-                        let chunkY = Math.floor(Math.random() * chunkYAmount);
+                        let chunkX = Math.floor(random() * chunkXAmount);
+                        let chunkY = Math.floor(random() * chunkYAmount);
                         let chunkIndex = (chunkX + chunkY * chunkXAmount) * chunkStride;
                         nextChunks[chunkIndex] = chunkX * chunkWidth + chunkWidth;
                         nextChunks[chunkIndex + 1] = chunkX * chunkWidth - 1;
@@ -5653,10 +5667,10 @@ let pixelData = {
         flammability: 0,
         blastResistance: 50,
         update4: function(x, y) {
-            if (Math.random() < 0.1) {
-                if (Math.random() < 0.01) {
-                    let x1 = Math.floor(Math.random() * gridWidth);
-                    let y1 = Math.floor(Math.random() * gridHeight);
+            if (random() < 0.1) {
+                if (random() < 0.01) {
+                    let x1 = Math.floor(random() * gridWidth);
+                    let y1 = Math.floor(random() * gridHeight);
                     if ((x1 - x) ** 2 + (y1 - y) ** 2 > 400) {
                         explode(x1, y1, 20 * 20, 20 * 8, 8000);
                         addPixel(x1, y1, PICKLED_PICKLE);
@@ -5664,8 +5678,8 @@ let pixelData = {
                 }
                 else {
                     for (let i = 0; i < 100; i++) {
-                        let chunkX = Math.floor(Math.random() * chunkXAmount);
-                        let chunkY = Math.floor(Math.random() * chunkYAmount);
+                        let chunkX = Math.floor(random() * chunkXAmount);
+                        let chunkY = Math.floor(random() * chunkYAmount);
                         let chunkIndex = (chunkX + chunkY * chunkXAmount) * chunkStride;
                         nextChunks[chunkIndex] = chunkX * chunkWidth + chunkWidth;
                         nextChunks[chunkIndex + 1] = chunkX * chunkWidth - 1;
@@ -5686,7 +5700,7 @@ let pixelData = {
         group: "Destruction",
         subgroup: "Spongy Rice",
         color: new Float32Array([230, 230, 230, 1]),
-        noise: new Float32Array([10, 10, -5, 1]),
+        noise: new Float32Array([10, 10, -5, 0]),
         state: SOLID,
         flammability: 0,
         blastResistance: 60,
@@ -5729,7 +5743,7 @@ let pixelData = {
         group: "Destruction",
         subgroup: "Spongy Rice",
         color: new Float32Array([230, 230, 230, 1]),
-        noise: new Float32Array([10, 10, -5, 1]),
+        noise: new Float32Array([10, 10, -5, 0]),
         state: SOLID,
         flammability: 0,
         blastResistance: 60,
@@ -5801,17 +5815,17 @@ let pixelData = {
                     // alert(x1 + " " + y1 + " " + angle + " " + size + " " + length);
                     let x3 = x1;
                     let y3 = y1;
-                    // let finalSize = size * (0.2 + Math.random() * 0.4);
+                    // let finalSize = size * (0.2 + random() * 0.4);
                     let finalSize = size;
-                    let branchOffset = Math.random() < 0.5;
+                    let branchOffset = random() < 0.5;
                     raycast2(x1, y1, Math.cos(angle), Math.sin(angle), (x2, y2) => {
                         let dist = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
                         if (dist > length) {
                             if (finalSize > 1) {
-                                // addBranch(x3, y3, angle - (15 + Math.random() * 30) / 180 * Math.PI, finalSize, length * (0.2 + Math.random() * 0.4));
-                                // addBranch(x3, y3, angle + (15 + Math.random() * 30) / 180 * Math.PI, finalSize, length * (0.2 + Math.random() * 0.4));
-                                addBranch(x3, y3, angle - (15 + Math.random() * 30) / 180 * Math.PI, finalSize * (0.6 + Math.random() * 0.4), length * (0.4 + Math.random() * 0.4));
-                                addBranch(x3, y3, angle + (15 + Math.random() * 30) / 180 * Math.PI, finalSize * (0.6 + Math.random() * 0.4), length * (0.4 + Math.random() * 0.4));
+                                // addBranch(x3, y3, angle - (15 + random() * 30) / 180 * Math.PI, finalSize, length * (0.2 + random() * 0.4));
+                                // addBranch(x3, y3, angle + (15 + random() * 30) / 180 * Math.PI, finalSize, length * (0.2 + random() * 0.4));
+                                addBranch(x3, y3, angle - (15 + random() * 30) / 180 * Math.PI, finalSize * (0.6 + random() * 0.4), length * (0.4 + random() * 0.4));
+                                addBranch(x3, y3, angle + (15 + random() * 30) / 180 * Math.PI, finalSize * (0.6 + random() * 0.4), length * (0.4 + random() * 0.4));
                                 // let continueAngle = random(0.2, 0.4) * (Math.round(random()) * 2 - 1);
                                 // branch(x2, y2, angle + continueAngle, size * random(0.5, 0.9), length * random(0.5, 1));
                                 // let forcedBranch = random() < 0.5 - continueAngle * 0.8 + (((Math.PI / 2) - angle) * 0.5);
@@ -5819,7 +5833,7 @@ let pixelData = {
                                 // if (random() < 0.2 || !forcedBranch) branch(x2, y2, angle - random(0.6, 1.6) - (((Math.PI / 2) - angle) * 0.2), size * random(0.2, 0.6), length * random(0.5, 1));
                             }
                             else {
-                                fillEllipse(x3, y3, (2 + Math.random() * 0.5) * growthFactor, (1.5 + Math.random() * 0.5) * growthFactor, (x4, y4) => {
+                                fillEllipse(x3, y3, (2 + random() * 0.5) * growthFactor, (1.5 + random() * 0.5) * growthFactor, (x4, y4) => {
                                     let index1 = (x4 + y4 * gridWidth) * gridStride;
                                     if (grid[index1 + ID] != DIRT) {
                                         addPixel(x4, y4, RECURSIVE_SAPLING);
@@ -5846,9 +5860,9 @@ let pixelData = {
                     });
                 };
                 // growth = 10;
-                if (Math.random() < growth / 10) {
+                if (random() < growth / 10) {
                     growthFactor = (Math.log(growth) / Math.log(4)) + 0.5;
-                    addBranch(x, y, -Math.PI / 2, growth * (0.2 + Math.random() * 0.1), growth * (0.8 + Math.random() * 0.7));
+                    addBranch(x, y, -Math.PI / 2, growth * (0.2 + random() * 0.1), growth * (0.8 + random() * 0.7));
                 }
             }
         },
@@ -6219,7 +6233,7 @@ let pixelData = {
         update: function(x, y) {
             let array = [AIR, WALL, ANT_LEFT_CLOCKWISE, ANT_LEFT_COUNTERCLOCKWISE, ANT_UP_CLOCKWISE, ANT_UP_COUNTERCLOCKWISE, ANT_RIGHT_CLOCKWISE, ANT_RIGHT_COUNTERCLOCKWISE, ANT_DOWN_CLOCKWISE, ANT_DOWN_COUNTERCLOCKWISE];
             let total = getTouching(x, y, array);
-            let random = Math.floor(Math.random() * total);
+            let direction = Math.floor(random() * total);
             forTouching(x, y, (x1, y1) => {
                 let index = (x1 + y1 * gridWidth) * gridStride;
                 let canMove = false;
@@ -6233,7 +6247,7 @@ let pixelData = {
                     return;
                 }
                 total -= 1;
-                if (random == total) {
+                if (direction == total) {
                     grid[index + ID] = AIR;
                     move(x, y, x1, y1);
                 }
@@ -6258,17 +6272,17 @@ let pixelData = {
             if (isOnGrid(x1, y1)) {
                 let index1 = (x1 + y1 * gridWidth) * gridStride;
                 if (grid[index1 + ID] != LASER_SCATTERER) {
-                    // if (Math.random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
-                    if (Math.random() < pixels[grid[index1 + ID]].flammability / 100) {
+                    // if (random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
+                    if (random() < pixels[grid[index1 + ID]].flammability / 100) {
                         addFire(x1, y1, true);
                     }
-                    if (Math.random() < 10 / pixels[grid[index1 + ID]].blastResistance) {
+                    if (random() < 10 / pixels[grid[index1 + ID]].blastResistance) {
                         if (grid[index1 + ID] == LASER_LEFT || grid[index1 + ID] == LASER_UP || grid[index1 + ID] == LASER_RIGHT || grid[index1 + ID] == LASER_DOWN) {
                             explode(x1, y1, 5 * 5, 5 * 8, 3000);
                         }
                         addPixel(x1, y1, AIR);
                     }
-                    // if (Math.random() < pixelAt(last[0], last[1]).flammability / 100) nextFireGrid[last[1]][last[0]] = true;
+                    // if (random() < pixelAt(last[0], last[1]).flammability / 100) nextFireGrid[last[1]][last[0]] = true;
                 }
             }
             addDrawingChunk(x, y);
@@ -6298,17 +6312,17 @@ let pixelData = {
             if (isOnGrid(x1, y1)) {
                 let index1 = (x1 + y1 * gridWidth) * gridStride;
                 if (grid[index1 + ID] != LASER_SCATTERER) {
-                    // if (Math.random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
-                    if (Math.random() < pixels[grid[index1 + ID]].flammability / 100) {
+                    // if (random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
+                    if (random() < pixels[grid[index1 + ID]].flammability / 100) {
                         addFire(x1, y1, true);
                     }
-                    if (Math.random() < 10 / pixels[grid[index1 + ID]].blastResistance) {
+                    if (random() < 10 / pixels[grid[index1 + ID]].blastResistance) {
                         if (grid[index1 + ID] == LASER_LEFT || grid[index1 + ID] == LASER_UP || grid[index1 + ID] == LASER_RIGHT || grid[index1 + ID] == LASER_DOWN) {
                             explode(x1, y1, 5 * 5, 5 * 8, 3000);
                         }
                         addPixel(x1, y1, AIR);
                     }
-                    // if (Math.random() < pixelAt(last[0], last[1]).flammability / 100) nextFireGrid[last[1]][last[0]] = true;
+                    // if (random() < pixelAt(last[0], last[1]).flammability / 100) nextFireGrid[last[1]][last[0]] = true;
                 }
             }
             addDrawingChunk(x, y);
@@ -6338,17 +6352,17 @@ let pixelData = {
             if (isOnGrid(x1, y1)) {
                 let index1 = (x1 + y1 * gridWidth) * gridStride;
                 if (grid[index1 + ID] != LASER_SCATTERER) {
-                    // if (Math.random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
-                    if (Math.random() < pixels[grid[index1 + ID]].flammability / 100) {
+                    // if (random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
+                    if (random() < pixels[grid[index1 + ID]].flammability / 100) {
                         addFire(x1, y1, true);
                     }
-                    if (Math.random() < 10 / pixels[grid[index1 + ID]].blastResistance) {
+                    if (random() < 10 / pixels[grid[index1 + ID]].blastResistance) {
                         if (grid[index1 + ID] == LASER_LEFT || grid[index1 + ID] == LASER_UP || grid[index1 + ID] == LASER_RIGHT || grid[index1 + ID] == LASER_DOWN) {
                             explode(x1, y1, 5 * 5, 5 * 8, 3000);
                         }
                         addPixel(x1, y1, AIR);
                     }
-                    // if (Math.random() < pixelAt(last[0], last[1]).flammability / 100) nextFireGrid[last[1]][last[0]] = true;
+                    // if (random() < pixelAt(last[0], last[1]).flammability / 100) nextFireGrid[last[1]][last[0]] = true;
                 }
             }
             addDrawingChunk(x, y);
@@ -6378,17 +6392,17 @@ let pixelData = {
             if (isOnGrid(x1, y1)) {
                 let index1 = (x1 + y1 * gridWidth) * gridStride;
                 if (grid[index1 + ID] != LASER_SCATTERER) {
-                    // if (Math.random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
-                    if (Math.random() < pixels[grid[index1 + ID]].flammability / 100) {
+                    // if (random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
+                    if (random() < pixels[grid[index1 + ID]].flammability / 100) {
                         addFire(x1, y1, true);
                     }
-                    if (Math.random() < 10 / pixels[grid[index1 + ID]].blastResistance) {
+                    if (random() < 10 / pixels[grid[index1 + ID]].blastResistance) {
                         if (grid[index1 + ID] == LASER_LEFT || grid[index1 + ID] == LASER_UP || grid[index1 + ID] == LASER_RIGHT || grid[index1 + ID] == LASER_DOWN) {
                             explode(x1, y1, 5 * 5, 5 * 8, 3000);
                         }
                         addPixel(x1, y1, AIR);
                     }
-                    // if (Math.random() < pixelAt(last[0], last[1]).flammability / 100) nextFireGrid[last[1]][last[0]] = true;
+                    // if (random() < pixelAt(last[0], last[1]).flammability / 100) nextFireGrid[last[1]][last[0]] = true;
                 }
             }
             addDrawingChunk(x, y);

@@ -1,5 +1,6 @@
 import { pixels, addPixel, addFire, addUpdatedChunk, addUpdatedChunk2, resetPushPixels, pixelTexture, pixelInventory, pixelInventoryUpdates, updatePixelImage, resetPixelInventory, updatePixelInventory } from "./pixels.js";
 import { resizeCanvas, resizeGrid, render } from "./renderer.js";
+import { random, randomSeed } from "./random.js";
 import { resizeMenuCanvases, transitionIn, transitionOut, slideInTitle, updateMenu } from "./menu.js";
 import { puzzles, puzzleProgress, currentPuzzle, targets, resetTargets, updateObjectives } from "./puzzles.js";
 
@@ -35,7 +36,7 @@ remove unnecessary workedPushPixels
 
 add explode functions to pumps
 isId function is so useless - DONE
-deterministic random
+deterministic random - DONE
 lava cooling? and lava heater heating stone
 lava heater raycasts for some reason
 
@@ -80,9 +81,13 @@ fps display borks in simulate mode - DONE
 
 optimize the code for when you pick up a pixel starting from 0 in inventory
 
-fix bug where loading puzzle save code on resupply needed is borken
+fix bug where loading puzzle save code on resupply needed is borken - DONE
 
-random() in shader is [-1, 1] i think, this breaks noise (ash is one of the pixels that are borken)
+random() in shader is [-1, 1] i think, this breaks noise (ash is one of the pixels that are borken) - DONE (its opacity 1 on noise)
+
+fix random:
+- seed non butterfly effect random for explosions
+- randomseed for random ticking
 
 // todo: minimize mode for savecodes
 // if (currentPuzzle != null) {
@@ -90,6 +95,8 @@ random() in shader is [-1, 1] i think, this breaks noise (ash is one of the pixe
 //         continue;
 //     }
 // }
+
+monsters always update because updateObjectives only scans updated chunks for monsters
 
 
 polishing:
@@ -201,7 +208,6 @@ function modal(title, content, type) {
     setRunState("paused");
     return new Promise((resolve, reject) => {
         modalContainer.onclose = () => {
-            console.log(modalContainer.returnValue)
             resolve(modalContainer.returnValue == "true");
             modalContainer.returnValue = null;
         };
@@ -281,7 +287,7 @@ resetButton.onclick = async () => {
 const screenshotButton = document.getElementById("screenshotButton");
 screenshotButton.onclick = async () => {
     console.log(drawBlueprintImg(grid, gridWidth, gridHeight, gridWidth * 6, gridHeight * 6))
-    downloadFile(await (await fetch(drawBlueprintImg(grid, gridWidth, gridHeight, gridWidth * 6, gridHeight * 6))).blob(), "test.png");
+    downloadFile(await (await fetch(drawBlueprintImg(grid, gridWidth, gridHeight, gridWidth * 6, gridHeight * 6))).blob(), "pixelsimulator" + Math.floor(Math.random() * 1000) + ".png");
 };
 
 const transitionContainer = document.getElementById("transitionContainer");
@@ -716,16 +722,12 @@ function loadSaveCode(string, selection = false, puzzle = false) {
                     continue;
                 }
                 let id = parsed.grid[parsedIndex + ID];
-                if (id == AIR || pixelInventory[id] != 0) {
-                    if (grid[index + ID] != 0) {
+                if (grid[index + ID] != id) {
+                    if (grid[index + ID] != AIR) {
                         pixelInventory[grid[index + ID]] += 1;
                         pixelInventoryUpdates[grid[index + ID]] = true;
                     }
-                    grid[index + ID] = id;
-                    if (id != AIR) {
-                        pixelInventory[id] -= 1;
-                        pixelInventoryUpdates[id] = true;
-                    }
+                    grid[index + ID] = AIR;
                 }
                 let fire = parsed.grid[parsedIndex + ON_FIRE];
                 if (grid[index + ON_FIRE] != fire) {
@@ -734,11 +736,32 @@ function loadSaveCode(string, selection = false, puzzle = false) {
                         pixelInventoryUpdates[FIRE] = true;
                         grid[index + ON_FIRE] = fire;
                     }
-                    else if (pixelInventory[FIRE] != 0) {
-                        pixelInventory[FIRE] -= 1;
-                        pixelInventoryUpdates[FIRE] = true;
-                        grid[index + ON_FIRE] = fire;
+                }
+            }
+        }
+        updatePixelInventory();
+        for (let y = 0; y < Math.min(gridHeight, parsed.gridHeight); y++) {
+            for (let x = 0; x < Math.min(gridWidth, parsed.gridWidth); x++) {
+                let index = (x + y * gridWidth) * gridStride;
+                let parsedIndex = (x + y * parsed.gridWidth) * gridStride;
+                if ((grid[index + PUZZLE_DATA] & 1) == 1) {
+                    continue;
+                }
+                let id = parsed.grid[parsedIndex + ID];
+                if (grid[index + ID] != id && id != AIR && pixelInventory[id] != 0) {
+                    if (grid[index + ID] != AIR) {
+                        pixelInventory[grid[index + ID]] += 1;
+                        pixelInventoryUpdates[grid[index + ID]] = true;
                     }
+                    grid[index + ID] = id;
+                    pixelInventory[id] -= 1;
+                    pixelInventoryUpdates[id] = true;
+                }
+                let fire = parsed.grid[parsedIndex + ON_FIRE];
+                if (grid[index + ON_FIRE] != fire && fire == 1 && pixelInventory[FIRE] != 0) {
+                    pixelInventory[FIRE] -= 1;
+                    pixelInventoryUpdates[FIRE] = true;
+                    grid[index + ON_FIRE] = fire;
                 }
             }
         }
@@ -1205,7 +1228,7 @@ function updateMouse() {
                     raytrace(lastBrushX, lastBrushY, brushX, brushY, brushSize, (x1, y1, x2, y2) => {
                         for (let y = y1; y <= y2; y++) {
                             for (let x = x1; x <= x2; x++) {
-                                addPixel(x, y, 0);
+                                addPixel(x, y, AIR);
                                 // addUpdatedChunk2(x, y);
                                 changed = true;
                             }
@@ -1221,11 +1244,11 @@ function updateMouse() {
                                     continue;
                                 }
                                 let index = (x + y * gridWidth) * gridStride;
-                                if (grid[index + ID] != 0) {
+                                if (grid[index + ID] != AIR) {
                                     pixelInventory[grid[index + ID]] += 1;
                                     pixelInventoryUpdates[grid[index + ID]] = true;
                                 }
-                                addPixel(x, y, 0);
+                                addPixel(x, y, AIR);
                                 // addUpdatedChunk2(x, y);
                                 grid[index + UPDATED] = 0;
                                 changed = true;
@@ -1326,7 +1349,7 @@ function updateMouse() {
                                     continue;
                                 }
                                 let index = (x + y * gridWidth) * gridStride;
-                                if (grid[index + ID] != 0) {
+                                if (grid[index + ID] != AIR) {
                                     pixelInventory[grid[index + ID]] += 1;
                                     pixelInventoryUpdates[grid[index + ID]] = true;
                                 }
@@ -1383,7 +1406,7 @@ function updateMouse() {
             if (currentPuzzle == null) {
                 for (let y = Math.max(selectionY, 0); y < Math.min(selectionY + selectionHeight, gridHeight); y++) {
                     for (let x = Math.max(selectionX, 0); x < Math.min(selectionX + selectionWidth, gridWidth); x++) {
-                        addPixel(x, y, 0);
+                        addPixel(x, y, AIR);
                         addFire(x, y, 0);
                         changed = true;
                     }
@@ -1396,7 +1419,7 @@ function updateMouse() {
                         if ((grid[index + PUZZLE_DATA] & 1) == 1) {
                             continue;
                         }
-                        if (grid[index + ID] != 0) {
+                        if (grid[index + ID] != AIR) {
                             pixelInventory[grid[index + ID]] += 1;
                             pixelInventoryUpdates[grid[index + ID]] = true;
                         }
@@ -1449,7 +1472,7 @@ function updateMouse() {
                         }
                         let id = selectionGrid[(x - startX + (y - startY) * selectionWidth) * gridStride + ID];
                         if (id == AIR || pixelInventory[id] != 0) {
-                            if (grid[index + ID] != 0) {
+                            if (grid[index + ID] != AIR) {
                                 pixelInventory[grid[index + ID]] += 1;
                                 pixelInventoryUpdates[grid[index + ID]] = true;
                             }
@@ -1561,6 +1584,7 @@ function updateMouse() {
     lastBrushY = brushY;
     if (currentPuzzle != null && changed) {
         saveCode.value = generateSaveCode();
+        updateObjectives();
     }
 };
 
@@ -1878,24 +1902,6 @@ function createGrid() {
     let gridArray = [];
     for (let y = 0; y < gridHeight; y++) {
         for (let x = 0; x < gridWidth; x++) {
-            // if (Math.random() < 0.5 && x > gridWidth * 4 / 5) {
-            // if (Math.random() < 0.25 && x > gridWidth * 4 / 5) {
-            // gridArray.push(...[4, 0, 0, 1, 0.85 + Math.random() * 0.05, 0.5, 1, 0, 0]);
-            // }
-            // // else if (Math.random() < 0.25) {
-            // if (Math.random() < 10.5 && x > gridWidth * 4 / 5) {
-            //     // else if (Math.random() < 0.5 && y > gridHeight * 3 / 4) {
-            //     gridArray.push(...[2, 0, 0, 0.1, 0.3, 0.85 + Math.random() * 0.05, 1, 0, 0]);
-            // }
-            // // if (x == 0 && y == 0) {
-            // //     gridArray.push(...[2, 0, 0, 0.1, 0.3, 0.85 + Math.random() * 0.05, 1, 0, 0]);
-            // // }
-            // else {
-            //     // gridArray.push(...[0, 0, 0, 1, 1, 1, 1, 0, 0]);
-            //     gridArray.push(...[6, 0, 0, 1, 1, 1, 1, 0, 0]);
-            // }
-            // gridArray.push(...[0, 0, 0, 1, 1, 1, 1, 0, 0]);
-            // gridArray.push(...[0, 0, 0, 1, 1, 1, 0.5, 0, 0]);
             gridArray.push(...[0, 0, 0, 0]);
         }
     }
@@ -2084,7 +2090,6 @@ function resetGrid() {
 };
 
 function updateGrid() {
-    console.log(tick)
     if (gridWidth % chunkWidth != 0) {
         for (let chunkY = 0; chunkY < chunkYAmount; chunkY++) {
             nextChunks[(chunkXAmount - 1 + chunkY * chunkXAmount) * chunkStride + 1] = Math.min(nextChunks[(chunkXAmount - 1 + chunkY * chunkXAmount) * chunkStride + 1], gridWidth - 1);
@@ -2136,6 +2141,7 @@ function updateGrid() {
                             continue;
                         }
                         if (grid[index + ON_FIRE] == 1) {
+                            randomSeed(x, y);
                             pixels[FIRE].update(x, y);
                         }
                     }
@@ -2175,6 +2181,7 @@ function updateGrid() {
                         if (pixels[grid[index + ID]].update1 == null) {
                             continue;
                         }
+                        randomSeed(x, y);
                         pixels[grid[index + ID]].update1(x, y);
                     }
                 }
@@ -2209,6 +2216,7 @@ function updateGrid() {
                         if (pixels[grid[index + ID]].update2 == null) {
                             continue;
                         }
+                        randomSeed(x, y);
                         pixels[grid[index + ID]].update2(x, y);
                     }
                 }
@@ -2243,6 +2251,7 @@ function updateGrid() {
                         if (pixels[grid[index + ID]].update3 == null) {
                             continue;
                         }
+                        randomSeed(x, y);
                         pixels[grid[index + ID]].update3(x, y);
                     }
                 }
@@ -2277,6 +2286,7 @@ function updateGrid() {
                         if (pixels[grid[index + ID]].update4 == null) {
                             continue;
                         }
+                        randomSeed(x, y);
                         pixels[grid[index + ID]].update4(x, y);
                     }
                 }
@@ -2317,6 +2327,7 @@ function updateGrid() {
                             if (pixels[grid[index + ID]].update == null) {
                                 continue;
                             }
+                            randomSeed(x, y);
                             pixels[grid[index + ID]].update(x, y);
                         }
                     }
@@ -2363,6 +2374,7 @@ function updateGrid() {
                             if (pixels[grid[index + ID]].update == null) {
                                 continue;
                             }
+                            randomSeed(x, y);
                             pixels[grid[index + ID]].update(x, y);
                         }
                     }
@@ -2374,13 +2386,15 @@ function updateGrid() {
     }
     for (let chunkY = 0; chunkY < chunkYAmount; chunkY++) {
         for (let chunkX = 0; chunkX < chunkXAmount; chunkX++) {
-            let x = chunkX * chunkWidth + Math.floor(Math.random() * chunkWidth);
-            let y = chunkY * chunkHeight + Math.floor(Math.random() * chunkHeight);
+            randomSeed(chunkX, chunkY);
+            let x = chunkX * chunkWidth + Math.floor(random() * chunkWidth);
+            let y = chunkY * chunkHeight + Math.floor(random() * chunkHeight);
             if (x >= gridWidth || y >= gridHeight) {
                 continue;
             }
             let index = (x + y * gridWidth) * gridStride;
             if (pixels[grid[index + ID]].randomUpdate != null) {
+                randomSeed(x, y);
                 pixels[grid[index + ID]].randomUpdate(x, y);
             }
         }
@@ -2411,6 +2425,7 @@ function updateGrid() {
                         if (pixels[grid[index + ID]].update5 == null) {
                             continue;
                         }
+                        randomSeed(x, y);
                         pixels[grid[index + ID]].update5(x, y);
                     }
                 }
@@ -2525,6 +2540,9 @@ function updateGame() {
         }
         for (let i = 0; i < simulateSpeed; i++) {
             updateGrid();
+            if (runState != "simulating") {
+                break;
+            }
         }
     }
     else if (runState == "slowmode" && frame % 10 == 0) {
@@ -2673,22 +2691,24 @@ function updateGame() {
         overlayCtx.fillText("30 FPS", graphX + 3, graphY + graphHeight - 1 - 1000 / 30 * 2 - 21);
         overlayCtx.setLineDash([]);
 
+        drawText("Tick: " + (tick - 1) / 7, 3, graphY + graphHeight + 3);
+
         let brushX = Math.floor(cameraX + mouseX / cameraScale);
         let brushY = Math.floor(cameraY + mouseY / cameraScale);
         if (selectionState == BRUSH) {
-            drawText("Brush Size: " + (brushSize * 2 - 1), 3, graphY + graphHeight + 3);
+            drawText("Brush Size: " + (brushSize * 2 - 1), 3, graphY + graphHeight + 20);
         }
         else if (selectionState == SELECTING) {
-            drawText("Selection: (" + Math.min(selectionX, brushX) + ", " + Math.min(selectionY, brushY) + ") => (" + Math.max(selectionX, brushX) + ", " + Math.max(selectionY, brushY) + "), " + (Math.abs(selectionX - brushX) + 1) + "x" + (Math.abs(selectionY - brushY) + 1), 3, graphY + graphHeight + 3);
+            drawText("Selection: (" + Math.min(selectionX, brushX) + ", " + Math.min(selectionY, brushY) + ") => (" + Math.max(selectionX, brushX) + ", " + Math.max(selectionY, brushY) + "), " + (Math.abs(selectionX - brushX) + 1) + "x" + (Math.abs(selectionY - brushY) + 1), 3, graphY + graphHeight + 20);
         }
         else if (selectionState == SELECTED) {
-            drawText("Selection: (" + selectionX + ", " + selectionY + ") => (" + (selectionX + selectionWidth - 1) + ", " + (selectionY + selectionHeight - 1) + "), " + selectionWidth + "x" + selectionHeight, 3, graphY + graphHeight + 3);
+            drawText("Selection: (" + selectionX + ", " + selectionY + ") => (" + (selectionX + selectionWidth - 1) + ", " + (selectionY + selectionHeight - 1) + "), " + selectionWidth + "x" + selectionHeight, 3, graphY + graphHeight + 20);
         }
         else if (selectionState == PASTING) {
-            drawText("Selection: " + selectionWidth + "x" + selectionHeight, 3, graphY + graphHeight + 3);
+            drawText("Selection: " + selectionWidth + "x" + selectionHeight, 3, graphY + graphHeight + 20);
         }
         if (brushX >= 0 && brushX < gridWidth && brushY >= 0 && brushY < gridHeight) {
-            drawText(pixels[grid[(brushX + brushY * gridWidth) * gridStride + ID]].name + " (" + brushX + ", " + brushY + ")", 3, graphY + graphHeight + 20);
+            drawText(pixels[grid[(brushX + brushY * gridWidth) * gridStride + ID]].name + " (" + brushX + ", " + brushY + ")", 3, graphY + graphHeight + 37);
         }
     }
 
@@ -2696,6 +2716,10 @@ function updateGame() {
         // console.log(cameraX, cameraY, Math.round(cameraScale * 256) / 256, frameTime)
 
     }
+
+    // if (runState == "simulating") {
+    //     setTimeout(updateGame, 0);
+    // }
 };
 function update() {
     updateMenu();
