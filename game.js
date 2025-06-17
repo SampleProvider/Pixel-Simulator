@@ -1690,6 +1690,17 @@ document.onmousemove = (e) => {
     mouseX = e.clientX * devicePixelRatio;
     mouseY = e.clientY * devicePixelRatio;
 };
+document.ontouchmove = (e) => {
+    var rect = canvas.getBoundingClientRect();
+    mouseRawX = e.touches[0].clientX;
+    mouseRawY = e.touches[0].clientY;
+    if (isKeybindPressed("Move")) {
+        cameraX -= (e.touches[0].clientX * devicePixelRatio - mouseX) / cameraScale;
+        cameraY -= (e.touches[0].clientY * devicePixelRatio - mouseY) / cameraScale;
+    }
+    mouseX = e.touches[0].clientX * devicePixelRatio;
+    mouseY = e.touches[0].clientY * devicePixelRatio;
+};
 overlayCanvas.onmousedown = (e) => {
     let key = "";
     if (e.button == 0) {
@@ -1724,6 +1735,23 @@ overlayCanvas.onmousedown = (e) => {
         }
     }
 };
+overlayCanvas.ontouchstart = (e) => {
+    let key = "";
+    key = "LMB";
+    controls[key] = performance.now();
+    mouseRawX = e.touches[0].clientX;
+    mouseRawY = e.touches[0].clientY;
+    if (isKeybindPressed("Move")) {
+        cameraX -= (e.touches[0].clientX * devicePixelRatio - mouseX) / cameraScale;
+        cameraY -= (e.touches[0].clientY * devicePixelRatio - mouseY) / cameraScale;
+    }
+    mouseX = e.touches[0].clientX * devicePixelRatio;
+    mouseY = e.touches[0].clientY * devicePixelRatio;
+    let brushX = Math.floor(cameraX + mouseX / cameraScale);
+    let brushY = Math.floor(cameraY + mouseY / cameraScale);
+    lastBrushX = brushX;
+    lastBrushY = brushY;
+};
 document.onmouseup = (e) => {
     let key = "";
     if (e.button == 0) {
@@ -1745,6 +1773,11 @@ document.onmouseup = (e) => {
             }
         }
     }
+};
+document.ontouchend = (e) => {
+    let key = "";
+    key = "LMB";
+    controls[key] = false;
 };
 document.oncontextmenu = (e) => {
     e.preventDefault();
@@ -2528,25 +2561,30 @@ function updateGame() {
     }
     let updateStart = performance.now();
     updateCamera();
-    if (runState == "playing") {
-        updateGrid();
-    }
-    else if (runState == "simulating") {
-        if (fpsTimes.length >= 50 * simulateSpeed) {
-            simulateSpeed += 1;
-        }
-        else {
-            simulateSpeed = Math.max(Math.floor(simulateSpeed / 2), 10);
-        }
-        for (let i = 0; i < simulateSpeed; i++) {
+    try {
+        if (runState == "playing") {
             updateGrid();
-            if (runState != "simulating") {
-                break;
+        }
+        else if (runState == "simulating") {
+            if (fpsTimes.length >= 50 * simulateSpeed) {
+                simulateSpeed += 1;
+            }
+            else {
+                simulateSpeed = Math.max(Math.floor(simulateSpeed / 2), 10);
+            }
+            for (let i = 0; i < simulateSpeed; i++) {
+                updateGrid();
+                if (runState != "simulating") {
+                    break;
+                }
             }
         }
+        else if (runState == "slowmode" && frame % 10 == 0) {
+            updateGrid();
+        }
     }
-    else if (runState == "slowmode" && frame % 10 == 0) {
-        updateGrid();
+    catch (err) {
+        modal("ERROR BUG BUG BUG!!!", err.stack, "error");
     }
     let updateEnd = performance.now();
     let drawStart = performance.now();

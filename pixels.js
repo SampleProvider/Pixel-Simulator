@@ -1,6 +1,6 @@
-import { grid, gridWidth, gridHeight, gridStride, chunks, nextChunks, drawChunks, chunkWidth, chunkHeight, chunkXAmount, chunkYAmount, chunkStride, tick, modal, brushPixel, setBrushPixel, showTooltip, hideTooltip, moveTooltip } from "./game.js";
+import { grid, gridWidth, gridHeight, gridStride, chunks, nextChunks, drawChunks, chunkWidth, chunkHeight, chunkXAmount, chunkYAmount, chunkStride, tick, modal, brushPixel, setBrushPixel, showTooltip, hideTooltip, moveTooltip, setRunState } from "./game.js";
 // import { imageBitmap } from "./renderer.js";
-import { random } from "./random.js";
+import { random, randomSeed } from "./random.js";
 import { currentPuzzle } from "./puzzles.js";
 
 const pixelTexture = await createImageBitmap(await (await fetch("pixels.png")).blob());
@@ -2316,7 +2316,7 @@ function pushDownCheck(x, y, selfX, selfY, allowRecursion) {
                 if (pushStrength == 0 && y2 != gridHeight - 1) {
                     let index2 = (x1 + (y2 + 1) * gridWidth) * gridStride;
                     let id1 = grid[index2 + ID];
-                    if ((id1 == PUSHER_UP || id1 == FAN_UP) && !isDeactivated(x1, y2 - 1)) {
+                    if ((id1 == PUSHER_UP || id1 == FAN_UP) && !isDeactivated(x1, y2 + 1)) {
                         pushFail(y2);
                         break push;
                     }
@@ -2502,6 +2502,10 @@ function isRotatable(x, y) {
 function rotatePixel(x, y) {
     let index = (x + y * gridWidth) * gridStride;
     let id = grid[index + ID];
+    if (pixels[id].rotations == null) {
+        return;
+    }
+    //sdfsdf fix for corruption
     let rotations = pixels[id].rotation;
     forTouching(x, y, (x1, y1) => {
         let index1 = (x1 + y1 * gridWidth) * gridStride;
@@ -3109,7 +3113,7 @@ let pixelData = {
                 if (random() < 0.125) {
                     let left = x > 0 && grid[(x - 1 + y * gridWidth) * gridStride + ID] == STONE;
                     let right = x < gridWidth - 1 && grid[(x + 1 + y * gridWidth) * gridStride + ID] == STONE;
-                    if (left || (left && right && random() < 0.5)) {
+                    if (left && (!right || random() < 0.5)) {
                         move(x, y, x - 1, y);
                         return;
                     }
@@ -5938,6 +5942,55 @@ let pixelData = {
             addUpdatedChunk(x, y);
         },
     },
+    corruption: {
+        name: "Corruption",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Destruction",
+        subgroup: "Corruption",
+        color: new Float32Array([0, 0, 0, 1]),
+        state: SOLID,
+        flammability: 0,
+        blastResistance: 0,
+        update: async function(x, y) {
+            // if (!window.enableCorruptionPixel) {
+            //     // modal("Corruption Pixel Detected!", "Are you sure you want to permanently corrupt your game?", "confirm");
+            //     await modal("Corruption Pixel Detected!", "Are you sure you want to permanently corrupt your game?", "info");
+            //     window.enableCorruptionPixel = true;
+            //     setRunState("playing");
+            //     return;
+            // }
+            let pixel1 = Math.floor(Math.random() * pixels.length);
+            let pixel2 = Math.floor(Math.random() * pixels.length);
+            let property = Object.keys(pixels[pixel1])[Math.floor(Math.random() * Object.keys(pixels[pixel1]).length)];
+            // property = "update";
+            // if (typeof pixels[pixel1][property] == "number" || pixels[pixel2][property] == "number") {
+            if (pixels[pixel2][property] === undefined) {
+                pixels[pixel2][property] = pixels[pixel1][property];
+                // delete pixels[pixel1][property];
+            }
+            else {
+                let pixel2Property = pixels[pixel2][property];
+                pixels[pixel2][property] = pixels[pixel1][property];
+                pixels[pixel1][property] = pixel2Property;
+                // let pixel2Pixel = pixels[pixel2];
+                // pixels[pixel2] = pixels[pixel1];
+                // pixels[pixel1] = pixel2Pixel;
+                // if ()
+                // pixels[pixel1].update = 
+            }
+            // }
+            addUpdatedChunk(x, y);
+            addDrawingChunk(x, y);
+        },
+        // draw: function(ctx, cameraScale, x, y) {
+        //     randomSeed(x + y * gridWidth);
+        //     let drawX = random();
+        //     let drawY = random();
+        //     let drawX = random();
+        //     let drawX = random();
+        //     ctx.drawImage(ctx.canvas, drawX * ctx.canvas.width, 0, 5, ctx.canvas.height, drawX * ctx.canvas.width, random() * 50, 5, ctx.canvas.height);
+        // },
+    },
     life: {
         name: "Conway's Game of Life",
         description: "Unrealistically flows and may or may not be wet",
@@ -6565,6 +6618,16 @@ for (let i = 0; i < pixels.length; i++) {
     }
 }
 
+let corruptionName = pixelData.corruption.name;
+setInterval(() => {
+    let characters = "abcdefghijklmnopqrstuvwxyzABCEDFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()-=_+[]{}\|;':\",./<>?`~";
+    let index = Math.floor(Math.random() * pixels[CORRUPTION].name.length);
+    if (Math.random() < 0.1) {
+        pixels[CORRUPTION].name = corruptionName;
+    }
+    pixels[CORRUPTION].name = pixels[CORRUPTION].name.substring(0, index) + characters[Math.floor(Math.random() * characters.length)] + pixels[CORRUPTION].name.substring(index + 1);
+});
+
 let pixelPicker = document.getElementById("pixelPicker");
 let pixelGroups = [];
 let pixelSubgroups = [];
@@ -6652,12 +6715,22 @@ for (let i = 0; i < pixels.length; i++) {
             setBrushPixel(id);
             updatePixelImage();
         };
+        let interval = 0;
         subgroupImg.onmouseover = function() {
             let id = pixelDivToId[i];
             showTooltip(pixels[id].name, pixels[id].description);
+            if (id == CORRUPTION) {
+                interval = setInterval(() => {
+                    showTooltip(pixels[id].name, pixels[id].description);
+                });
+            }
             moveTooltip();
         };
         subgroupImg.onmouseout = function() {
+            let id = pixelDivToId[i];
+            if (id == CORRUPTION) {
+                clearInterval(interval);
+            }
             hideTooltip();
         };
         subgroupImg.onmousemove = function() {
