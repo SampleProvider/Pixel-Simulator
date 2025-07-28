@@ -1,6 +1,7 @@
-import { grid, gridWidth, gridHeight, gridStride, chunks, nextChunks, chunkWidth, chunkHeight, chunkXAmount, chunkYAmount, chunkStride, tick, modal, setRunState, generateSaveCode, parseSaveCode, loadSaveCode, mouseX, mouseY, resetGrid } from "./game.js";
+import { grid, gridWidth, gridHeight, gridStride, chunks, nextChunks, chunkWidth, chunkHeight, chunkXAmount, chunkYAmount, chunkStride, tick, modal, setRunState, downloadFile, uploadFile, generateSaveCode, parseSaveCode, loadSaveCode, drawBlueprintImg, mouseX, mouseY, resetGrid } from "./game.js";
 import { pixels, pixelInventory, resetPixelInventory, pixelInventoryUpdates, updatePixelInventory } from "./pixels.js";
 import { transitionIn, transitionOut, slideInPuzzles } from "./menu.js";
+import { playMusic } from "./sound.js";
 
 const ID = 0;
 const PUZZLE_DATA = 2;
@@ -263,6 +264,7 @@ let puzzles = {
                 target: "all",
             },
         ],
+        music: "square_waves",
         img: "data:image/png;base64,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",
         official: true,
     },
@@ -716,6 +718,20 @@ let worlds = {
 
 };
 
+if (localStorage.getItem("puzzles") != null) {
+    try {
+        let json = JSON.parse(localStorage.getItem("puzzles"));
+        for (let i in json) {
+            if (puzzles[i] == null) {
+                puzzles[i] = json[i];
+            }
+        }
+    }
+    catch (err) {
+        modal("Puzzles Error", "The stored puzzles were unable to be loaded.<br><br>" + err.stack, "error");
+    }
+}
+
 let puzzleProgress = {};
 
 if (localStorage.getItem("puzzleProgress") != null) {
@@ -776,14 +792,235 @@ const customPuzzlesButton = document.getElementById("customPuzzlesButton");
 
 const officialPuzzlesList = document.getElementById("officialPuzzlesList");
 const customPuzzlesList = document.getElementById("customPuzzlesList");
+const createCustomPuzzleContainer = document.getElementById("createCustomPuzzleContainer");
 
 officialPuzzlesButton.onclick = function() {
-    officialPuzzlesList.style.display = "block";
-    customPuzzlesList.style.display = "none";
+    officialPuzzlesList.style.transform = "translateX(0%)";
+    customPuzzlesList.style.transform = "translateX(100%)";
+    createCustomPuzzleContainer.style.transform = "translateX(200%)";
 };
 customPuzzlesButton.onclick = function() {
-    officialPuzzlesList.style.display = "none";
-    customPuzzlesList.style.display = "block";
+    officialPuzzlesList.style.transform = "translateX(-100%)";
+    customPuzzlesList.style.transform = "translateX(0%)";
+    createCustomPuzzleContainer.style.transform = "translateX(100%)";
+};
+
+const uploadCustomPuzzleButton = document.getElementById("uploadCustomPuzzleButton");
+const createCustomPuzzleButton = document.getElementById("createCustomPuzzleButton");
+
+uploadCustomPuzzleButton.onclick = async function() {
+    let file = await uploadFile([".json"]);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            let json = JSON.parse(e.target.result);
+            if (puzzles[json.id] != null) {
+                if (puzzles[json.id].official) {
+                    modal("Puzzle Already Exists", "An official puzzle with id '" + json.id + "' already exists.", "info");
+                    return;
+                }
+                else if (!await modal("Overwrite Existing Puzzle?", "A puzzle with id '" + json.id + "' already exists. Continuing will overwrite this puzzle! This cannot be undone!", "confirm")) {
+                    return;
+                }
+                puzzles[json.id].div.remove();
+            }
+            puzzles[json.id] = json;
+            addPuzzle(json.id);
+        }
+        catch (err) {
+            modal("Error Loading Puzzle", "An error occured while loading the puzzle.<br>" + err.stack, "error");
+        }
+    };
+    reader.readAsText(file);
+};
+createCustomPuzzleButton.onclick = function() {
+    officialPuzzlesList.style.transform = "translateX(-200%)";
+    customPuzzlesList.style.transform = "translateX(-100%)";
+    createCustomPuzzleContainer.style.transform = "translateX(0%)";
+};
+
+const createCustomPuzzleCloseButton = document.getElementById("createCustomPuzzleCloseButton");
+
+createCustomPuzzleCloseButton.onclick = function() {
+    officialPuzzlesList.style.transform = "translateX(-100%)";
+    customPuzzlesList.style.transform = "translateX(0%)";
+    createCustomPuzzleContainer.style.transform = "translateX(100%)";
+};
+
+const createCustomPuzzleId = document.getElementById("createCustomPuzzleId");
+const createCustomPuzzleName = document.getElementById("createCustomPuzzleName");
+const createCustomPuzzleAuthor = document.getElementById("createCustomPuzzleAuthor");
+const createCustomPuzzleWorld = document.getElementById("createCustomPuzzleWorld");
+const createCustomPuzzleSaveCode = document.getElementById("createCustomPuzzleSaveCode");
+const createCustomPuzzleMusic = document.getElementById("createCustomPuzzleMusic");
+
+createCustomPuzzleId.onkeydown = (e) => {
+    e.stopImmediatePropagation();
+};
+createCustomPuzzleName.onkeydown = (e) => {
+    e.stopImmediatePropagation();
+};
+createCustomPuzzleAuthor.onkeydown = (e) => {
+    e.stopImmediatePropagation();
+};
+createCustomPuzzleWorld.onkeydown = (e) => {
+    e.stopImmediatePropagation();
+};
+createCustomPuzzleSaveCode.onkeydown = (e) => {
+    e.stopImmediatePropagation();
+};
+
+const createCustomPuzzleInventory = document.getElementById("createCustomPuzzleInventory");
+const createCustomPuzzleInventoryList = document.getElementById("createCustomPuzzleInventoryList");
+
+let createCustomPuzzleInventoryListNames = [];
+let createCustomPuzzleInventoryListAmounts = [];
+
+for (let i in pixels) {
+    let name = document.createElement("label");
+    name.setAttribute("for", "createCustomPuzzleInventoryList" + i);
+    name.classList.add("createCustomPuzzleInventoryListName");
+    name.innerText = pixels[i].name + ":";
+    name.title = pixels[i].id;
+    createCustomPuzzleInventoryList.appendChild(name);
+    createCustomPuzzleInventoryListNames.push(name);
+    let amount = document.createElement("input");
+    amount.type = "number";
+    amount.id = "createCustomPuzzleInventoryList" + i;
+    amount.classList.add("createCustomPuzzleInventoryListAmount");
+    amount.value = 0;
+    amount.onkeydown = (e) => {
+        e.stopImmediatePropagation();
+    };
+    createCustomPuzzleInventoryList.appendChild(amount);
+    createCustomPuzzleInventoryListAmounts.push(amount);
+}
+
+createCustomPuzzleInventory.oninput = function() {
+    for (let i in pixels) {
+        if (pixels[i].name.toLowerCase().includes(createCustomPuzzleInventory.value.toLowerCase()) || pixels[i].id.toLowerCase().includes(createCustomPuzzleInventory.value.toLowerCase())) {
+            createCustomPuzzleInventoryListNames[i].style.display = "block";
+            createCustomPuzzleInventoryListAmounts[i].style.display = "block";
+            // createCustomPuzzleInventoryListNames[i].style.height = "";
+            // createCustomPuzzleInventoryListAmounts[i].style.height = "";
+        }
+        else {
+            createCustomPuzzleInventoryListNames[i].style.display = "none";
+            createCustomPuzzleInventoryListAmounts[i].style.display = "none";
+            // createCustomPuzzleInventoryListNames[i].style.height = "0px";
+            // createCustomPuzzleInventoryListAmounts[i].style.height = "0px";
+        }
+    }
+};
+createCustomPuzzleInventory.onkeydown = (e) => {
+    e.stopImmediatePropagation();
+};
+
+const createCustomPuzzleObjectivesList = document.getElementById("createCustomPuzzleObjectivesList");
+const createCustomPuzzleAddObjectiveButton = document.getElementById("createCustomPuzzleAddObjectiveButton");
+const createCustomPuzzleObjectiveTemplate = document.getElementById("createCustomPuzzleObjectiveTemplate");
+let createCustomPuzzleObjectives = [];
+
+createCustomPuzzleAddObjectiveButton.onclick = function() {
+    const objective = createCustomPuzzleObjectiveTemplate.content.cloneNode(true).children[0];
+    let id = Math.random();
+    objective.children[0].setAttribute("for", "createCustomPuzzleObjectiveType" + id);
+    objective.children[1].id = "createCustomPuzzleObjectiveType" + id;
+    objective.children[1].oninput = () => {
+        if (objective.children[1].value == "destroyMonsters") {
+            objective.children[2].style.display = "block";
+            objective.children[3].style.display = "block";
+        }
+        else {
+            objective.children[2].style.display = "none";
+            objective.children[3].style.display = "none";
+            objective.children[3].value = "";
+        }
+    }
+    objective.children[2].setAttribute("for", "createCustomPuzzleObjectiveTargetAll" + id);
+    objective.children[3].id = "createCustomPuzzleObjectiveTargetAll" + id;
+    objective.children[4].setAttribute("for", "createCustomPuzzleObjectiveTarget" + id);
+    objective.children[5].id = "createCustomPuzzleObjectiveTarget" + id;
+    objective.children[5].onkeydown = (e) => {
+        e.stopImmediatePropagation();
+    };
+    objective.children[6].setAttribute("for", "createCustomPuzzleObjectiveMin" + id);
+    objective.children[7].id = "createCustomPuzzleObjectiveMin" + id;
+    objective.children[7].onkeydown = (e) => {
+        e.stopImmediatePropagation();
+    };
+    objective.children[8].setAttribute("for", "createCustomPuzzleObjectiveMax" + id);
+    objective.children[9].id = "createCustomPuzzleObjectiveMax" + id;
+    objective.children[9].onkeydown = (e) => {
+        e.stopImmediatePropagation();
+    };
+    objective.children[10].onclick = () => {
+        objective.remove();
+        for (let i = 0; i < createCustomPuzzleObjectives.length; i++) {
+            if (createCustomPuzzleObjectives[i] == objective) {
+                createCustomPuzzleObjectives.splice(i, 1);
+                break;
+            }
+        }
+    };
+    createCustomPuzzleObjectivesList.insertBefore(objective, createCustomPuzzleObjectivesList.lastElementChild);
+    createCustomPuzzleObjectives.push(objective);
+};
+
+const createCustomPuzzleFinishButton = document.getElementById("createCustomPuzzleFinishButton");
+
+createCustomPuzzleFinishButton.onclick = async function() {
+    let id = createCustomPuzzleId.value;
+    if (puzzles[id] != null) {
+        if (puzzles[id].official) {
+            modal("Puzzle Already Exists", "An official puzzle with id '" + id + "' already exists.", "info");
+            return;
+        }
+        else if (!await modal("Overwrite Existing Puzzle?", "A puzzle with id '" + id + "' already exists. Continuing will overwrite this puzzle! This cannot be undone!", "confirm")) {
+            return;
+        }
+        puzzles[id].div.remove();
+    }
+    puzzles[id] = {
+        id: id,
+        name: createCustomPuzzleName.value,
+        author: createCustomPuzzleAuthor.value,
+        world: createCustomPuzzleWorld.value,
+        saveCode: createCustomPuzzleSaveCode.value,
+        inventory: {},
+        objectives: [],
+        music: createCustomPuzzleMusic.value,
+        img: "",
+    };
+    for (let i in pixels) {
+        if (createCustomPuzzleInventoryListAmounts[i].value != 0) {
+            puzzles[id].inventory[pixels[i].id] = Number(createCustomPuzzleInventoryListAmounts[i].value);
+        }
+    }
+    for (let i in createCustomPuzzleObjectives) {
+        let objective = {
+            type: createCustomPuzzleObjectives[i].children[1].value,
+        };
+        if (createCustomPuzzleObjectives[i].children[3].checked) {
+            objective.target = "all";
+        }
+        else if (createCustomPuzzleObjectives[i].children[5].value != "") {
+            objective.target = Number(createCustomPuzzleObjectives[i].children[5].value);
+        }
+        if (createCustomPuzzleObjectives[i].children[7].value != "") {
+            objective.min = Number(createCustomPuzzleObjectives[i].children[7].value);
+        }
+        if (createCustomPuzzleObjectives[i].children[9].value != "") {
+            objective.max = Number(createCustomPuzzleObjectives[i].children[9].value);
+        }
+        puzzles[id].objectives.push(objective);
+    }
+    let parsed = parseSaveCode(createCustomPuzzleSaveCode.value);
+    puzzles[id].img = drawBlueprintImg(parsed.grid, parsed.gridWidth, parsed.gridHeight, parsed.gridWidth * 6, parsed.gridHeight * 6);
+    addPuzzle(id);
+    officialPuzzlesList.style.transform = "translateX(-100%)";
+    customPuzzlesList.style.transform = "translateX(0%)";
+    createCustomPuzzleContainer.style.transform = "translateX(100%)";
 };
 
 function addPuzzle(id) {
@@ -834,6 +1071,36 @@ function addPuzzle(id) {
         }
         worlds[puzzles[id].world] = world;
     }
+    const downloadButton = document.createElement("button");
+    downloadButton.classList.add("puzzleDownloadButton");
+    downloadButton.classList.add("button");
+    downloadButton.onclick = (e) => {
+        e.stopImmediatePropagation();
+        const blob = new Blob([JSON.stringify(puzzles[id])], { type: "application/json" });
+        downloadFile(blob, puzzles[id].name + ".json");
+    };
+    downloadButton.onmouseover = (e) => {
+        e.stopImmediatePropagation();
+        hidePuzzleTooltip();
+    };
+    puzzle.appendChild(downloadButton);
+    if (!puzzles[id].official) {
+        const deleteButton = document.createElement("button");
+        deleteButton.classList.add("puzzleDeleteButton");
+        deleteButton.classList.add("button");
+        deleteButton.onclick = async (e) => {
+            e.stopImmediatePropagation();
+            if (await modal("Delete puzzle?", "'" + puzzles[id].name + "' will be lost forever!", "confirm")) {
+                delete puzzles[id];
+                puzzle.remove();
+            }
+        };
+        deleteButton.onmouseover = (e) => {
+            e.stopImmediatePropagation();
+            hidePuzzleTooltip();
+        };
+        puzzle.appendChild(deleteButton);
+    }
     worlds[puzzles[id].world].appendChild(puzzle);
     puzzles[id].div = puzzle;
 };
@@ -847,6 +1114,12 @@ const puzzleAuthor = document.getElementById("puzzleAuthor");
 
 function loadPuzzle(id) {
     currentPuzzle = id;
+    multiplayerOverlay.style.display = "none";
+    playButton.style.display = "block";
+    stepButton.style.display = "block";
+    simulateButton.style.display = "block";
+    slowmodeButton.style.display = "block";
+    resetButton.style.display = "block";
     if (id == null) {
         resetPixelInventory();
         puzzleOverlay.style.display = "none";

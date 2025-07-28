@@ -1,0 +1,73 @@
+@font-face {
+    font-family: "Noto Sans";
+    src: url(./fonts/NotoSans-Regular.ttf);
+}
+
+body {
+    margin: 0px;
+    overflow: hidden;
+    --border-size: 1px;
+    font-family: "Noto Sans";
+}
+
+* {
+    font-family: "Noto Sans";
+    box-sizing: content-box;
+}
+#body {
+    display: grid;
+    grid-gap: 4px;
+    border: 2px solid black;
+    margin: 8px;
+    padding: 8px;
+    grid-template-columns: auto auto;
+    text-align: center;
+}
+#title {
+    font-size: 40px;
+    grid-column: span 2;
+}
+#body label {
+    text-align: right;
+}
+#body input {
+    grid-column: 2;
+    width: 300px;
+}
+#body select {
+    grid-column: 2;
+    width: 306px;
+}
+#generateButton {
+    grid-column: 2;
+    min-width: 100px;
+    width: 292px;
+}
+#progressBar {
+    border: 1px solid light-dark(rgb(118, 118, 118), rgb(133, 133, 133));
+    border-radius: 2px;
+    /* border-style: inset; */
+    width: 306px;
+    text-align: center;
+    /* height: 10px;
+    margin: auto;
+    margin-left: 0px; */
+    position: relative;
+}
+#progressBarBackground {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    height: 100%;
+    background-color: lime;
+}
+#progressBarText {
+    position: relative;
+}
+#timeRemaining {
+    width: 308px;
+}
+#output {
+    resize: vertical;
+    width: 302px;
+}

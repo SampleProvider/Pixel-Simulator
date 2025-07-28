@@ -140,11 +140,11 @@ let selectionGridBuffer = device.createBuffer({
     usage: GPUBufferUsage.FRAGMENT | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
 });
 let colorsBuffer = device.createBuffer({
-    size: 4 * 1200,
+    size: 4 * 1600,
     usage: GPUBufferUsage.FRAGMENT | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
 });
 let texturesBuffer = device.createBuffer({
-    size: 4 * 1200,
+    size: 4 * 1600,
     usage: GPUBufferUsage.FRAGMENT | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
 });
 
@@ -483,9 +483,19 @@ class RenderPass {
         // this.shader = this.shader.replaceAll("const colors;", colorString);
         // this.shader = this.shader.replaceAll("const noise_colors;", noiseString);
         // let pixelIndices = {};
+        let pixelIds = [];
         for (let i in pixels) {
+            pixelIds.push({
+                name: pixels[i].id.toUpperCase(),
+                id: i,
+            });
+        }
+        pixelIds.sort((a, b) => {
+            return b.name.length - a.name.length;
+        });
+        for (let i in pixelIds) {
             // pixelIndices[pixels[i].id] = i;
-            this.shader = this.shader.replaceAll(pixels[i].id.toUpperCase(), i);
+            this.shader = this.shader.replaceAll(pixelIds[i].name, pixelIds[i].id);
         }
         // this.shader = this.shader.replaceAll("FIRE", pixelIndices.fire);
         // this.shader = this.shader.replaceAll("FIRE", pixelIndices.fire);
@@ -839,6 +849,7 @@ function resizeGrid(gridWidth, gridHeight, gridStride, chunkXAmount, chunkYAmoun
         usage: GPUBufferUsage.FRAGMENT | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
     chunksBuffer = device.createBuffer({
+        label: "test chunks buffer",
         size: 4 * chunkStride * chunkXAmount * chunkYAmount,
         usage: GPUBufferUsage.FRAGMENT | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
@@ -854,7 +865,7 @@ function render(camera, drawPlacementRestriction, tick, grid, chunks, brush, sel
 
     device.queue.writeBuffer(cameraBuffer, 0, camera);
     device.queue.writeBuffer(timeBuffer, 0, new Float32Array([performance.now()]));
-    device.queue.writeBuffer(drawPlacementRestrictionBuffer, 0, new Uint32Array([drawPlacementRestriction ? 1 : 0]));
+    device.queue.writeBuffer(drawPlacementRestrictionBuffer, 0, new Uint32Array([drawPlacementRestriction]));
 
     device.queue.writeBuffer(tickBuffer, 0, new Uint32Array([tick]));
     device.queue.writeBuffer(gridBuffer, 0, grid);

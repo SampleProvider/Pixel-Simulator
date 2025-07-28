@@ -1,7 +1,8 @@
 import { pixels, pixelTexture, pixelInventory, resetPixelInventory } from "./pixels.js";
-import { modal, sandboxGrid, sandboxSaveCode, loadSaveCode } from "./game.js";
+import { modal, sandboxGrid, sandboxSaveCode, loadSaveCode, mouseX, mouseY } from "./game.js";
 import { loadPuzzle } from "./puzzles.js";
 import { noise } from "./noise.js";
+import { playMusic } from "./sound.js";
 import { bezier } from "./cubic-bezier.js";
 
 let WIDTH = window.innerWidth * devicePixelRatio;
@@ -200,6 +201,20 @@ function slideOutPuzzles() {
     // puzzlesContainer.innerText;
     puzzlesContainer.style.transform = "translate(-50%, -50%) translateX(100vw)";
 };
+function slideInMultiplayer() {
+    menuState = "slideInMultiplayer";
+    menuStateTime = 0;
+    titleContainer.style.transform = "translateX(100vw)";
+    multiplayerContainer.style.display = "";
+    multiplayerContainer.innerText;
+    multiplayerContainer.style.transform = "translate(-50%, -50%)";
+};
+function slideOutMultiplayer() {
+    menuState = "slideOutMultiplayer";
+    menuStateTime = 0;
+    titleContainer.style.transform = "";
+    multiplayerContainer.style.transform = "translate(-50%, -50%) translateX(-100vw)";
+};
 
 let menuState = "title";
 let menuStateTime = 0;
@@ -227,14 +242,18 @@ function loadSandbox() {
 if (searchParams.has("skipMenu")) {
     loadSandbox();
 }
+else {
+}
 
 const gameContainer = document.getElementById("gameContainer");
 const menuContainer = document.getElementById("menuContainer");
 const titleContainer = document.getElementById("titleContainer");
 const sandboxButtonContainer = document.getElementById("sandboxButtonContainer");
 const puzzlesButtonContainer = document.getElementById("puzzlesButtonContainer");
+const multiplayerButtonContainer = document.getElementById("multiplayerButtonContainer");
 const sandboxButton = document.getElementById("sandboxButton");
 const puzzlesButton = document.getElementById("puzzlesButton");
+const multiplayerButton = document.getElementById("multiplayerButton");
 
 sandboxButton.onclick = () => {
     if (menuState != "title" && menuState != "pixelateInTitle" && menuState != "slideInTitle") {
@@ -252,6 +271,12 @@ puzzlesButton.onclick = () => {
     }
     slideInPuzzles();
 };
+multiplayerButton.onclick = () => {
+    if (menuState != "title" && menuState != "pixelateInTitle" && menuState != "slideInTitle") {
+        return;
+    }
+    slideInMultiplayer();
+};
 
 const puzzlesContainer = document.getElementById("puzzlesContainer");
 const puzzlesCloseButton = document.getElementById("puzzlesCloseButton");
@@ -262,6 +287,30 @@ puzzlesCloseButton.onclick = () => {
     }
     slideOutPuzzles();
 };
+
+const multiplayerContainer = document.getElementById("multiplayerContainer");
+const multiplayerCloseButton = document.getElementById("multiplayerCloseButton");
+
+multiplayerCloseButton.onclick = () => {
+    if (menuState != "multiplayer") {
+        return;
+    }
+    slideOutMultiplayer();
+};
+
+let mouseDown = false;
+menuCanvas.onmousedown = (e) => {
+    mouseDown = true;
+};
+menuCanvas.ontouchstart = (e) => {
+    mouseDown = true;
+};
+document.addEventListener("mouseup", (e) => {
+    mouseDown = false;
+});
+document.addEventListener("touchend", (e) => {
+    mouseDown = false;
+});
 
 function updateMenu() {
     if (menuContainer.style.display == "none") {
@@ -295,6 +344,9 @@ function updateMenu() {
         if (menuStateTime == 180) {
             puzzlesButtonContainer.style.transform = "translateY(0px)";
         }
+        if (menuStateTime == 192) {
+            multiplayerButtonContainer.style.transform = "translateY(0px)";
+        }
     }
     else if (menuState == "pixelateOutTitle") {
         if (menuStateTime == 18) {
@@ -302,6 +354,9 @@ function updateMenu() {
         }
         if (menuStateTime == 12) {
             puzzlesButtonContainer.style.transform = "";
+        }
+        if (menuStateTime == 6) {
+            multiplayerButtonContainer.style.transform = "";
         }
     }
     else if (menuState == "slideInTitle") {
@@ -321,6 +376,9 @@ function updateMenu() {
         }
         if (menuStateTime == 42) {
             puzzlesButtonContainer.style.transform = "translateY(0px)";
+        }
+        if (menuStateTime == 48) {
+            multiplayerButtonContainer.style.transform = "translateY(0px)";
         }
         if (menuStateTime == 96) {
             menuState = "title";
@@ -347,13 +405,16 @@ function updateMenu() {
         if (menuStateTime == 12) {
             puzzlesButtonContainer.style.transform = "";
         }
+        if (menuStateTime == 6) {
+            multiplayerButtonContainer.style.transform = "";
+        }
         if (menuStateTime == 96) {
             menuContainer.style.display = "none";
             backgroundPixels = [];
         }
     }
     else if (menuState == "slideInPuzzles") {
-        if (menuStateTime < 30) {
+        if (menuStateTime <= 30) {
             let t = (menuStateTime - 0) / 30;
             t = bezier(0.5, 0, 0.5, 1)(t);
             titleX = Math.round(menuCanvas.width / 2 * (1 - t) + -menuCanvas.width / 2 * t);
@@ -363,7 +424,7 @@ function updateMenu() {
         }
     }
     else if (menuState == "slideOutPuzzles") {
-        if (menuStateTime < 30) {
+        if (menuStateTime <= 30) {
             let t = (menuStateTime - 0) / 30;
             t = bezier(0.5, 0, 0.5, 1)(t);
             titleX = Math.round(-menuCanvas.width / 2 * (1 - t) + menuCanvas.width / 2 * t);
@@ -376,7 +437,31 @@ function updateMenu() {
     else if (menuState == "puzzles") {
         titleX = -menuCanvas.width / 2;
     }
-    if (menuState == "title" || menuState == "slideInPuzzles" || menuState == "puzzles" || menuState == "slideOutPuzzles") {
+    else if (menuState == "slideInMultiplayer") {
+        if (menuStateTime <= 30) {
+            let t = (menuStateTime - 0) / 30;
+            t = bezier(0.5, 0, 0.5, 1)(t);
+            titleX = Math.round(menuCanvas.width / 2 * (1 - t) + menuCanvas.width * 3 / 2 * t);
+        }
+        if (menuStateTime == 30) {
+            menuState = "multiplayer";
+        }
+    }
+    else if (menuState == "slideOutMultiplayer") {
+        if (menuStateTime <= 30) {
+            let t = (menuStateTime - 0) / 30;
+            t = bezier(0.5, 0, 0.5, 1)(t);
+            titleX = Math.round(menuCanvas.width * 3 / 2 * (1 - t) + menuCanvas.width / 2 * t);
+        }
+        if (menuStateTime == 30) {
+            menuState = "title";
+            multiplayerContainer.style.display = "none";
+        }
+    }
+    else if (menuState == "multiplayer") {
+        titleX = menuCanvas.width * 3 / 2;
+    }
+    if (menuState == "title" || menuState == "slideInPuzzles" || menuState == "puzzles" || menuState == "slideOutPuzzles" || menuState == "slideInMultiplayer" || menuState == "multiplayer" || menuState == "slideOutMultiplayer") {
         if (Math.random() < 0.1 * 2) {
             let validPixels = [
                 DIRT,
@@ -418,10 +503,77 @@ function updateMenu() {
         }
     }   
     for (let i in backgroundPixels) {
+        // if (mouseDown && Math.sqrt(Math.pow(mouseX - backgroundPixels[i].x, 2) + Math.pow(mouseY - backgroundPixels[i].y, 2)) < 100) {
+        let distance = Math.sqrt(Math.pow(mouseX - backgroundPixels[i].x, 2) + Math.pow(mouseY - backgroundPixels[i].y, 2));
+        if (mouseDown && distance < 100) {
+            backgroundPixels[i].spdX += (backgroundPixels[i].x - mouseX) * 0.01;
+            backgroundPixels[i].spdY += (backgroundPixels[i].y - mouseY) * 0.01;
+        }
+        if (mouseDown && distance < 10) {
+            if (backgroundPixels[i].id == WATER_PUMP) {
+                for (let j = 0; j < 50; j++) {
+                    // addBackgroundPixel(WATER, Math.random() * menuCanvas.width, -20 * Math.sqrt(2) - Math.random() * 100, Math.random() * Math.PI);
+                    // addBackgroundPixel(WATER, backgroundPixels[i].x, backgroundPixels[i].y, backgroundPixels[i].rotation);
+                    let spdX = backgroundPixels[i].spdX;
+                    let spdY = backgroundPixels[i].spdY;
+                    let angle = Math.random() * Math.PI * 2;
+                    let magnitude = Math.random();
+                    backgroundPixels.push({
+                        id: WATER,
+                        x: backgroundPixels[i].x,
+                        y: backgroundPixels[i].y,
+                        rotation: backgroundPixels[i].rotation,
+                        spdX: spdX + Math.cos(angle) * magnitude,
+                        spdY: spdY + Math.sin(angle) * magnitude,
+                        spdRotation: backgroundPixels[i].spdRotation + (Math.random() * 2 - 1) * 0.1,
+                        noise: Math.random(),
+                    });
+                }
+                backgroundPixels[i].id = WATER;
+            }
+            if (backgroundPixels[i].id == LAVA_HEATER) {
+                for (let j = 0; j < 50; j++) {
+                    // addBackgroundPixel(LAVA, Math.random() * menuCanvas.width, -20 * Math.sqrt(2) - Math.random() * 100, Math.random() * Math.PI);
+                    let spdX = backgroundPixels[i].spdX;
+                    let spdY = backgroundPixels[i].spdY;
+                    let angle = Math.random() * Math.PI * 2;
+                    let magnitude = Math.random();
+                    backgroundPixels.push({
+                        id: LAVA,
+                        x: backgroundPixels[i].x,
+                        y: backgroundPixels[i].y,
+                        rotation: backgroundPixels[i].rotation,
+                        spdX: spdX + Math.cos(angle) * magnitude,
+                        spdY: spdY + Math.sin(angle) * magnitude,
+                        spdRotation: backgroundPixels[i].spdRotation + (Math.random() * 2 - 1) * 0.1,
+                        noise: Math.random(),
+                    });
+                }
+                backgroundPixels[i].id = LAVA;
+            }
+        }
         backgroundPixels[i].x += backgroundPixels[i].spdX;
         backgroundPixels[i].y += backgroundPixels[i].spdY;
         backgroundPixels[i].rotation += backgroundPixels[i].spdRotation;
         backgroundPixels[i].spdX *= 0.99;
+        if (backgroundPixels[i].spdY < 2) {
+            backgroundPixels[i].spdY += (2 - backgroundPixels[i].spdY) * 0.01;
+        }
+        if (backgroundPixels[i].x < -20 * Math.sqrt(2)) {
+            backgroundPixels.splice(i, 1);
+            i -= 1;
+            continue;
+        }
+        if (backgroundPixels[i].x > menuCanvas.width + 20 * Math.sqrt(2)) {
+            backgroundPixels.splice(i, 1);
+            i -= 1;
+            continue;
+        }
+        // if (backgroundPixels[i].y < -20 * Math.sqrt(2)) {
+        //     backgroundPixels.splice(i, 1);
+        //     i -= 1;
+        //     continue;
+        // }
         if (backgroundPixels[i].y > menuCanvas.height + 20 * Math.sqrt(2)) {
             backgroundPixels.splice(i, 1);
             i -= 1;
@@ -439,6 +591,12 @@ function updateMenu() {
             if (pixel.noise != null) {
                 menuCtx.fillStyle = "rgba(" + (pixel.color[0] + pixel.noise[0] * backgroundPixels[i].noise) + ", " + (pixel.color[1] + pixel.noise[1] * backgroundPixels[i].noise) + ", " + (pixel.color[2] + pixel.noise[2] * backgroundPixels[i].noise) + ", 1)";
             }
+            // if (backgroundPixels[i].id == WATER) {
+            //     menuCtx.fillStyle = "rgba(" + (0.3 - backgroundPixels[i].noise * 0.1) * 255 + ", " + (0.3 - backgroundPixels[i].noise * 0.15) * 255 + ", " + (1) * 255 + ", 1)";
+            // }
+            // if (backgroundPixels[i].id == LAVA) {
+                
+            // }
             menuCtx.fillRect(-size / 2, -size / 2, size, size);
         }
         else {

@@ -1,14 +1,14 @@
 @group(0) @binding(0) var<uniform> viewport: vec2<f32>;
 @group(0) @binding(1) var<uniform> camera: vec4<f32>;
 @group(0) @binding(2) var<uniform> time: f32;
-@group(0) @binding(3) var<uniform> draw_placement_restriction: u32;
+@group(0) @binding(3) var<uniform> draw_placement_restriction: i32;
 @group(1) @binding(0) var<uniform> tick: u32;
 @group(1) @binding(1) var<uniform> grid_size: vec2<u32>;
-@group(1) @binding(2) var<storage, read> grid: array<f32>;
+@group(1) @binding(2) var<storage, read> grid: array<i32>;
 @group(1) @binding(3) var<storage, read> chunks: array<u32>;
 @group(1) @binding(4) var<storage, read> brush: array<f32>;
 //@group(1) @binding(7) var<storage, read> colors: array<vec4<f32>>;
-@group(1) @binding(5) var<storage, read> selection_grid: array<f32>;
+@group(1) @binding(5) var<storage, read> selection_grid: array<i32>;
 //@group(1) @binding(6) var<uniform> pixel_texture_pos: array<vec4<f32>>;
 
 
@@ -158,7 +158,7 @@ fn vs_main(@location(0) pos: vec2<f32>) -> @builtin(position) vec4<f32> {
 
 const stride = 4;
 
-fn get_color(id: f32, color: vec4<f32>, pos: vec2<f32>) -> vec4<f32> {
+fn get_color(id: i32, color: vec4<f32>, pos: vec2<f32>) -> vec4<f32> {
     //if (id == 2) {
     //return sampledColor;
     //}
@@ -188,12 +188,12 @@ fn get_color(id: f32, color: vec4<f32>, pos: vec2<f32>) -> vec4<f32> {
         //return vec4<f32>(0.725 - noise * 0.025, 0.75 - noise * 0.05, 0.95 - noise * 0.025, 1.0);
         return vec4<f32>(185.0 / 255 - noise * 5.0 / 255, 190.0 / 255.0 - noise * 10.0 / 255.0, 247.5 / 255.0 - noise * 7.5 / 255.0, 1.0);
     }
-    if (id == 111) {
-        let noiseSpeed = 0.1;
-        let noise = perlinNoise2(floor(pos) / 3) + perlinNoise2(floor(pos) / 1) / 2;
-        //return vec4<f32>(0.725 - noise * 0.025, 0.75 - noise * 0.05, 0.95 - noise * 0.025, 1.0);
-        return vec4<f32>(230.0 / 255.0, 240.0 / 255.0 - noise * 10.0 / 255.0, 240.0 / 255.0 - noise * 10.0 / 255.0, 1.0);
-    }
+    // if (id == 111) {
+    //     let noiseSpeed = 0.1;
+    //     let noise = perlinNoise2(floor(pos) / 3) + perlinNoise2(floor(pos) / 1) / 2;
+    //     //return vec4<f32>(0.725 - noise * 0.025, 0.75 - noise * 0.05, 0.95 - noise * 0.025, 1.0);
+    //     return vec4<f32>(230.0 / 255.0, 240.0 / 255.0 - noise * 10.0 / 255.0, 240.0 / 255.0 - noise * 10.0 / 255.0, 1.0);
+    // }
     if (id == STEAM) {
         let noiseSpeed = 6.0;
         let noise = perlinNoise3(vec3<f32>(floor(pos) / 6, time * 0.001 * noiseSpeed)) + perlinNoise3(vec3<f32>(floor(pos) / 2, time * 0.003 * noiseSpeed)) / 2;
@@ -227,11 +227,11 @@ fn get_color(id: f32, color: vec4<f32>, pos: vec2<f32>) -> vec4<f32> {
         return vec4<f32>(255.0 / 255.0 - noise * 125.0 / 255.0, 225.0 / 255.0 + noise * 125.0 / 255.0, 25.0 / 255.0, 1.0);
     }
     //return vec4<f32>(id, 0.0, 0.0, 1.0);
-    return colors[u32(id) * 2] + random(index) * colors[u32(id) * 2 + 1];
-    // return colors[u32(id) * 2];
-    //return colors[u32(id) * 2];
-    //return colors[u32(id)];
-    //return colors[u32(id)] + random(index) * noise_colors[u32(id)];
+    return colors[id * 2] + random(index) * colors[id * 2 + 1];
+    // return colors[id * 2];
+    //return colors[id * 2];
+    //return colors[id];
+    //return colors[id] + random(index) * noise_colors[id];
     //if (id < 2) {
     //}
     //return color;
@@ -328,7 +328,9 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
     // }
     // else
     if (textures[u32(grid[index])].x == -1) {
-        color = get_color(grid[index], vec4<f32>(grid[index + 3], grid[index + 4], grid[index + 5], grid[index + 6]), new_pos);
+        // MASSIVE BUG BUH
+        // color = get_color(grid[index], vec4<f32>(grid[index + 3], grid[index + 4], grid[index + 5], grid[index + 6]), new_pos);
+        color = get_color(grid[index], vec4<f32>(0.0, 0.0, 0.0, 0.0), new_pos);
     }
     else {
         color = sampledColor;
@@ -352,20 +354,119 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
         // color = mix(vec4<f32>(0.8, 0.0, 1.0, 1.0), vec4<f32>(1.0, 0.0, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 1000 / 96) + 1) / 2);
         color = mix(vec4<f32>(0.8, 0.0, 1.0, 1.0), vec4<f32>(1.0, 0.0, 1.0, 1.0), (sin(time * 0.001 * 3.1415) + 1) / 2);
     }
+    if (grid[index] == COMPARATOR_LEFT_OFF || grid[index] == COMPARATOR_LEFT_ON) {
+        if (floor_pos.x * 12 >= 5 && floor_pos.x * 12 <= 7 && floor_pos.y * 3 <= 1) {
+            if (u32(new_pos.y) == 0 || grid[index - grid_size.x * stride] == AIR) {
+                color = vec4<f32>(100.0 / 255.0, 0.0, 0.0, 1.0);
+            }
+        }
+        if (floor_pos.x * 12 >= 5 && floor_pos.x * 12 <= 7 && floor_pos.y * 3 >= 2) {
+            if (u32(new_pos.y) == grid_size.y - 1 || grid[index + grid_size.x * stride] == AIR) {
+                color = vec4<f32>(100.0 / 255.0, 0.0, 0.0, 1.0);
+            }
+        }
+        if (floor_pos.x * 3 >= 2 && floor_pos.y * 12 >= 5 && floor_pos.y * 12 <= 7) {
+            if (u32(new_pos.x) == grid_size.x - 1 || grid[index + stride] == AIR) {
+                color = vec4<f32>(100.0 / 255.0, 0.0, 0.0, 1.0);
+            }
+        }
+    }
+    if (grid[index] == COMPARATOR_UP_OFF || grid[index] == COMPARATOR_UP_ON) {
+        if (floor_pos.x * 12 >= 5 && floor_pos.x * 12 <= 7 && floor_pos.y * 3 >= 2) {
+            if (u32(new_pos.y) == grid_size.y - 1 || grid[index + grid_size.x * stride] == AIR) {
+                color = vec4<f32>(100.0 / 255.0, 0.0, 0.0, 1.0);
+            }
+        }
+        if (floor_pos.x * 3 <= 1 && floor_pos.y * 12 >= 5 && floor_pos.y * 12 <= 7) {
+            if (u32(new_pos.x) == 0 || grid[index - stride] == AIR) {
+                color = vec4<f32>(100.0 / 255.0, 0.0, 0.0, 1.0);
+            }
+        }
+        if (floor_pos.x * 3 >= 2 && floor_pos.y * 12 >= 5 && floor_pos.y * 12 <= 7) {
+            if (u32(new_pos.x) == grid_size.x - 1 || grid[index + stride] == AIR) {
+                color = vec4<f32>(100.0 / 255.0, 0.0, 0.0, 1.0);
+            }
+        }
+    }
+    if (grid[index] == COMPARATOR_RIGHT_OFF || grid[index] == COMPARATOR_RIGHT_ON) {
+        if (floor_pos.x * 12 >= 5 && floor_pos.x * 12 <= 7 && floor_pos.y * 3 <= 1) {
+            if (u32(new_pos.y) == 0 || grid[index - grid_size.x * stride] == AIR) {
+                color = vec4<f32>(100.0 / 255.0, 0.0, 0.0, 1.0);
+            }
+        }
+        if (floor_pos.x * 12 >= 5 && floor_pos.x * 12 <= 7 && floor_pos.y * 3 >= 2) {
+            if (u32(new_pos.y) == grid_size.y - 1 || grid[index + grid_size.x * stride] == AIR) {
+                color = vec4<f32>(100.0 / 255.0, 0.0, 0.0, 1.0);
+            }
+        }
+        if (floor_pos.x * 3 <= 1 && floor_pos.y * 12 >= 5 && floor_pos.y * 12 <= 7) {
+            if (u32(new_pos.x) == 0 || grid[index - stride] == AIR) {
+                color = vec4<f32>(100.0 / 255.0, 0.0, 0.0, 1.0);
+            }
+        }
+    }
+    if (grid[index] == COMPARATOR_DOWN_OFF || grid[index] == COMPARATOR_DOWN_ON) {
+        if (floor_pos.x * 12 >= 5 && floor_pos.x * 12 <= 7 && floor_pos.y * 3 <= 1) {
+            if (u32(new_pos.y) == 0 || grid[index - grid_size.x * stride] == AIR) {
+                color = vec4<f32>(100.0 / 255.0, 0.0, 0.0, 1.0);
+            }
+        }
+        if (floor_pos.x * 3 <= 1 && floor_pos.y * 12 >= 5 && floor_pos.y * 12 <= 7) {
+            if (u32(new_pos.x) == 0 || grid[index - stride] == AIR) {
+                color = vec4<f32>(100.0 / 255.0, 0.0, 0.0, 1.0);
+            }
+        }
+        if (floor_pos.x * 3 >= 2 && floor_pos.y * 12 >= 5 && floor_pos.y * 12 <= 7) {
+            if (u32(new_pos.x) == grid_size.x - 1 || grid[index + stride] == AIR) {
+                color = vec4<f32>(100.0 / 255.0, 0.0, 0.0, 1.0);
+            }
+        }
+    }
+    if (grid[index] == COLOR_WELL && all(color == vec4<f32>(1.0, 0.0, 0.0, 1.0))) {
+        color = vec4<f32>(min(max(2 * abs((time * 0.001) % 3 - 1.5) - 1, 0), 1), min(max(-2 * abs((time * 0.001) % 3 - 1) + 2, 0), 1), min(max(-2 * abs((time * 0.001) % 3 - 2) + 2, 0), 1), 1.0);
+    }
+    // if (grid[index] == PASSIVE_COLOR_GENERATOR && (floor_pos.x * 5 - (1.0 / 512.0) + 0.000045) % 2 >= 1 && (floor_pos.y * 5 - (1.0 / 512.0) + 0.000045) % 2 >= 1) {
+    if (grid[index] == PASSIVE_COLOR_GENERATOR && all(color == vec4<f32>(1.0, 127.0 / 255.0, 127.0 / 255.0, 1.0))) {
+    // if (grid[index] == PASSIVE_COLOR_GENERATOR && floor_pos.x * 5 >= 1 - 2.7e-3 && floor_pos.x * 5 < 2 && floor_pos.y * 5 >= 1 - 1e-5 && floor_pos.y * 5 < 2) {
+    // if (grid[index] == PASSIVE_COLOR_GENERATOR && floor_pos.x * 5 >= 1 - 2e-3 && floor_pos.x * 5 < 2 && floor_pos.y * 5 >= 1 - 1e-5 && floor_pos.y * 5 < 2) {
+    // if (grid[index] == PASSIVE_COLOR_GENERATOR && floor_pos.x * 5 > 1 - (1.0 / 512.0) + 0.000045 && floor_pos.x * 5 < 2 && floor_pos.y * 5 >= 1 - 1e-5 && floor_pos.y * 5 < 2) {
+        color = vec4<f32>(min(max(2 * abs((time * 0.001) % 3 - 1.5) - 1, 0), 1), min(max(-2 * abs((time * 0.001) % 3 - 1) + 2, 0), 1), min(max(-2 * abs((time * 0.001) % 3 - 2) + 2, 0), 1), 1.0);
+        color = mix(color, vec4<f32>(1.0, 1.0, 1.0, 1.0), 0.5);
+    }
+    if (grid[index] == ACTIVE_COLOR_GENERATOR && all(color == vec4<f32>(1.0, 0.0, 0.0, 1.0))) {
+        color = vec4<f32>(min(max(2 * abs((time * 0.001) % 3 - 1.5) - 1, 0), 1), min(max(-2 * abs((time * 0.001) % 3 - 1) + 2, 0), 1), min(max(-2 * abs((time * 0.001) % 3 - 2) + 2, 0), 1), 1.0);
+    }
     if (color.w != 1.0) {
         color = mix(background_color, color, color.w);
         // color = mix(color, vec4<f32>(1.0, 1.0, 1.0, 1.0), color.w);
         color.w = 1.0;
     }
     //var color = get_color(grid[index], vec4<f32>(grid[index + 3], grid[index + 4], grid[index + 5], grid[index + 6]), new_pos);
-    if (grid[index + 1] == 1.0) {
+    if ((grid[index + 1] & 1) == 1) {
         color = get_fire_color(color, new_pos);
     }
-    if (draw_placement_restriction == 1 && (u32(grid[index + 2]) & 1) == 1 && abs(new_pos.x + new_pos.y - round(new_pos.x + new_pos.y)) > 0.1) {
-        color = mix(color, vec4<f32>(0.0, 0.0, 0.0, 1.0), 0.2);
-    }
-    if ((u32(grid[index + 2]) & 2) == 2 && (abs(new_pos.x - round(new_pos.x)) < 0.2 || abs(new_pos.y - round(new_pos.y)) < 0.2)) {
+    if ((grid[index + 2] & 2) == 2 && (abs(new_pos.x - round(new_pos.x)) < 0.2 || abs(new_pos.y - round(new_pos.y)) < 0.2)) {
         color = vec4<f32>(0.0, 200.0 / 255.0, 1.0, 1.0);
+    }
+
+    if (draw_placement_restriction == -1 || (grid[index + 2] & (1 << u32(draw_placement_restriction))) != 0) {
+        if ((grid[index + 2] & 1) == 1 && abs(new_pos.x + new_pos.y - round(new_pos.x + new_pos.y)) > 0.1) {
+            color = mix(color, vec4<f32>(0.0, 0.0, 0.0, 1.0), 0.2);
+        }
+        if ((grid[index + 2] & 4) == 4 && abs(new_pos.x + new_pos.y - round(new_pos.x + new_pos.y)) > 0.1) {
+            color = mix(color, vec4<f32>(1.0, 0.0, 0.0, 1.0), 0.2);
+        }
+        if ((grid[index + 2] & 8) == 8 && abs(new_pos.x + new_pos.y - round(new_pos.x + new_pos.y)) > 0.1) {
+            color = mix(color, vec4<f32>(0.0, 0.0, 1.0, 1.0), 0.2);
+        }
+    }
+
+    let range = (sin(time * 0.001 * 3.1415 / 2) + 1) / 2 * 0.1;
+    if ((grid[index + 1] & 2) == 2 && (abs(new_pos.x - round(new_pos.x)) < range + 0.1 || abs(new_pos.y - round(new_pos.y)) < range + 0.1)) {
+        color = mix(color, vec4<f32>(1.0, 0.0, 0.0, 1.0), 0.2);
+    }
+    if ((grid[index + 1] & 4) == 4 && (abs(new_pos.x - round(new_pos.x)) < 0.2 - range || abs(new_pos.y - round(new_pos.y)) < 0.2 - range)) {
+        color = mix(color, vec4<f32>(0.0, 0.0, 1.0, 1.0), 0.2);
     }
     //if (grid[index] != 0) {
     //color.r = abs(grid[index + 1] / 10);
@@ -383,20 +484,22 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
             id = u32(brush[3]);
         }
     }
-    var texture_pos2 = (new_pos - floor(new_pos)) * textures[u32(id)].zw + textures[u32(id)].xy;
+    var texture_pos2 = (new_pos - floor(new_pos)) * textures[id].zw + textures[id].xy;
     if (id == ROTATOR_CLOCKWISE || id == ROTATOR_COUNTERCLOCKWISE) {
-        texture_pos2.x += (floor(time * 0.001 * 6) % 4) * textures[u32(id)].z;
+        texture_pos2.x += (floor(time * 0.001 * 6) % 4) * textures[id].z;
     }
     if (id == DETONATOR) {
-        texture_pos2.x += (floor(time * 0.001 * 2) % 2) * textures[u32(id)].z;
+        texture_pos2.x += (floor(time * 0.001 * 2) % 2) * textures[id].z;
     }
     let sampledColor2 = textureSample(pixelTexture, pixelSampler, texture_pos2);
     if (selection_grid[0] != -1) {
         if (new_pos.x >= brush[0] && new_pos.x < brush[0] + brush[2] && new_pos.y >= brush[1] && new_pos.y < brush[1] + brush[3]) {
             let index_2 = (u32(new_pos.x - brush[0]) + u32(new_pos.y - brush[1]) * u32(brush[2])) * stride;
             var color_2: vec4<f32>;
-            if (textures[u32(id)].x == -1) {
-                color_2 = get_color(selection_grid[index_2], vec4<f32>(selection_grid[index_2 + 3], selection_grid[index_2 + 4], selection_grid[index_2 + 5], selection_grid[index_2 + 6]), new_pos);
+            if (textures[id].x == -1) {
+                // also bug pls fix
+                // color_2 = get_color(selection_grid[index_2], vec4<f32>(selection_grid[index_2 + 3], selection_grid[index_2 + 4], selection_grid[index_2 + 5], selection_grid[index_2 + 6]), new_pos);
+                color_2 = get_color(selection_grid[index_2], vec4<f32>(0.0, 0.0, 0.0, 0.0), new_pos);
             }
             else {
                 color_2 = sampledColor2;
@@ -420,13 +523,13 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
                 color_2 = mix(background_color, color_2, color_2.w);
                 color_2.w = 1.0;
             }
-            if (selection_grid[index_2 + 1] == 1.0) {
+            if (selection_grid[index_2 + 1] == 1) {
                 color_2 = get_fire_color(color_2, new_pos);
             }
-            if ((u32(selection_grid[index_2 + 2]) & 1) == 1 && abs(new_pos.x + new_pos.y - round(new_pos.x + new_pos.y)) > 0.1) {
+            if ((selection_grid[index_2 + 2] & 1) == 1 && abs(new_pos.x + new_pos.y - round(new_pos.x + new_pos.y)) > 0.1) {
                 color_2 = mix(color_2, vec4<f32>(0.0, 0.0, 0.0, 1.0), 0.2);
             }
-            if ((u32(selection_grid[index_2 + 2]) & 2) == 2 && (abs(new_pos.x - round(new_pos.x)) < 0.2 || abs(new_pos.y - round(new_pos.y)) < 0.2)) {
+            if ((selection_grid[index_2 + 2] & 2) == 2 && (abs(new_pos.x - round(new_pos.x)) < 0.2 || abs(new_pos.y - round(new_pos.y)) < 0.2)) {
                 color_2 = vec4<f32>(0.0, 0.8, 1.0, 1.0);
             }
             color = mix(color, color_2, 0.5 * color_2.w);
@@ -442,28 +545,39 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
                     color = mix(color, vec4<f32>(0.0, 0.0, 0.0, 1.0), 0.5);
                 }
             }
+            else if (brush[3] == TEAM_PLACEMENT_RESTRICTION_A) {
+                if (abs(new_pos.x + new_pos.y - round(new_pos.x + new_pos.y)) > 0.1) {
+                    color = mix(color, vec4<f32>(1.0, 0.0, 0.0, 1.0), 0.5);
+                }
+            }
+            else if (brush[3] == TEAM_PLACEMENT_RESTRICTION_B) {
+                if (abs(new_pos.x + new_pos.y - round(new_pos.x + new_pos.y)) > 0.1) {
+                    color = mix(color, vec4<f32>(0.0, 0.0, 1.0, 1.0), 0.5);
+                }
+            }
             else {
                 var color_2: vec4<f32>;
-                // if (u32(id) == 0) {
+                // if (id == 0) {
                 //     color_2 = background_color;
                 // }
-                if (textures[u32(id)].x == -1) {
-                    color_2 = get_color(brush[3], vec4<f32>(brush[4], brush[5], brush[6], brush[7]) + random(index) * vec4<f32>(brush[8], brush[9], brush[10], brush[11]), new_pos);
+                if (textures[id].x == -1) {
+                    // color_2 = get_color(brush[3], vec4<f32>(brush[4], brush[5], brush[6], brush[7]) + random(index) * vec4<f32>(brush[8], brush[9], brush[10], brush[11]), new_pos);
+                    color_2 = get_color(i32(brush[3]), vec4<f32>(brush[4], brush[5], brush[6], brush[7]) + random(index) * vec4<f32>(brush[8], brush[9], brush[10], brush[11]), new_pos);
                 }
                 else {
                     color_2 = sampledColor2;
                 }
                 if (id == LASER_LEFT && floor_pos.x * 6 <= 3 && floor_pos.y * 6 >= 2 && floor_pos.y * 6 <= 4) {
-                    color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 2) + 1) / 2);
+                    color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 3) + 1) / 2);
                 }
                 if (id == LASER_UP && floor_pos.x * 6 >= 2 && floor_pos.x * 6 <= 4 && floor_pos.y * 6 <= 3) {
-                    color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 2) + 1) / 2);
+                    color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 3) + 1) / 2);
                 }
                 if (id == LASER_RIGHT && floor_pos.x * 6 >= 3 && floor_pos.y * 6 >= 2 && floor_pos.y * 6 <= 4) {
-                    color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 2) + 1) / 2);
+                    color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 3) + 1) / 2);
                 }
                 if (id == LASER_DOWN && floor_pos.x * 6 >= 2 && floor_pos.x * 6 <= 4 && floor_pos.y * 6 >= 3) {
-                    color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 2) + 1) / 2);
+                    color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 3) + 1) / 2);
                 }
                 if (id == DELETER && floor_pos.x * 4 >= 1 && floor_pos.x * 4 <= 3 && floor_pos.y * 4 >= 1 && floor_pos.y * 4 <= 3) {
                     color_2 = mix(vec4<f32>(0.8, 0.0, 1.0, 1.0), vec4<f32>(1.0, 0.0, 1.0, 1.0), (sin(time * 0.001 * 3.1415) + 1) / 2);

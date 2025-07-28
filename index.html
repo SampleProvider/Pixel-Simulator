@@ -73,6 +73,33 @@
                 </div> -->
             </div>
         </div>
+        <div id="multiplayerOverlay">
+            <div class="multiplayerTeam">
+                <div class="multiplayerTeamName">Team Alpha</div>
+                <div class="multiplayerHealthBar">0/0</div>
+                <div class="multiplayerPixelInventory">
+                    <div class="multiplayerPixel">1</div>
+                    <div class="multiplayerPixel">1</div>
+                    <div class="multiplayerPixel">1</div>
+                </div>
+            </div>
+            <div class="multiplayerTeam">
+                <div class="multiplayerTeamName">Team Beta</div>
+                <div class="multiplayerHealthBar">0/0</div>
+                <div class="multiplayerPixelInventory">
+                    <div class="multiplayerPixel">1</div>
+                    <div class="multiplayerPixel">1</div>
+                    <div class="multiplayerPixel">1</div>
+                </div>
+            </div>
+        </div>
+        <template id="multiplayerTeamTemplate">
+            <div class="multiplayerTeam">
+                <div class="multiplayerTeamName">Team Alpha</div>
+                <div class="multiplayerHealthBar">0/0</div>
+                <div class="multiplayerPixelInventory"></div>
+            </div>
+        </template>
         <div id="tooltip">
             <div id="tooltipName"></div>
             <div id="tooltipDescription" style="display: none;"></div>
@@ -98,6 +125,9 @@
             <div id="puzzlesButtonContainer" class="menuButtonContainer">
                 <button id="puzzlesButton" class="menuButton">Puzzles</button>
             </div>
+            <div id="multiplayerButtonContainer" class="menuButtonContainer">
+                <button id="multiplayerButton" class="menuButton">Multiplayer</button>
+            </div>
         </div>
         <div id="puzzlesContainer" style="display: none;">
             <div id="puzzlesTitle">Puzzles</div>
@@ -105,88 +135,136 @@
                 <button id="officialPuzzlesButton" class="puzzlesHeaderButton">Official Puzzles</button>
                 <button id="customPuzzlesButton" class="puzzlesHeaderButton">Custom Puzzles</button>
             </div>
-            <div id="officialPuzzlesList"></div>
-            <div id="customPuzzlesList" style="display: none;">
-                <button id="createCustomPuzzleButton">+</button>
-                <div class="puzzle">
-                    <img class="puzzleImg">
-                    <div class="puzzleName">buh overflow problem</div>
-                    <div class="puzzleAuthor">sdf</div>
-                    <div class="puzzleTicks">Not completed</div>
+            <div id="puzzlesList">
+                <div id="officialPuzzlesList"></div>
+                <div id="customPuzzlesList">
+                    <button id="uploadCustomPuzzleButton">Upload Puzzle</button>
+                    <button id="createCustomPuzzleButton">Create Puzzle</button>
                 </div>
-                <div class="puzzle">
-                    <img class="puzzleImg">
-                    <div class="puzzleName"></div>
-                    <div class="puzzleAuthor"></div>
-                    <div class="puzzleTicks"></div>
-                </div>
-                <div class="puzzle">
-                    <img class="puzzleImg">
-                    <div class="puzzleName"></div>
-                    <div class="puzzleAuthor"></div>
-                    <div class="puzzleTicks"></div>
-                </div>
-                <div class="puzzle">
-                    <img class="puzzleImg">
-                    <div class="puzzleName"></div>
-                    <div class="puzzleAuthor"></div>
-                    <div class="puzzleTicks"></div>
-                </div>
-                <div class="puzzle">
-                    <img class="puzzleImg">
-                    <div class="puzzleName"></div>
-                    <div class="puzzleAuthor"></div>
-                    <div class="puzzleTicks"></div>
-                </div>
-                <div class="puzzle">
-                    <img class="puzzleImg">
-                    <div class="puzzleName"></div>
-                    <div class="puzzleAuthor"></div>
-                    <div class="puzzleTicks"></div>
-                </div>
-                <div class="puzzle">
-                    <img class="puzzleImg">
-                    <div class="puzzleName"></div>
-                    <div class="puzzleAuthor"></div>
-                    <div class="puzzleTicks"></div>
-                </div>
-                <div class="puzzle">
-                    <img class="puzzleImg">
-                    <div class="puzzleName"></div>
-                    <div class="puzzleAuthor"></div>
-                    <div class="puzzleTicks"></div>
-                </div>
-                <div class="puzzle">
-                    <img class="puzzleImg">
-                    <div class="puzzleName"></div>
-                    <div class="puzzleAuthor"></div>
-                    <div class="puzzleTicks"></div>
-                </div>
-                <div class="puzzle">
-                    <img class="puzzleImg">
-                    <div class="puzzleName"></div>
-                    <div class="puzzleAuthor"></div>
-                    <div class="puzzleTicks"></div>
-                </div>
-                <div class="puzzle">
-                    <img class="puzzleImg">
-                    <div class="puzzleName"></div>
-                    <div class="puzzleAuthor"></div>
-                    <div class="puzzleTicks"></div>
-                </div>
-                <div class="puzzle">
-                    <img class="puzzleImg">
-                    <div class="puzzleName"></div>
-                    <div class="puzzleAuthor"></div>
-                    <div class="puzzleTicks"></div>
+                <div id="createCustomPuzzleContainer">
+                    <div id="createCustomPuzzleTitle">Create Custom Puzzle</div>
+                    <div id="createCustomPuzzleSettings">
+                        <label for="createCustomPuzzleId">Id:</label>
+                        <input type="text" id="createCustomPuzzleId">
+                        <label for="createCustomPuzzleName">Name:</label>
+                        <input type="text" id="createCustomPuzzleName">
+                        <label for="createCustomPuzzleAuthor">Author:</label>
+                        <input type="text" id="createCustomPuzzleAuthor">
+                        <label for="createCustomPuzzleWorld">World:</label>
+                        <input type="text" id="createCustomPuzzleWorld">
+                        <label for="createCustomPuzzleSaveCode">Save Code:</label>
+                        <textarea id="createCustomPuzzleSaveCode"></textarea>
+                        <label for="createCustomPuzzleInventory">Inventory:</label>
+                        <div style="display: grid;">
+                            <input type="text" id="createCustomPuzzleInventory" placeholder="Search:">
+                            <div id="createCustomPuzzleInventoryList"></div>
+                        </div>
+                        <label>Objectives:</label>
+                        <div id="createCustomPuzzleObjectivesList">
+                            <!-- <div class="createCustomPuzzleObjective">
+                                <label for="createCustomPuzzleObjectiveType1">Type:</label>
+                                <select id="createCustomPuzzleObjectiveType1" class="createCustomPuzzleObjectiveType">
+                                    <option value="destroyMonsters">Destroy Monsters</option>
+                                    <option value="ticks">Ticks</option>
+                                    <option value="pixels">Pixels</option>
+                                </select>
+                                <label for="createCustomPuzzleObjectiveTargetAll1">Target All:</label>
+                                <input id="createCustomPuzzleObjectiveTargetAll1" type="checkbox" class="createCustomPuzzleObjectiveTargetAll">
+                                <label for="createCustomPuzzleObjectiveTarget1">Target:</label>
+                                <input id="createCustomPuzzleObjectiveTarget1" type="number" class="createCustomPuzzleObjectiveTarget">
+                                <label for="createCustomPuzzleObjectiveMin1">Min:</label>
+                                <input type="number" class="createCustomPuzzleObjectiveMin">
+                                <label for="createCustomPuzzleObjectiveMax1">Max:</label>
+                                <input type="number" class="createCustomPuzzleObjectiveMax">
+                                <button class="createCustomPuzzleObjectiveDeleteButton">x</button>
+                            </div> -->
+                            <template id="createCustomPuzzleObjectiveTemplate">
+                                <div class="createCustomPuzzleObjective">
+                                    <label for="createCustomPuzzleObjectiveType1">Type:</label>
+                                    <select id="createCustomPuzzleObjectiveType1" class="createCustomPuzzleObjectiveType">
+                                        <option value="destroyMonsters">Destroy Monsters</option>
+                                        <option value="ticks">Ticks</option>
+                                        <option value="pixels">Pixels</option>
+                                    </select>
+                                    <label for="createCustomPuzzleObjectiveTargetAll1">Target All:</label>
+                                    <input id="createCustomPuzzleObjectiveTargetAll1" type="checkbox" class="createCustomPuzzleObjectiveTargetAll">
+                                    <label for="createCustomPuzzleObjectiveTarget1">Target:</label>
+                                    <input id="createCustomPuzzleObjectiveTarget1" type="number" class="createCustomPuzzleObjectiveTarget">
+                                    <label for="createCustomPuzzleObjectiveMin1">Min:</label>
+                                    <input type="number" class="createCustomPuzzleObjectiveMin">
+                                    <label for="createCustomPuzzleObjectiveMax1">Max:</label>
+                                    <input type="number" class="createCustomPuzzleObjectiveMax">
+                                    <button class="createCustomPuzzleObjectiveDeleteButton">Delete Objective</button>
+                                </div>
+                            </template>
+                            <button id="createCustomPuzzleAddObjectiveButton">Add Objective</button>
+                        </div>
+                        <label for="createCustomPuzzleMusic">Music:</label>
+                        <select id="createCustomPuzzleMusic">
+                        </select>
+                        <!-- buh what is this id name createCustomPuzzleFinishButton -->
+                        <button id="createCustomPuzzleFinishButton">Create Puzzle</button>
+                    </div>
+                    <button id="createCustomPuzzleCloseButton" class="button"></button>
                 </div>
             </div>
             <button id="puzzlesCloseButton" class="button"></button>
+        </div>
+        <div id="multiplayerContainer" style="display: none;">
+            <div id="multiplayerTitle">Multiplayer</div>
+            <div id="multiplayerContainers">
+                <div id="multiplayerGameListContainer">
+                    <div style="display: grid; grid-gap: 4px; min-height: 0px; margin-bottom: 4px; ">
+                        <div id="multiplayerGameListTitle">Games:</div>
+                        <input id="multiplayerGameIdInput" type="text">
+                        <button id="multiplayerJoinGameButton">Join Game</button>
+                        <div id="multiplayerGameList">
+                            No Active Games
+                            <template id="multiplayerGameTemplate">
+                                <div class="multiplayerGame">
+                                    <div style="flex-grow: 1;">
+                                        <div class="multiplayerGameTitle"></div>
+                                        <div class="multiplayerGameSubtitle"></div>
+                                    </div>
+                                    <div class="multiplayerGameJoinGameButton">Join Game</div>
+                                </div>
+                            </template>
+                        </div>
+                        <button id="multiplayerCreateGameButton">Create Game</button>
+                    </div>
+                </div>
+                <div id="multiplayerGameLobbyContainer">
+                    <button id="multiplayerLeaveGameButton">Leave Game</button>
+                    <div style="display: grid; grid-gap: 4px;">
+                        <div id="multiplayerGameLobbyTitle">Game Lobby</div>
+                        <label for="multiplayerGameLobbyId">Join Code:</label>
+                        <input type="text" id="multiplayerGameLobbyId" disabled>
+                        <label for="multiplayerGameLobbyPublic">Public:</label>
+                        <input type="checkbox" id="multiplayerGameLobbyPublic" disabled>
+                        <div id="multiplayerGameLobbyPlayers"></div>
+                        <button id="multiplayerStartGameButton">Start Game</button>
+                    </div>
+                </div>
+                <div id="multiplayerLoadingContainer">
+                    <div id="multiplayerLoadingSquares">
+                        <div id="multiplayerLoadingSquare1" class="multiplayerLoadingSquare"></div>
+                        <div id="multiplayerLoadingSquare2" class="multiplayerLoadingSquare"></div>
+                        <div id="multiplayerLoadingSquare3" class="multiplayerLoadingSquare"></div>
+                    </div>
+                    <div id="multiplayerLoadingTitle">Connecting to server...</div>
+                </div>
+            </div>
+            <button id="multiplayerCloseButton" class="button"></button>
+        </div>
+        <div id="volumeSliderButton"></div>
+        <div id="volumeSliderContainer">
+            <input type="range" id="volumeSlider" min="0" max="100" step="1">
         </div>
         <div id="puzzleTooltip">
             <div id="puzzleTooltipName"></div>
             <div id="puzzleTooltipDescription"></div>
         </div>
+        <div id="multiplayerGameLobbyDraggingPlayer" class="multiplayerGameLobbyPlayer" style="display: none;"></div>
     </div>
     <div id="transitionContainer" style="display: none;">
         <div id="transitionTop"></div>
@@ -226,7 +304,10 @@
         </div>
     </template>
     <!-- <script src="pixels.js" type="module"></script> -->
+    <!-- <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script> -->
+    <script src="socket.io.min.js"></script>
     <script src="game.js" type="module" defer></script>
+    <!-- <script src="sound.js" type="module" defer></script> -->
     <!-- <script src="renderer.js" type="module" defer></script> -->
 </body>
 

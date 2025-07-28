@@ -66,7 +66,7 @@ button {
     border: none;
     background-color: transparent;
     background-image: url("/img/buttons.png");
-    background-size: 1500% 400%;
+    background-size: 2000% 400%;
     background-position: 0% 0%;
     image-rendering: pixelated;
     cursor: pointer;
@@ -103,6 +103,9 @@ button {
     transform: translateY(15vh); */
 }
 #titleContainer {
+    position: absolute;
+    width: 100vw;
+    height: 100vh;
     transition: 500ms cubic-bezier(0.5, 0, 0.5, 1) transform;
     transform: translateX(0px);
 }
@@ -117,6 +120,7 @@ button {
     color: white;
     font-size: 3.5vh;
     cursor: pointer;
+    user-select: none;
     transition: 50ms linear transform;
     transform: translate(-50%, -50%);
 }
@@ -136,6 +140,74 @@ button {
 }
 #puzzlesButton {
     top: 70vh;
+}
+#multiplayerButton {
+    top: 80vh;
+}
+#volumeSliderButton {
+    position: absolute;
+    left: 8px;
+    bottom: 8px;
+    width: 36px;
+    height: 36px;
+    border: 4px solid white;
+    border-style: outset;
+    box-shadow: 0px 0px 5px #ffffff;
+    background-color: #ffffff33;
+    background-image: url("/img/volumeButtons.png");
+    background-size: 300% 100%;
+    background-position: 0% 0%;
+    image-rendering: pixelated;
+    cursor: pointer;
+}
+#volumeSliderButton:active {
+    border-style: inset;
+}
+#volumeSliderContainer {
+    position: absolute;
+    left: calc(44px + var(--border-size) * 8);
+    bottom: 8px;
+    width: 120px;
+    height: calc(36px + var(--border-size) * 8);
+    overflow-x: hidden;
+}
+#volumeSlider {
+    position: absolute;
+    appearance: none;
+    left: 8px;
+    top: 50%;
+    width: calc(100% - 8px - var(--border-size) * 8);
+    height: 16px;
+    margin: 0px;
+    border: 4px solid white;
+    border-style: outset;
+    background-color: #ffffff33;
+    transform: translate(calc(-100% - 8px), -50%);
+    transition: 250ms ease transform;
+}
+#volumeSlider::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 32px;
+    border: 4px solid white;
+    border-style: outset;
+    background-color: #ffffff;
+    cursor: grab;
+}
+#volumeSlider::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 32px;
+    border: 4px solid white;
+    border-style: outset;
+    background-color: #ffffff;
+    cursor: grab;
+}
+#volumeSlider::-webkit-slider-thumb:active {
+    cursor: grabbing;
+}
+#volumeSliderButton:hover + #volumeSliderContainer > #volumeSlider, #volumeSliderContainer:hover #volumeSlider {
+    transform: translate(0%, -50%);
 }
 
 #puzzlesContainer {
@@ -164,18 +236,43 @@ button {
     font-size: 18px;
     background-color: white;
 }
-#officialPuzzlesList, #customPuzzlesList {
+#puzzlesList {
+    position: relative;
     border: 2px solid black;
     margin: 4px;
+    /* min-height: 0px; */
+    flex-grow: 1;
+    overflow: hidden;
+}
+#officialPuzzlesList, #customPuzzlesList, #createCustomPuzzleContainer {
+    position: absolute;
+    padding: 4px;
+    width: calc(100% - 8px);
+    height: calc(100% - 8px);
     text-align: center;
     overflow-y: scroll;
+    transition: 500ms cubic-bezier(0.5, 0, 0.5, 1) transform;
+}
+#customPuzzlesList {
+    transform: translateX(100%);
+}
+#createCustomPuzzleContainer {
+    transform: translateX(200%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 .puzzleWorld {
     display: block;
     text-align: center;
     font-size: 24px;
 }
+/* todo spaghetti */
+.puzzleWorld + div {
+    line-height: 0px;
+}
 .puzzle {
+    position: relative;
     display: inline-block;
     border: 2px solid black;
     margin: 4px;
@@ -191,6 +288,32 @@ button {
     outline: 4px solid lime;
     outline-offset: -6px;
 }
+.puzzleDownloadButton, .puzzleDeleteButton {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    background-size: 3200% 640%;
+    display: none;
+}
+.puzzle:hover .puzzleDownloadButton, .puzzle:hover .puzzleDeleteButton {
+    display: block;
+}
+.puzzleDownloadButton {
+    left: 2px;
+    bottom: 2px;
+    background-position: -2100% -200%;
+}
+.puzzleDownloadButton:active {
+    background-position: -2100% -300%;
+}
+.puzzleDeleteButton {
+    right: 2px;
+    bottom: 2px;
+    background-position: -2300% -200%;
+}
+.puzzleDeleteButton:active {
+    background-position: -2300% -300%;
+}
 #puzzlesCloseButton {
     position: absolute;
     left: 0px;
@@ -204,6 +327,377 @@ button {
 #puzzlesCloseButton:active {
     background-position: -100% -300%;
     transform: translate(-50%, -50%) translateY(2px);
+}
+#uploadCustomPuzzleButton, #createCustomPuzzleButton {
+    width: calc(100% - 8px - var(--border-size) * 4);
+    appearance: none;
+    border: 2px solid black;
+    margin: 4px;
+    cursor: pointer;
+    font-size: 18px;
+    background-color: white;
+}
+
+#createCustomPuzzleTitle {
+    font-size: 20px;
+}
+#createCustomPuzzleSettings {
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 4px;
+}
+#createCustomPuzzleSettings label {
+    text-align: right;
+}
+#createCustomPuzzleSettings input[type=text], #createCustomPuzzleSettings input[type=number] {
+    appearance: none;
+    border: 2px solid black;
+}
+#createCustomPuzzleSettings select {
+    border: 2px solid black;
+}
+#createCustomPuzzleSaveCode {
+    appearance: none;
+    border: 2px solid black;
+    resize: none;
+    font-family: 'Courier New', Courier, monospace;
+}
+#createCustomPuzzleInventoryList {
+    display: grid;
+    padding: 4px;
+    grid-template-columns: auto auto;
+    gap: 4px;
+    border: 2px solid black;
+    border-top: 0px;
+    background-color: white;
+    max-height: 400px;
+    overflow-y: scroll;
+}
+#createCustomPuzzleObjectivesList {
+    display: grid;
+    gap: 4px;
+    padding: 4px;
+    border: 2px solid black;
+    background-color: white;
+    max-height: 400px;
+    overflow-y: scroll;
+}
+.createCustomPuzzleObjective {
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 4px;
+    padding: 4px;
+    border: 2px solid black;
+}
+.createCustomPuzzleObjectiveDeleteButton {
+    border: 2px solid black;
+    cursor: pointer;
+    background-color: red;
+    grid-column: span 2;
+}
+#createCustomPuzzleAddObjectiveButton {
+    border: 2px solid black;
+    cursor: pointer;
+}
+#createCustomPuzzleFinishButton {
+    border: 2px solid black;
+    cursor: pointer;
+    grid-column: span 2;
+}
+#createCustomPuzzleCloseButton {
+    position: absolute;
+    left: 4px;
+    top: 4px;
+    background-position: -200% -200%;
+}
+#createCustomPuzzleCloseButton:hover {
+    transform: translateY(-2px);
+}
+#createCustomPuzzleCloseButton:active {
+    background-position: -200% -300%;
+    transform: translateY(2px);
+}
+
+#multiplayerContainer {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    left: 50vw;
+    top: 50vh;
+    width: calc(100vw - 200px);
+    height: calc(100vh - 200px);
+    border: 4px solid white;
+    background-color: lightgray;
+    transition: 500ms cubic-bezier(0.5, 0, 0.5, 1) transform;
+    transform: translate(-50%, -50%) translateX(-100vw);
+}
+#multiplayerTitle {
+    font-size: 40px;
+    text-align: center;
+}
+#multiplayerContainers {
+    position: relative;
+    flex-grow: 1;
+    overflow: hidden;
+}
+#multiplayerContainer input[type=text], #multiplayerContainer input[type=number] {
+    appearance: none;
+    border: 2px solid black;
+}
+#multiplayerGameListContainer, #multiplayerGameLobbyContainer, #multiplayerCreateGameContainer, #multiplayerLoadingContainer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    transition: 500ms cubic-bezier(0.5, 0, 0.5, 1) transform;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+#multiplayerGameLobbyContainer, #multiplayerCreateGameContainer {
+    transform: translateX(100%);
+}
+#multiplayerGameListTitle {
+    font-size: 32px;
+    text-align: center;
+    grid-column: span 2;
+}
+#multiplayerGameId {
+    border: 2px solid black;
+    font-size: 16px;
+}
+#multiplayerJoinGameButton {
+    border: 2px solid black;
+    background-color: #00ff00;
+    padding: 2px;
+    grid-column: 2;
+    cursor: pointer;
+    transition: 50ms linear transform;
+    transform: translateY(0px);
+}
+#multiplayerJoinGameButton:hover {
+    transform: translateY(-2px);
+}
+#multiplayerJoinGameButton:active {
+    transform: translateY(2px);
+}
+#multiplayerGameList {
+    display: flex;
+    flex-direction: column;
+    padding: 2px;
+    border: 2px solid black;
+    grid-column: span 2;
+    overflow-y: scroll;
+    text-align: center;
+}
+.multiplayerGame {
+    display: flex;
+    margin: 2px;
+    padding: 4px;
+    border: 2px solid black;
+    text-align: left;
+}
+.multiplayerGameTitle {
+    font-size: 20px;
+}
+.multiplayerGameSubtitle {
+    font-size: 12px;
+}
+.multiplayerGameJoinGameButton {
+    display: flex;
+    align-items: center;
+    border: 2px solid black;
+    background-color: #00ff00;
+    padding: 2px;
+    cursor: pointer;
+    transition: 50ms linear transform;
+    transform: translateY(0px);
+}
+.multiplayerGameJoinGameButton:hover {
+    transform: translateY(-2px);
+}
+.multiplayerGameJoinGameButton:active {
+    transform: translateY(2px);
+}
+#multiplayerCreateGameButton {
+    text-align: center;
+    border: 2px solid black;
+    background-color: #00ff00;
+    padding: 2px;
+    grid-column: span 2;
+    cursor: pointer;
+    transition: 50ms linear transform;
+    transform: translateY(0px);
+}
+#multiplayerCreateGameButton:hover {
+    transform: translateY(-2px);
+}
+#multiplayerCreateGameButton:active {
+    transform: translateY(2px);
+}
+#multiplayerGameLobbyTitle {
+    font-size: 32px;
+    text-align: center;
+    grid-column: span 2;
+}
+#multiplayerGameLobbyContainer input {
+    grid-column: 2;
+}
+#multiplayerGameLobbyPlayers {
+    grid-column: span 2;
+    display: grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    gap: 4px;
+}
+.multiplayerGameLobbyTeamTitle {
+    text-align: center;
+    grid-row: 1;
+}
+.multiplayerGameLobbyTeamPlayers {
+    display: grid;
+    gap: 2px;
+    padding: 2px;
+    border: 2px solid black;
+    grid-row: 2;
+}
+.multiplayerGameLobbyPlayer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid black;
+    font-size: 16px;
+    height: 32px;
+    background-color: rgba(255, 255, 255, 0.5);
+}
+.multiplayerGameLobbyPlayer.draggable {
+    background-color: white;
+    cursor: grab;
+    user-select: none;
+}
+.multiplayerGameLobbyPlayer.dragging {
+    color: transparent;
+    border: 2px dashed black;
+    background-color: rgba(255, 255, 255, 0.5);
+}
+.multiplayerGameLobbyPlayer.dragging .multiplayerGameLobbyPlayerButton {
+    visibility: hidden;
+}
+.multiplayerGameLobbyPlayerButton {
+    background-color: red;
+    border: 2px solid black;
+    margin: 2px;
+    padding: 2px;
+    cursor: pointer;
+    transition: 50ms linear transform;
+    transform: translateY(0px);
+}
+.multiplayerGameLobbyPlayerButton:hover {
+    transform: translateY(-2px);
+}
+.multiplayerGameLobbyPlayerButton:active {
+    transform: translateY(2px);
+}
+#multiplayerStartGameButton {
+    text-align: center;
+    border: 2px solid black;
+    background-color: white;
+    padding: 2px;
+    grid-column: span 2;
+    cursor: pointer;
+    transition: 50ms linear transform;
+    transform: translateY(0px);
+}
+#multiplayerStartGameButton:hover {
+    transform: translateY(-2px);
+}
+#multiplayerStartGameButton:active {
+    transform: translateY(2px);
+}
+#multiplayerLeaveGameButton {
+    position: absolute;
+    left: 4px;
+    top: 4px;
+    text-align: center;
+    border: 2px solid black;
+    background-color: white;
+    padding: 2px;
+    cursor: pointer;
+    transition: 50ms linear transform;
+    transform: translateY(0px);
+}
+#multiplayerLeaveGameButton:hover {
+    transform: translateY(-2px);
+}
+#multiplayerLeaveGameButton:active {
+    transform: translateY(2px);
+}
+#multiplayerLoadingContainer {
+    position: relative;
+    transition: 500ms cubic-bezier(0.5, 0, 0.5, 1) transform, 250ms linear opacity;
+    background-color: lightgray;
+}
+#multiplayerLoadingSquares {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 128px;
+    height: 128px;
+    transform: translate(-50%, -50%);
+}
+.multiplayerLoadingSquare {
+    position: absolute;
+    width: 64px;
+    height: 64px;
+    outline: 1px solid red;
+    background-color: red;
+}
+#multiplayerLoadingSquare1 {
+    animation: loading 3000ms ease-in 0ms infinite;
+}
+#multiplayerLoadingSquare2 {
+    animation: loading 3000ms ease-in -1000ms infinite;
+}
+#multiplayerLoadingSquare3 {
+    animation: loading 3000ms ease-in -2000ms infinite;
+}
+@keyframes loading {
+    0%, 80% {
+        left: 0px;
+        top: 0px;
+    }
+    5%, 25% {
+        left: 64px;
+        top: 0px;
+    }
+    30%, 50% {
+        left: 64px;
+        top: 64px;
+    }
+    55%, 75% {
+        left: 0px;
+        top: 64px;
+    }
+}
+#multiplayerLoadingTitle {
+    position: absolute;
+    left: 50%;
+    top: calc(50% + 64px);
+    font-size: 20px;
+    transform: translateX(-50%);
+}
+#multiplayerCloseButton {
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    transform: translate(50%, -50%);
+    background-position: -100% -200%;
+}
+#multiplayerCloseButton:hover {
+    transform: translate(50%, -50%) translateY(-2px);
+}
+#multiplayerCloseButton:active {
+    background-position: -100% -300%;
+    transform: translate(50%, -50%) translateY(2px);
 }
 
 #puzzleTooltip {
@@ -224,6 +718,12 @@ button {
 }
 #puzzleTooltipName, #puzzleTooltipDescription {
     padding: 4px;
+}
+
+#multiplayerGameLobbyDraggingPlayer {
+    position: absolute;
+    cursor: grabbing;
+    pointer-events: none;
 }
 
 #transitionTop, #transitionBottom {
@@ -443,7 +943,7 @@ button {
     width: 30px;
     height: 30px;
     margin: 2px;
-    background-size: 2400% 640%;
+    background-size: 3200% 640%;
     background-position: -2200% -200%;
 }
 #uploadBlueprintButton:active {
@@ -485,7 +985,7 @@ button {
     width: 30px;
     height: 30px;
     margin: 2px;
-    background-size: 2400% 640%;
+    background-size: 3200% 640%;
     background-position: -2000% -200%;
 }
 .blueprintCopyButton:active {
@@ -495,7 +995,7 @@ button {
     width: 30px;
     height: 30px;
     margin: 2px;
-    background-size: 2400% 640%;
+    background-size: 3200% 640%;
     background-position: -2100% -200%;
 }
 .blueprintDownloadButton:active {
@@ -505,7 +1005,7 @@ button {
     width: 30px;
     height: 30px;
     margin: 2px;
-    background-size: 2400% 640%;
+    background-size: 3200% 640%;
     background-position: -2300% -200%;
 }
 .blueprintDeleteButton:active {
@@ -523,9 +1023,10 @@ button {
     position: absolute;
     right: 0px;
     bottom: 0px;
-    padding: 4px;
+    padding: 8px;
     display: flex;
     flex-direction: row-reverse;
+    gap: 8px;
     /*padding: 2px;*/
     background-color: #00000066;
     border-left: 2px solid black;
@@ -546,7 +1047,7 @@ button {
 .pixelGroupImg {
     width: 48px;
     height: 48px;
-    margin: 4px;
+    /* margin: 4px; */
     cursor: pointer;
     flex-shrink: 0;
     transition: 50ms linear transform;
@@ -826,6 +1327,65 @@ button {
     transform: translateY(2px);
 }
 
+#multiplayerOverlay {
+    position: absolute;
+    display: flex;
+    /* gap: 8px; */
+    left: 50%;
+    top: 0px;
+    border: 2px solid black;
+    border-top: 0px;
+    /* padding: 8px; */
+    background-color: #00000066;
+    transform: translateX(-50%);
+}
+.multiplayerTeam {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-left: 2px solid black;
+    padding: 8px;
+    padding-top: 0px;
+}
+.multiplayerTeam:first-child {
+    border: none;
+}
+.multiplayerTeamName {
+    margin-top: 4px;
+    margin-bottom: 4px;
+    font-size: 20px;
+    color: white;
+}
+.multiplayerHealthBar {
+    background-color: red;
+    width: 100%;
+    height: 24px;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+    text-align: center;
+    color: white;
+}
+.multiplayerPixelInventory {
+    display: flex;
+    gap: 8px;
+}
+.multiplayerPixel {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    background-color: red;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.multiplayerPixel:first-child {
+    margin: 0px;
+}
+
 #tooltip {
     position: absolute;
     opacity: 0;
@@ -946,7 +1506,7 @@ because the nesting selector cannot represent pseudo-elements. */
     /* display: flex;
     align-items: center; */
     width: 96px;
-    background-size: 750% 400%;
+    background-size: 1000% 400%;
     /* font-family: "Noto Sans"; */
     /* font-family: "Source Code Pro"; */
     font-weight: 500;
