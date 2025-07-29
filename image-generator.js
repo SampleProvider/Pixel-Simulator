@@ -4916,6 +4916,7 @@ const progressBarText = document.getElementById("progressBarText");
 const progressBarBackground = document.getElementById("progressBarBackground");
 const timeRemaining = document.getElementById("timeRemaining");
 const output = document.getElementById("output");
+const downloadButton = document.getElementById("downloadButton");
 
 scaleInput.oninput = function() {
     if (input.files != null && input.files[0] != null) {
@@ -5217,4 +5218,13 @@ generateButton.onclick = function() {
     else {
         alert("No image uploaded!");
     }
+};
+downloadButton.onclick = function() {
+    const blob = new Blob([JSON.stringify({
+        saveCode: output.value,
+    })], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "output.pixel";
+    a.click();
 };

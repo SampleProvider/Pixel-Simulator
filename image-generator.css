@@ -38,7 +38,7 @@ body {
     grid-column: 2;
     width: 306px;
 }
-#generateButton {
+#body button {
     grid-column: 2;
     min-width: 100px;
     width: 292px;
