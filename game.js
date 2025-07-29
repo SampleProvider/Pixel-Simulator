@@ -190,6 +190,11 @@ let chunkXAmount = Math.ceil(gridWidth / chunkWidth);
 let chunkYAmount = Math.ceil(gridHeight / chunkHeight);
 let chunkStride = 4;
 
+let gridUpdated = true;
+function setGridUpdated() {
+    gridUpdated = true;
+};
+
 let tick = 1;
 let frame = 0;
 
@@ -784,6 +789,7 @@ function loadSaveCode(string, selection = false, puzzle = false) {
         gridHeight = parsed.gridHeight;
         createGrid();
         grid = parsed.grid;
+        setGridUpdated();
         let sections = string.split(";");
         let version = sections[0];
         if (version == "V1" || version == "V2" || version == "V3") {
@@ -863,6 +869,7 @@ function loadSaveCode(string, selection = false, puzzle = false) {
             }
         }
         updatePixelInventory();
+        setGridUpdated();
     }
 };
 
@@ -1478,6 +1485,7 @@ function updateMouse() {
                     updatePixelInventory();
                 }
             }
+            setGridUpdated();
         }
         else if (isKeybindPressed("Main Action")) {
             if (pixels[brushPixel].id == "fire") {
@@ -1629,6 +1637,7 @@ function updateMouse() {
                     updatePixelInventory();
                 }
             }
+            setGridUpdated();
         }
         if (isKeybindJustPressed("Pick Brush Pixel")) {
             if (brushX >= 0 && brushX < gridWidth && brushY >= 0 && brushY < gridHeight) {
@@ -1847,6 +1856,7 @@ function updateMouse() {
                 }
                 updatePixelInventory();
             }
+            setGridUpdated();
         }
         if (isKeybindJustPressed("Rotate Selection Clockwise")) {
             let array = [];
@@ -2315,6 +2325,8 @@ socket.on("initClientData", function(data) {
     nextChunks = new Int32Array(data.nextChunks);
     chunks = new Int32Array(data.chunks);
     drawChunks = new Int32Array(data.drawChunks);
+    setGridUpdated();
+
     tick = data.tick - 7;
     multiplayerPixelInventory.length = 0;
     for (let i in data.pixelInventory) {
@@ -2728,6 +2740,7 @@ if (localStorage.getItem("selectionGrid") != null) {
 }
 
 function drawGrid(ctx) {
+    return;
     // for (let chunkY = 0; chunkY < chunkYAmount; chunkY++) {
     //     for (let chunkX = 0; chunkX < chunkXAmount; chunkX++) {
     //         if (chunks[(chunkX + chunkY * chunkXAmount) * chunkStride] == chunkX * chunkWidth + chunkWidth + 1) {
@@ -3244,6 +3257,7 @@ function updateGrid() {
     if (currentPuzzle != null) {
         updateObjectives();
     }
+    setGridUpdated();
 };
 
 let debug = true;
@@ -3344,20 +3358,21 @@ function updateGame() {
         }
         if (selectionState == BRUSH) {
             if (isKeybindPressed("Secondary Action")) {
-                render(cameraArray, drawPlacementRestriction, tick, grid, nextChunks, new Float32Array([brushX, brushY, brushSize, 0, 1, 0, 0, 1, 0, 0, 0, 0]), new Int32Array([-1]));
+                render(cameraArray, drawPlacementRestriction, tick, grid, gridUpdated, nextChunks, new Float32Array([brushX, brushY, brushSize, 0, 1, 0, 0, 1, 0, 0, 0, 0]), new Int32Array([-1]));
             }
             else {
-                render(cameraArray, drawPlacementRestriction, tick, grid, nextChunks, new Float32Array([brushX, brushY, brushSize, brushPixel, pixels[brushPixel].color != null ? pixels[brushPixel].color[0] / 255 : 0, pixels[brushPixel].color != null ? pixels[brushPixel].color[1] / 255 : 0, pixels[brushPixel].color != null ? pixels[brushPixel].color[2] / 255 : 0, pixels[brushPixel].color != null ? pixels[brushPixel].color[3] / 255 : 0, pixels[brushPixel].noise != null ? pixels[brushPixel].noise[0] / 255 : 0, pixels[brushPixel].noise != null ? pixels[brushPixel].noise[1] / 255 : 0, pixels[brushPixel].noise != null ? pixels[brushPixel].noise[2] / 255 : 0, pixels[brushPixel].noise != null ? pixels[brushPixel].noise[3] / 255 : 0]), new Int32Array([-1]));
+                render(cameraArray, drawPlacementRestriction, tick, grid, gridUpdated, nextChunks, new Float32Array([brushX, brushY, brushSize, brushPixel, pixels[brushPixel].color != null ? pixels[brushPixel].color[0] / 255 : 0, pixels[brushPixel].color != null ? pixels[brushPixel].color[1] / 255 : 0, pixels[brushPixel].color != null ? pixels[brushPixel].color[2] / 255 : 0, pixels[brushPixel].color != null ? pixels[brushPixel].color[3] / 255 : 0, pixels[brushPixel].noise != null ? pixels[brushPixel].noise[0] / 255 : 0, pixels[brushPixel].noise != null ? pixels[brushPixel].noise[1] / 255 : 0, pixels[brushPixel].noise != null ? pixels[brushPixel].noise[2] / 255 : 0, pixels[brushPixel].noise != null ? pixels[brushPixel].noise[3] / 255 : 0]), new Int32Array([-1]));
             }
         }
         else if (selectionState == PASTING) {
             let startX = Math.floor(cameraX + mouseX / cameraScale - (selectionWidth - 1) / 2);
             let startY = Math.floor(cameraY + mouseY / cameraScale - (selectionHeight - 1) / 2);
-            render(cameraArray, drawPlacementRestriction, tick, grid, nextChunks, new Float32Array([startX, startY, selectionWidth, selectionHeight, 0, 0, 0, 0, 0, 0, 0, 0]), selectionGrid);
+            render(cameraArray, drawPlacementRestriction, tick, grid, gridUpdated, nextChunks, new Float32Array([startX, startY, selectionWidth, selectionHeight, 0, 0, 0, 0, 0, 0, 0, 0]), selectionGrid);
         }
         else {
-            render(cameraArray, drawPlacementRestriction, tick, grid, nextChunks, new Float32Array([brushX, brushY, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), new Int32Array([-1]));
+            render(cameraArray, drawPlacementRestriction, tick, grid, gridUpdated, nextChunks, new Float32Array([brushX, brushY, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), new Int32Array([-1]));
         }
+        gridUpdated = false;
 
         updateMouse();
         drawGrid(overlayCtx);

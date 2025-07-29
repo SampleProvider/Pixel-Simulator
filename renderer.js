@@ -860,7 +860,7 @@ function resizeGrid(gridWidth, gridHeight, gridStride, chunkXAmount, chunkYAmoun
     device.queue.writeBuffer(gridSizeBuffer, 0, new Uint32Array([gridWidth, gridHeight]));
     createBindGroups();
 };
-function render(camera, drawPlacementRestriction, tick, grid, chunks, brush, selectionGrid) {
+function render(camera, drawPlacementRestriction, tick, grid, gridUpdated, chunks, brush, selectionGrid) {
     const encoder = device.createCommandEncoder();
 
     device.queue.writeBuffer(cameraBuffer, 0, camera);
@@ -868,8 +868,10 @@ function render(camera, drawPlacementRestriction, tick, grid, chunks, brush, sel
     device.queue.writeBuffer(drawPlacementRestrictionBuffer, 0, new Uint32Array([drawPlacementRestriction]));
 
     device.queue.writeBuffer(tickBuffer, 0, new Uint32Array([tick]));
-    device.queue.writeBuffer(gridBuffer, 0, grid);
-    device.queue.writeBuffer(chunksBuffer, 0, chunks);
+    if (gridUpdated) {
+        device.queue.writeBuffer(gridBuffer, 0, grid);
+        device.queue.writeBuffer(chunksBuffer, 0, chunks);
+    }
     device.queue.writeBuffer(brushBuffer, 0, brush);
     device.queue.writeBuffer(selectionGridBuffer, 0, selectionGrid);
 
