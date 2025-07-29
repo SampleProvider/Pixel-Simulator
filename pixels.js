@@ -1,4 +1,4 @@
-import { grid, gridWidth, gridHeight, gridStride, chunks, nextChunks, drawChunks, chunkWidth, chunkHeight, chunkXAmount, chunkYAmount, chunkStride, tick, modal, brushPixel, setBrushPixel, showTooltip, hideTooltip, moveTooltip, setRunState } from "./game.js";
+import { grid, gridWidth, gridHeight, gridStride, chunks, nextChunks, drawChunks, chunkWidth, chunkHeight, chunkXAmount, chunkYAmount, chunkStride, gridUpdatedChunks, tick, modal, brushPixel, setBrushPixel, showTooltip, hideTooltip, moveTooltip, setRunState } from "./game.js";
 // import { imageBitmap } from "./renderer.js";
 import { random, randomSeed } from "./random.js";
 import { currentPuzzle } from "./puzzles.js";
@@ -307,6 +307,63 @@ function addUpdatedChunk(x, y) {
             nextChunks[index + chunkStride + chunkXAmount * chunkStride + 1] = Math.max(nextChunks[index + chunkStride + chunkXAmount * chunkStride + 1], x + buffer);
             nextChunks[index + chunkStride + chunkXAmount * chunkStride + 2] = Math.min(nextChunks[index + chunkStride + chunkXAmount * chunkStride + 2], chunkY * chunkHeight + chunkHeight);
             nextChunks[index + chunkStride + chunkXAmount * chunkStride + 3] = Math.max(nextChunks[index + chunkStride + chunkXAmount * chunkStride + 3], y + buffer);
+        }
+    }
+    gridUpdatedChunks[index] = Math.min(gridUpdatedChunks[index], Math.max(x - buffer, chunkX * chunkWidth));
+    gridUpdatedChunks[index + 1] = Math.max(gridUpdatedChunks[index + 1], Math.min(x + buffer, chunkX * chunkWidth + chunkWidth - 1));
+    gridUpdatedChunks[index + 2] = Math.min(gridUpdatedChunks[index + 2], Math.max(y - buffer, chunkY * chunkHeight));
+    gridUpdatedChunks[index + 3] = Math.max(gridUpdatedChunks[index + 3], Math.min(y + buffer, chunkY * chunkHeight + chunkHeight - 1));
+
+    if (x >= buffer && x % chunkWidth < buffer) {
+        gridUpdatedChunks[index - chunkStride] = Math.min(gridUpdatedChunks[index - chunkStride], x - buffer);
+        gridUpdatedChunks[index - chunkStride + 1] = Math.max(gridUpdatedChunks[index - chunkStride + 1], chunkX * chunkWidth - 1);
+        gridUpdatedChunks[index - chunkStride + 2] = Math.min(gridUpdatedChunks[index - chunkStride + 2], Math.max(y - buffer, chunkY * chunkHeight));
+        gridUpdatedChunks[index - chunkStride + 3] = Math.max(gridUpdatedChunks[index - chunkStride + 3], Math.min(y + buffer, chunkY * chunkHeight + chunkHeight - 1));
+    }
+    if (x < gridWidth - buffer && x % chunkWidth >= chunkWidth - buffer) {
+        gridUpdatedChunks[index + chunkStride] = Math.min(gridUpdatedChunks[index + chunkStride], chunkX * chunkWidth + chunkWidth);
+        gridUpdatedChunks[index + chunkStride + 1] = Math.max(gridUpdatedChunks[index + chunkStride + 1], x + buffer);
+        gridUpdatedChunks[index + chunkStride + 2] = Math.min(gridUpdatedChunks[index + chunkStride + 2], Math.max(y - buffer, chunkY * chunkHeight));
+        gridUpdatedChunks[index + chunkStride + 3] = Math.max(gridUpdatedChunks[index + chunkStride + 3], Math.min(y + buffer, chunkY * chunkHeight + chunkHeight - 1));
+    }
+    if (y >= buffer && y % chunkHeight < buffer) {
+        gridUpdatedChunks[index - chunkXAmount * chunkStride] = Math.min(gridUpdatedChunks[index - chunkXAmount * chunkStride], Math.max(x - buffer, chunkX * chunkWidth));
+        gridUpdatedChunks[index - chunkXAmount * chunkStride + 1] = Math.max(gridUpdatedChunks[index - chunkXAmount * chunkStride + 1], Math.min(x + buffer, chunkX * chunkWidth + chunkWidth - 1));
+        gridUpdatedChunks[index - chunkXAmount * chunkStride + 2] = Math.min(gridUpdatedChunks[index - chunkXAmount * chunkStride + 2], y - buffer);
+        gridUpdatedChunks[index - chunkXAmount * chunkStride + 3] = Math.max(gridUpdatedChunks[index - chunkXAmount * chunkStride + 3], chunkY * chunkHeight - 1);
+    }
+    if (y < gridHeight - buffer && y % chunkHeight >= chunkHeight - buffer) {
+        gridUpdatedChunks[index + chunkXAmount * chunkStride] = Math.min(gridUpdatedChunks[index + chunkXAmount * chunkStride], Math.max(x - buffer, chunkX * chunkWidth));
+        gridUpdatedChunks[index + chunkXAmount * chunkStride + 1] = Math.max(gridUpdatedChunks[index + chunkXAmount * chunkStride + 1], Math.min(x + buffer, chunkX * chunkWidth + chunkWidth - 1));
+        gridUpdatedChunks[index + chunkXAmount * chunkStride + 2] = Math.min(gridUpdatedChunks[index + chunkXAmount * chunkStride + 2], chunkY * chunkHeight + chunkHeight);
+        gridUpdatedChunks[index + chunkXAmount * chunkStride + 3] = Math.max(gridUpdatedChunks[index + chunkXAmount * chunkStride + 3], y + buffer);
+    }
+    if (x >= buffer && x % chunkWidth < buffer) {
+        if (y >= buffer && y % chunkHeight < buffer) {
+            gridUpdatedChunks[index - chunkStride - chunkXAmount * chunkStride] = Math.min(gridUpdatedChunks[index - chunkStride - chunkXAmount * chunkStride], x - buffer);
+            gridUpdatedChunks[index - chunkStride - chunkXAmount * chunkStride + 1] = Math.max(gridUpdatedChunks[index - chunkStride - chunkXAmount * chunkStride + 1], chunkX * chunkWidth - 1);
+            gridUpdatedChunks[index - chunkStride - chunkXAmount * chunkStride + 2] = Math.min(gridUpdatedChunks[index - chunkStride - chunkXAmount * chunkStride + 2], y - buffer);
+            gridUpdatedChunks[index - chunkStride - chunkXAmount * chunkStride + 3] = Math.max(gridUpdatedChunks[index - chunkStride - chunkXAmount * chunkStride + 3], chunkY * chunkHeight - 1);
+        }
+        if (y < gridHeight - buffer && y % chunkHeight >= chunkHeight - buffer) {
+            gridUpdatedChunks[index - chunkStride + chunkXAmount * chunkStride] = Math.min(gridUpdatedChunks[index - chunkStride + chunkXAmount * chunkStride], x - buffer);
+            gridUpdatedChunks[index - chunkStride + chunkXAmount * chunkStride + 1] = Math.max(gridUpdatedChunks[index - chunkStride + chunkXAmount * chunkStride + 1], chunkX * chunkWidth - 1);
+            gridUpdatedChunks[index - chunkStride + chunkXAmount * chunkStride + 2] = Math.min(gridUpdatedChunks[index - chunkStride + chunkXAmount * chunkStride + 2], chunkY * chunkHeight + chunkHeight);
+            gridUpdatedChunks[index - chunkStride + chunkXAmount * chunkStride + 3] = Math.max(gridUpdatedChunks[index - chunkStride + chunkXAmount * chunkStride + 3], y + buffer);
+        }
+    }
+    if (x < gridWidth - buffer && x % chunkWidth >= chunkWidth - buffer) {
+        if (y >= buffer && y % chunkHeight < buffer) {
+            gridUpdatedChunks[index + chunkStride - chunkXAmount * chunkStride] = Math.min(gridUpdatedChunks[index + chunkStride - chunkXAmount * chunkStride], chunkX * chunkWidth + chunkWidth);
+            gridUpdatedChunks[index + chunkStride - chunkXAmount * chunkStride + 1] = Math.max(gridUpdatedChunks[index + chunkStride - chunkXAmount * chunkStride + 1], x + buffer);
+            gridUpdatedChunks[index + chunkStride - chunkXAmount * chunkStride + 2] = Math.min(gridUpdatedChunks[index + chunkStride - chunkXAmount * chunkStride + 2], y - buffer);
+            gridUpdatedChunks[index + chunkStride - chunkXAmount * chunkStride + 3] = Math.max(gridUpdatedChunks[index + chunkStride - chunkXAmount * chunkStride + 3], chunkY * chunkHeight - 1);
+        }
+        if (y < gridHeight - buffer && y % chunkHeight >= chunkHeight - buffer) {
+            gridUpdatedChunks[index + chunkStride + chunkXAmount * chunkStride] = Math.min(gridUpdatedChunks[index + chunkStride + chunkXAmount * chunkStride], chunkX * chunkWidth + chunkWidth);
+            gridUpdatedChunks[index + chunkStride + chunkXAmount * chunkStride + 1] = Math.max(gridUpdatedChunks[index + chunkStride + chunkXAmount * chunkStride + 1], x + buffer);
+            gridUpdatedChunks[index + chunkStride + chunkXAmount * chunkStride + 2] = Math.min(gridUpdatedChunks[index + chunkStride + chunkXAmount * chunkStride + 2], chunkY * chunkHeight + chunkHeight);
+            gridUpdatedChunks[index + chunkStride + chunkXAmount * chunkStride + 3] = Math.max(gridUpdatedChunks[index + chunkStride + chunkXAmount * chunkStride + 3], y + buffer);
         }
     }
 };

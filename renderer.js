@@ -1,4 +1,5 @@
 import { pixels } from "./pixels.js";
+import { grid, gridWidth, gridHeight, gridStride, chunks, nextChunks, drawChunks, chunkWidth, chunkHeight, chunkXAmount, chunkYAmount, chunkStride, gridUpdatedChunks, tick, modal, brushPixel, setBrushPixel, showTooltip, hideTooltip, moveTooltip, setRunState } from "./game.js";
 
 const VERTICES = new Float32Array([
     -1, -1,
@@ -860,7 +861,7 @@ function resizeGrid(gridWidth, gridHeight, gridStride, chunkXAmount, chunkYAmoun
     device.queue.writeBuffer(gridSizeBuffer, 0, new Uint32Array([gridWidth, gridHeight]));
     createBindGroups();
 };
-function render(camera, drawPlacementRestriction, tick, grid, gridUpdated, chunks, brush, selectionGrid) {
+function render(camera, drawPlacementRestriction, tick, grid, gridUpdated, gridUpdatedChunks, chunks, brush, selectionGrid) {
     const encoder = device.createCommandEncoder();
 
     device.queue.writeBuffer(cameraBuffer, 0, camera);
@@ -869,7 +870,21 @@ function render(camera, drawPlacementRestriction, tick, grid, gridUpdated, chunk
 
     device.queue.writeBuffer(tickBuffer, 0, new Uint32Array([tick]));
     if (gridUpdated) {
-        device.queue.writeBuffer(gridBuffer, 0, grid);
+        for (let chunkY = 0; chunkY < chunkYAmount; chunkY++) {
+            for (let chunkX = 0; chunkX < chunkXAmount; chunkX++) {
+                let minX = gridUpdatedChunks[(chunkX + chunkY * chunkXAmount) * chunkStride];
+                let maxX = gridUpdatedChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1];
+                if (maxX >= minX) {
+                    let minY = gridUpdatedChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2];
+                    let maxY = gridUpdatedChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3];
+                    for (let y = minY; y <= maxY; y++) {
+                        let index = (minX + y * gridWidth) * gridStride;
+                        device.queue.writeBuffer(gridBuffer, index * 4, grid, index, (maxX - minX + 1) * gridStride);
+                    }
+                }
+            }
+        }
+        // device.queue.writeBuffer(gridBuffer, 0, grid);
         device.queue.writeBuffer(chunksBuffer, 0, chunks);
     }
     device.queue.writeBuffer(brushBuffer, 0, brush);

@@ -5168,13 +5168,13 @@ generateButton.onclick = function() {
                                                     color = lerpColor(color, [255, 153, 0, 0.585]);
                                                 }
                                                 if (l == 1) {
-                                                    color = lerpColor(color, [0, 0, 0, 0.2]);
+                                                    color = lerpColor(color, [0, 0, 0, 0.16]);
                                                 }
                                                 if (m == 1) {
-                                                    color = lerpColor(color, [255, 0, 0, 0.2]);
+                                                    color = lerpColor(color, [255, 0, 0, 0.16]);
                                                 }
                                                 if (n == 1) {
-                                                    color = lerpColor(color, [0, 0, 255, 0.2]);
+                                                    color = lerpColor(color, [0, 0, 255, 0.16]);
                                                 }
                                                 let distance = Math.abs(color[0] - imageData.data[i]) + Math.abs(color[1] - imageData.data[i + 1]) + Math.abs(color[2] - imageData.data[i + 2]);
                                                 if (best == null || distance < bestDistance) {
