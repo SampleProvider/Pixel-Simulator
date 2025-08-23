@@ -29,7 +29,7 @@
                 <button id="generateSaveCodeButton" class="button"></button>
             </div>
             <div id="saveCodeText">Save Code:</div>
-            <textarea id="saveCode" style="flex-grow: 1;"></textarea>
+            <textarea id="saveCode" style="flex-grow: 1;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
             <div id="saveCodeSettingsToggle">
                 <div></div>
             </div>
@@ -76,7 +76,7 @@
         <div id="multiplayerOverlay">
             <div class="multiplayerTeam">
                 <div class="multiplayerTeamName">Team Alpha</div>
-                <div class="multiplayerHealthBar">0/0</div>
+                <div class="multiplayerScore">0/0</div>
                 <div class="multiplayerPixelInventory">
                     <div class="multiplayerPixel">1</div>
                     <div class="multiplayerPixel">1</div>
@@ -85,7 +85,7 @@
             </div>
             <div class="multiplayerTeam">
                 <div class="multiplayerTeamName">Team Beta</div>
-                <div class="multiplayerHealthBar">0/0</div>
+                <div class="multiplayerScore">0/0</div>
                 <div class="multiplayerPixelInventory">
                     <div class="multiplayerPixel">1</div>
                     <div class="multiplayerPixel">1</div>
@@ -93,16 +93,20 @@
                 </div>
             </div>
         </div>
+        <div id="multiplayerWinContainer">
+            <div id="multiplayerWinTitle"></div>
+            <div id="multiplayerWinSubtitle"></div>
+        </div>
         <template id="multiplayerTeamTemplate">
             <div class="multiplayerTeam">
                 <div class="multiplayerTeamName">Team Alpha</div>
-                <div class="multiplayerHealthBar">0/0</div>
+                <div class="multiplayerScore">0 / 0</div>
                 <div class="multiplayerPixelInventory"></div>
             </div>
         </template>
         <div id="tooltip">
             <div id="tooltipName"></div>
-            <div id="tooltipDescription" style="display: none;"></div>
+            <div id="tooltipDescription"></div>
         </div>
         <div id="congratulationsContainer" class="hidden">
             <div id="congratulations">

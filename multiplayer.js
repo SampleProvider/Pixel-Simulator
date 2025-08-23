@@ -1,4 +1,5 @@
 // import { io } from "socket.io-client";
+import { modal } from "./game.js";
 import { transitionIn, transitionOut } from "./menu.js";
 import { loadPuzzle } from "./puzzles.js";
 import { pixels, pixelImageData } from "./pixels.js";
@@ -18,9 +19,16 @@ socket.on("connect", () => {
 });
 socket.on("connect_error", () => {
     console.log("buh bug connect erorr")
+    multiplayerId = null;
+    multiplayerGameId = null;
     socket.connect();
 });
 socket.on("disconnect", () => {
+    multiplayerId = null;
+    multiplayerGameId = null;
+    if (multiplayerContainer.style.display != "none") {
+        modal("Disconnected", "Disconnected from server", "info");
+    }
     console.log("disconnected")
 });
 
@@ -59,6 +67,9 @@ let draggingPlayerY = 0;
 
 const multiplayerOverlay = document.getElementById("multiplayerOverlay");
 const multiplayerTeamTemplate = document.getElementById("multiplayerTeamTemplate");
+
+const multiplayerWinTitle = document.getElementById("multiplayerWinTitle");
+const multiplayerWinSubtitle = document.getElementById("multiplayerWinSubtitle");
 
 multiplayerJoinGameButton.onclick = () => {
     socket.emit("joinGame", Number(multiplayerGameIdInput.value));
@@ -264,6 +275,7 @@ socket.on("updateGame", function(data) {
             host: data.host,
             public: data.public,
             allowCrafting: data.allowCrafting,
+            scores: [],
             started: data.started,
             div: multiplayerGameList.lastElementChild,
             teamDivs: [],
@@ -312,7 +324,7 @@ socket.on("leaveGame", function() {
 socket.on("startGame", async function() {
     await transitionIn();
     loadPuzzle(null);
-    multiplayerOverlay.style.display = "block";
+    multiplayerOverlay.style.display = "flex";
     playButton.style.display = "none";
     stepButton.style.display = "none";
     simulateButton.style.display = "none";
@@ -321,6 +333,18 @@ socket.on("startGame", async function() {
     gameContainer.style.display = "block";
     menuContainer.style.display = "none";
     await transitionOut();
+});
+socket.on("endGame", function(data) {
+    multiplayerWinTitle.style.opacity = 2;
+    if (data == multiplayerGames[multiplayerGameId].players[multiplayerId].team) {
+        multiplayerWinTitle.innerText = "Victory!";
+    }
+    else {
+        multiplayerWinTitle.innerText = "Defeat";
+    }
+    multiplayerWinTitle.style.opacity = 0;
+    multiplayerWinSubtitle.innerText = "Team " + getTeamName(data) + " won";
+    multiplayerGameId = null;
 });
 
 function updateMultiplayer() {
@@ -333,6 +357,7 @@ function updateMultiplayer() {
             multiplayerLoadingContainer.style.pointerEvents = "auto";
         }
         multiplayerId = null;
+        multiplayerGameId = null;
         return;
     }
     if (socket.connected) {
@@ -346,6 +371,7 @@ function updateMultiplayer() {
             multiplayerState = "disconnected";
         }
         multiplayerId = null;
+        multiplayerGameId = null;
         multiplayerGames = {};
         multiplayerGameList.innerHTML = "No Active Games";
         multiplayerGameListContainer.style.transform = "";

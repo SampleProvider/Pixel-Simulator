@@ -142,8 +142,8 @@ fn vs_main(@location(0) pos: vec2<f32>) -> @builtin(position) vec4<f32> {
 }
 
 @group(1) @binding(6) var<storage, read> colors: array<vec4<f32>>;
-@group(1) @binding(7) var<storage, read> textures: array<vec4<f32>>;
-@group(1) @binding(8) var pixelTexture: texture_2d<f32>;
+@group(1) @binding(7) var<storage, read> textures: array<i32>;
+@group(1) @binding(8) var pixelTexture: texture_2d_array<f32>;
 @group(1) @binding(9) var pixelSampler: sampler;
 
 //@group(1) @binding(9) var<storage, read> texture_pos: array<vec4<f32>>;
@@ -255,8 +255,8 @@ fn get_fire_color(color: vec4<f32>, pos: vec2<f32>) -> vec4<f32> {
 }
 fn get_background_color(pos: vec2<f32>) -> vec4<f32> {
     let index = (u32(pos.x) + u32(pos.y) * grid_size.x) * stride;
-    var noise = perlinNoise2(vec2<f32>(floor(pos) / 6)) + perlinNoise2(vec2<f32>(floor(pos) / 3)) * 0.25 + perlinNoise2(vec2<f32>(floor(pos) / 2)) * 0.75;
-    noise = noise * (random(index) * 1.5 + 0.25) / 1.25;
+    // var noise = perlinNoise2(vec2<f32>(floor(pos) / 6)) + perlinNoise2(vec2<f32>(floor(pos) / 3)) * 0.25 + perlinNoise2(vec2<f32>(floor(pos) / 2)) * 0.75;
+    // noise = noise * (random(index) * 1.5 + 0.25) / 1.25;
     // return vec4<f32>(1.0, 0.55 + noise * 0.15, 0.0, 1.0);
     return vec4<f32>(1.0, 1.0, 1.0, 0.5);
 }
@@ -267,6 +267,9 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
     //return vec4<f32>(1.0, 0.0, 1.0, 1.0);
     //let new_pos = floor(pos.xy * camera.zw + camera.xy);
     var new_pos = pos.xy / camera.zw + camera.xy;
+    // if (camera.z < 5 && camera.w < 5) {
+    //     new_pos = floor(new_pos) + vec2<f32>(0.5, 0.5);
+    // }
     let floor_pos = (new_pos - floor(new_pos));
     // if ((new_pos - floor(new_pos)).x >= 0.99) {
     //     new_pos.x -= 0.01;
@@ -293,66 +296,88 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
         discard;
     }
     let index = (u32(new_pos.x) + u32(new_pos.y) * grid_size.x) * stride;
-    var texture_pos = (new_pos - floor(new_pos)) * textures[u32(grid[index])].zw + textures[u32(grid[index])].xy;
+    // var texture_pos = (new_pos - floor(new_pos)) * textures[u32(grid[index])].zw + textures[u32(grid[index])].xy;
+    // var texture_pos_raw = new_pos * textures[u32(grid[index])].zw;
+    var texture_pos = new_pos;
+    var texture_layer = textures[u32(grid[index])];
+    var texture_interpolation = 0.0;
+    var texture_interpolation_layer = textures[u32(grid[index])];
+    // var texture_pos = new_pos * textures[u32(grid[index])].zw + textures[u32(grid[index])].xy;
     let background_color = get_background_color(new_pos);
     //if (camera.z < 8.0) {
         //texture_pos = textures[u32(grid[index])].xy;
     //}
 
     /// IMPORTANT !!! LINE FIX
-    // if ((new_pos - floor(new_pos)).x >= 0.9) {
-    //     texture_pos.x -= 0.1 * textures[u32(grid[index])].z;
+    // if ((new_pos - floor(new_pos)).x >= 0.99) {
+    //     texture_pos.x -= 0.01 * textures[u32(grid[index])].z;
     // }
-    // if ((new_pos - floor(new_pos)).y >= 0.9) {
-    //     texture_pos.y -= 0.1 * textures[u32(grid[index])].w;
+    // if ((new_pos - floor(new_pos)).y >= 0.99) {
+    //     texture_pos.y -= 0.01 * textures[u32(grid[index])].w;
     // }
-    //texture_pos = vec2<f32>(7.0, 4.0);
-    if (grid[index] == ROTATOR_CLOCKWISE || grid[index] == ROTATOR_COUNTERCLOCKWISE) {
-        texture_pos.x += (floor(time * 0.001 * 6) % 4) * textures[u32(grid[index])].z;
-        // texture_pos.x += 3.0;
+    // if ((new_pos - floor(new_pos)).x <= 0.01) {
+    //     texture_pos.x += 0.01 * textures[u32(grid[index])].z;
+    // }
+    // if ((new_pos - floor(new_pos)).y <= 0.01) {
+    //     texture_pos.y += 0.01 * textures[u32(grid[index])].w;
+    // }
+    if (grid[index] == ROTATOR_CLOCKWISE) {
+        texture_layer += i32(floor(time * 0.001 * 6) % 4);
+    }
+    if (grid[index] == ROTATOR_COUNTERCLOCKWISE) {
+        texture_layer += i32((6 - floor(time * 0.001 * 6) % 4) % 4) - 1;
     }
     if (grid[index] == DETONATOR) {
-        texture_pos.x += (floor(time * 0.001 * 2) % 2) * textures[u32(grid[index])].z;
-        // texture_pos.x += 3.0;
+        texture_layer += i32(floor(time * 0.001 * 2) % 2);
     }
-    // if (grid[index] == 41) {
-    //     texture_pos.x += (2.5 - abs(4.5 - floor(time * 0.001 * 10 + 2) % 10)) * textures[u32(grid[index])].z;
-    //     texture_pos.y += (floor((time * 0.001 * 10 + 2) / 5) % 2) * (1 - (new_pos - floor(new_pos)).y * 2) * textures[u32(grid[index])].w;
-    //     // if ()
-    //     // texture_pos.x += 3.0;
+    if (grid[index] == DELETER) {
+        // // color = mix(vec4<f32>(0.8, 0.0, 1.0, 1.0), vec4<f32>(1.0, 0.0, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 1000 / 96) + 1) / 2);
+        // color = mix(vec4<f32>(0.8, 0.0, 1.0, 1.0), vec4<f32>(1.0, 0.0, 1.0, 1.0), (sin(time * 0.001 * 3.1415) + 1) / 2);
+        texture_interpolation = (sin(time * 0.001 * 3.1415) + 1) / 2;
+        texture_interpolation_layer += 1;
+    }
+    if (grid[index] == LASER_LEFT || grid[index] == LASER_UP || grid[index] == LASER_RIGHT || grid[index] == LASER_DOWN) {
+        // color = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 3) + 1) / 2);
+        texture_interpolation = (sin(time * 0.001 * 3.1415 * 3) + 1) / 2;
+        texture_interpolation_layer += 1;
+    }
+    if (grid[index] == COLOR_WELL || grid[index] == PASSIVE_COLOR_GENERATOR || grid[index] == ACTIVE_COLOR_GENERATOR) {
+        texture_interpolation = time * 0.002 - floor(time * 0.002);
+        texture_layer += i32(floor(time * 0.002 + 5) % 6);
+        texture_interpolation_layer += i32(floor(time * 0.002) % 6);
+        // color = vec4<f32>(min(max(2 * abs((time * 0.001) % 3 - 1.5) - 1, 0), 1), min(max(-2 * abs((time * 0.001) % 3 - 1) + 2, 0), 1), min(max(-2 * abs((time * 0.001) % 3 - 2) + 2, 0), 1), 1.0);
+    }
+    // // if (grid[index] == PASSIVE_COLOR_GENERATOR && (floor_pos.x * 5 - (1.0 / 512.0) + 0.000045) % 2 >= 1 && (floor_pos.y * 5 - (1.0 / 512.0) + 0.000045) % 2 >= 1) {
+    // if (grid[index] == PASSIVE_COLOR_GENERATOR && all(color == vec4<f32>(1.0, 127.0 / 255.0, 127.0 / 255.0, 1.0))) {
+    // // if (grid[index] == PASSIVE_COLOR_GENERATOR && floor_pos.x * 5 >= 1 - 2.7e-3 && floor_pos.x * 5 < 2 && floor_pos.y * 5 >= 1 - 1e-5 && floor_pos.y * 5 < 2) {
+    // // if (grid[index] == PASSIVE_COLOR_GENERATOR && floor_pos.x * 5 >= 1 - 2e-3 && floor_pos.x * 5 < 2 && floor_pos.y * 5 >= 1 - 1e-5 && floor_pos.y * 5 < 2) {
+    // // if (grid[index] == PASSIVE_COLOR_GENERATOR && floor_pos.x * 5 > 1 - (1.0 / 512.0) + 0.000045 && floor_pos.x * 5 < 2 && floor_pos.y * 5 >= 1 - 1e-5 && floor_pos.y * 5 < 2) {
+    //     color = vec4<f32>(min(max(2 * abs((time * 0.001) % 3 - 1.5) - 1, 0), 1), min(max(-2 * abs((time * 0.001) % 3 - 1) + 2, 0), 1), min(max(-2 * abs((time * 0.001) % 3 - 2) + 2, 0), 1), 1.0);
+    //     color = mix(color, vec4<f32>(1.0, 1.0, 1.0, 1.0), 0.5);
     // }
-    let sampledColor = textureSample(pixelTexture, pixelSampler, texture_pos);
+    // if (grid[index] == ACTIVE_COLOR_GENERATOR && all(color == vec4<f32>(1.0, 0.0, 0.0, 1.0))) {
+    //     color = vec4<f32>(min(max(2 * abs((time * 0.001) % 3 - 1.5) - 1, 0), 1), min(max(-2 * abs((time * 0.001) % 3 - 1) + 2, 0), 1), min(max(-2 * abs((time * 0.001) % 3 - 2) + 2, 0), 1), 1.0);
+    // }
+    // let sampledColor = textureSample(pixelTexture, pixelSampler, texture_pos);
+    // let sampledColor = textureSampleGrad(pixelTexture, pixelSampler, texture_pos, texture_layer, dpdx(texture_pos_raw), dpdy(texture_pos_raw));
+    let sampledColor = textureSample(pixelTexture, pixelSampler, texture_pos, texture_layer);
+    let sampledInterpolationColor = textureSample(pixelTexture, pixelSampler, texture_pos, texture_interpolation_layer);
+    // let sampledColor = textureSampleLevel(pixelTexture, pixelSampler, texture_pos, texture_layer, 6);
     var color: vec4<f32>;
     // if (u32(grid[index]) == 0) {
     //     color = background_color;
     // }
     // else
-    if (textures[u32(grid[index])].x == -1) {
+    if (textures[u32(grid[index])] == -1) {
         // MASSIVE BUG BUH
         // color = get_color(grid[index], vec4<f32>(grid[index + 3], grid[index + 4], grid[index + 5], grid[index + 6]), new_pos);
         color = get_color(grid[index], vec4<f32>(0.0, 0.0, 0.0, 0.0), new_pos);
     }
     else {
-        color = sampledColor;
+        color = mix(sampledColor, sampledInterpolationColor, texture_interpolation);
         // if (color.w == 0.0) {
         //     // color = vec4<f32>(1.0, 1.0, 1.0, 1.0);
         // }
-    }
-    if (grid[index] == LASER_LEFT && floor_pos.x * 6 <= 3 && floor_pos.y * 6 >= 2 && floor_pos.y * 6 <= 4) {
-        color = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 3) + 1) / 2);
-    }
-    if (grid[index] == LASER_UP && floor_pos.x * 6 >= 2 && floor_pos.x * 6 <= 4 && floor_pos.y * 6 <= 3) {
-        color = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 3) + 1) / 2);
-    }
-    if (grid[index] == LASER_RIGHT && floor_pos.x * 6 >= 3 && floor_pos.y * 6 >= 2 && floor_pos.y * 6 <= 4) {
-        color = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 3) + 1) / 2);
-    }
-    if (grid[index] == LASER_DOWN && floor_pos.x * 6 >= 2 && floor_pos.x * 6 <= 4 && floor_pos.y * 6 >= 3) {
-        color = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 3) + 1) / 2);
-    }
-    if (grid[index] == DELETER && floor_pos.x * 4 >= 1 && floor_pos.x * 4 <= 3 && floor_pos.y * 4 >= 1 && floor_pos.y * 4 <= 3) {
-        // color = mix(vec4<f32>(0.8, 0.0, 1.0, 1.0), vec4<f32>(1.0, 0.0, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 1000 / 96) + 1) / 2);
-        color = mix(vec4<f32>(0.8, 0.0, 1.0, 1.0), vec4<f32>(1.0, 0.0, 1.0, 1.0), (sin(time * 0.001 * 3.1415) + 1) / 2);
     }
     if (grid[index] == COMPARATOR_LEFT_OFF || grid[index] == COMPARATOR_LEFT_ON) {
         if (floor_pos.x * 12 >= 5 && floor_pos.x * 12 <= 7 && floor_pos.y * 3 <= 1) {
@@ -422,20 +447,6 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
             }
         }
     }
-    if (grid[index] == COLOR_WELL && all(color == vec4<f32>(1.0, 0.0, 0.0, 1.0))) {
-        color = vec4<f32>(min(max(2 * abs((time * 0.001) % 3 - 1.5) - 1, 0), 1), min(max(-2 * abs((time * 0.001) % 3 - 1) + 2, 0), 1), min(max(-2 * abs((time * 0.001) % 3 - 2) + 2, 0), 1), 1.0);
-    }
-    // if (grid[index] == PASSIVE_COLOR_GENERATOR && (floor_pos.x * 5 - (1.0 / 512.0) + 0.000045) % 2 >= 1 && (floor_pos.y * 5 - (1.0 / 512.0) + 0.000045) % 2 >= 1) {
-    if (grid[index] == PASSIVE_COLOR_GENERATOR && all(color == vec4<f32>(1.0, 127.0 / 255.0, 127.0 / 255.0, 1.0))) {
-    // if (grid[index] == PASSIVE_COLOR_GENERATOR && floor_pos.x * 5 >= 1 - 2.7e-3 && floor_pos.x * 5 < 2 && floor_pos.y * 5 >= 1 - 1e-5 && floor_pos.y * 5 < 2) {
-    // if (grid[index] == PASSIVE_COLOR_GENERATOR && floor_pos.x * 5 >= 1 - 2e-3 && floor_pos.x * 5 < 2 && floor_pos.y * 5 >= 1 - 1e-5 && floor_pos.y * 5 < 2) {
-    // if (grid[index] == PASSIVE_COLOR_GENERATOR && floor_pos.x * 5 > 1 - (1.0 / 512.0) + 0.000045 && floor_pos.x * 5 < 2 && floor_pos.y * 5 >= 1 - 1e-5 && floor_pos.y * 5 < 2) {
-        color = vec4<f32>(min(max(2 * abs((time * 0.001) % 3 - 1.5) - 1, 0), 1), min(max(-2 * abs((time * 0.001) % 3 - 1) + 2, 0), 1), min(max(-2 * abs((time * 0.001) % 3 - 2) + 2, 0), 1), 1.0);
-        color = mix(color, vec4<f32>(1.0, 1.0, 1.0, 1.0), 0.5);
-    }
-    if (grid[index] == ACTIVE_COLOR_GENERATOR && all(color == vec4<f32>(1.0, 0.0, 0.0, 1.0))) {
-        color = vec4<f32>(min(max(2 * abs((time * 0.001) % 3 - 1.5) - 1, 0), 1), min(max(-2 * abs((time * 0.001) % 3 - 1) + 2, 0), 1), min(max(-2 * abs((time * 0.001) % 3 - 2) + 2, 0), 1), 1.0);
-    }
     if (color.w != 1.0) {
         color = mix(background_color, color, color.w);
         // color = mix(color, vec4<f32>(1.0, 1.0, 1.0, 1.0), color.w);
@@ -468,6 +479,58 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
     if ((grid[index + 1] & 4) == 4 && (abs(new_pos.x - round(new_pos.x)) < 0.2 - range || abs(new_pos.y - round(new_pos.y)) < 0.2 - range)) {
         color = mix(color, vec4<f32>(0.0, 0.0, 1.0, 1.0), 0.2);
     }
+
+    if ((grid[index + 2] & 16) == 16) {
+        var king_of_the_hill_color = vec4<f32>(1.0, 0.0, 1.0, 1.0);
+        if ((grid[index + 1] & 2) == 2) {
+            king_of_the_hill_color = vec4<f32>(1.0, 0.0, 0.0, 1.0);
+        }
+        if ((grid[index + 1] & 4) == 4) {
+            king_of_the_hill_color = vec4<f32>(0.0, 0.0, 1.0, 1.0);
+        }
+        color = mix(color, king_of_the_hill_color, 0.2);
+        if (floor_pos.x * 5 <= 1) {
+            if (u32(new_pos.x) != 0 && (grid[index - stride + 2] & 16) == 0) {
+                color = king_of_the_hill_color;
+            }
+        }
+        if (floor_pos.x * 5 >= 4) {
+            if (u32(new_pos.x) != grid_size.x - 1 && (grid[index + stride + 2] & 16) == 0) {
+                color = king_of_the_hill_color;
+            }
+        }
+        if (floor_pos.y * 5 <= 1) {
+            if (u32(new_pos.y) != 0 && (grid[index - grid_size.x * stride + 2] & 16) == 0) {
+                color = king_of_the_hill_color;
+            }
+        }
+        if (floor_pos.y * 5 >= 4) {
+            if (u32(new_pos.y) != grid_size.y - 1 && (grid[index + grid_size.x * stride + 2] & 16) == 0) {
+                color = king_of_the_hill_color;
+            }
+        }
+        if (floor_pos.x * 5 <= 1 && floor_pos.y * 5 <= 1) {
+            if (u32(new_pos.x) != 0 && u32(new_pos.y) != 0 && (grid[index - grid_size.x * stride - stride + 2] & 16) == 0) {
+                color = king_of_the_hill_color;
+            }
+        }
+        if (floor_pos.x * 5 >= 4 && floor_pos.y * 5 <= 1) {
+            if (u32(new_pos.x) != grid_size.x - 1 && u32(new_pos.y) != 0 && (grid[index - grid_size.x * stride + stride + 2] & 16) == 0) {
+                color = king_of_the_hill_color;
+            }
+        }
+        if (floor_pos.x * 5 <= 1 && floor_pos.y * 5 >= 4) {
+            if (u32(new_pos.x) != 0 && u32(new_pos.y) != grid_size.y - 1 && (grid[index + grid_size.x * stride - stride + 2] & 16) == 0) {
+                color = king_of_the_hill_color;
+            }
+        }
+        if (floor_pos.x * 5 >= 4 && floor_pos.y * 5 >= 4) {
+            if (u32(new_pos.x) != grid_size.x - 1 && u32(new_pos.y) != grid_size.y - 1 && (grid[index + grid_size.x * stride + stride + 2] & 16) == 0) {
+                color = king_of_the_hill_color;
+            }
+        }
+    }
+
     //if (grid[index] != 0) {
     //color.r = abs(grid[index + 1] / 10);
     //color.g = abs(grid[index + 2] / 10);
@@ -484,40 +547,47 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
             id = u32(brush[3]);
         }
     }
-    var texture_pos2 = (new_pos - floor(new_pos)) * textures[id].zw + textures[id].xy;
-    if (id == ROTATOR_CLOCKWISE || id == ROTATOR_COUNTERCLOCKWISE) {
-        texture_pos2.x += (floor(time * 0.001 * 6) % 4) * textures[id].z;
+    // var texture_pos2 = (new_pos - floor(new_pos)) * textures[id].zw + textures[id].xy;
+    // var texture_layer2 = 0;
+    var texture_pos2 = new_pos;
+    var texture_layer2 = textures[id];
+    var texture_interpolation2 = 0.0;
+    var texture_interpolation_layer2 = textures[id];
+    if (id == ROTATOR_CLOCKWISE) {
+        texture_layer2 += i32(floor(time * 0.001 * 6) % 4);
+    }
+    if (id == ROTATOR_COUNTERCLOCKWISE) {
+        texture_layer2 += i32((6 - floor(time * 0.001 * 6) % 4) % 4) - 1;
     }
     if (id == DETONATOR) {
-        texture_pos2.x += (floor(time * 0.001 * 2) % 2) * textures[id].z;
+        texture_layer2 += i32(floor(time * 0.001 * 2) % 2);
     }
-    let sampledColor2 = textureSample(pixelTexture, pixelSampler, texture_pos2);
+    if (id == DELETER) {
+        texture_interpolation2 = (sin(time * 0.001 * 3.1415) + 1) / 2;
+        texture_interpolation_layer2 += 1;
+    }
+    if (id == LASER_LEFT || id == LASER_UP || id == LASER_RIGHT || id == LASER_DOWN) {
+        texture_interpolation2 = (sin(time * 0.001 * 3.1415 * 3) + 1) / 2;
+        texture_interpolation_layer2 += 1;
+    }
+    if (id == COLOR_WELL || id == PASSIVE_COLOR_GENERATOR || id == ACTIVE_COLOR_GENERATOR) {
+        texture_interpolation2 = time * 0.002 - floor(time * 0.002);
+        texture_layer2 += i32(floor(time * 0.002 + 5) % 6);
+        texture_interpolation_layer2 += i32(floor(time * 0.002) % 6);
+    }
+    let sampledColor2 = textureSample(pixelTexture, pixelSampler, texture_pos2, texture_layer2);
+    let sampledInterpolationColor2 = textureSample(pixelTexture, pixelSampler, texture_pos2, texture_interpolation_layer2);
     if (selection_grid[0] != -1) {
         if (new_pos.x >= brush[0] && new_pos.x < brush[0] + brush[2] && new_pos.y >= brush[1] && new_pos.y < brush[1] + brush[3]) {
             let index_2 = (u32(new_pos.x - brush[0]) + u32(new_pos.y - brush[1]) * u32(brush[2])) * stride;
             var color_2: vec4<f32>;
-            if (textures[id].x == -1) {
+            if (textures[id] == -1) {
                 // also bug pls fix
                 // color_2 = get_color(selection_grid[index_2], vec4<f32>(selection_grid[index_2 + 3], selection_grid[index_2 + 4], selection_grid[index_2 + 5], selection_grid[index_2 + 6]), new_pos);
                 color_2 = get_color(selection_grid[index_2], vec4<f32>(0.0, 0.0, 0.0, 0.0), new_pos);
             }
             else {
-                color_2 = sampledColor2;
-            }
-            if (selection_grid[index_2] == LASER_LEFT && floor_pos.x * 6 <= 3 && floor_pos.y * 6 >= 2 && floor_pos.y * 6 <= 4) {
-                color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 3) + 1) / 2);
-            }
-            if (selection_grid[index_2] == LASER_UP && floor_pos.x * 6 >= 2 && floor_pos.x * 6 <= 4 && floor_pos.y * 6 <= 3) {
-                color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 3) + 1) / 2);
-            }
-            if (selection_grid[index_2] == LASER_RIGHT && floor_pos.x * 6 >= 3 && floor_pos.y * 6 >= 2 && floor_pos.y * 6 <= 4) {
-                color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 3) + 1) / 2);
-            }
-            if (selection_grid[index_2] == LASER_DOWN && floor_pos.x * 6 >= 2 && floor_pos.x * 6 <= 4 && floor_pos.y * 6 >= 3) {
-                color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 3) + 1) / 2);
-            }
-            if (selection_grid[index_2] == DELETER && floor_pos.x * 4 >= 1 && floor_pos.x * 4 <= 3 && floor_pos.y * 4 >= 1 && floor_pos.y * 4 <= 3) {
-                color_2 = mix(vec4<f32>(0.8, 0.0, 1.0, 1.0), vec4<f32>(1.0, 0.0, 1.0, 1.0), (sin(time * 0.001 * 3.1415) + 1) / 2);
+                color_2 = mix(sampledColor2, sampledInterpolationColor2, texture_interpolation2);
             }
             if (color_2.w != 1.0) {
                 color_2 = mix(background_color, color_2, color_2.w);
@@ -560,27 +630,12 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
                 // if (id == 0) {
                 //     color_2 = background_color;
                 // }
-                if (textures[id].x == -1) {
+                if (textures[id] == -1) {
                     // color_2 = get_color(brush[3], vec4<f32>(brush[4], brush[5], brush[6], brush[7]) + random(index) * vec4<f32>(brush[8], brush[9], brush[10], brush[11]), new_pos);
                     color_2 = get_color(i32(brush[3]), vec4<f32>(brush[4], brush[5], brush[6], brush[7]) + random(index) * vec4<f32>(brush[8], brush[9], brush[10], brush[11]), new_pos);
                 }
                 else {
-                    color_2 = sampledColor2;
-                }
-                if (id == LASER_LEFT && floor_pos.x * 6 <= 3 && floor_pos.y * 6 >= 2 && floor_pos.y * 6 <= 4) {
-                    color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 3) + 1) / 2);
-                }
-                if (id == LASER_UP && floor_pos.x * 6 >= 2 && floor_pos.x * 6 <= 4 && floor_pos.y * 6 <= 3) {
-                    color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 3) + 1) / 2);
-                }
-                if (id == LASER_RIGHT && floor_pos.x * 6 >= 3 && floor_pos.y * 6 >= 2 && floor_pos.y * 6 <= 4) {
-                    color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 3) + 1) / 2);
-                }
-                if (id == LASER_DOWN && floor_pos.x * 6 >= 2 && floor_pos.x * 6 <= 4 && floor_pos.y * 6 >= 3) {
-                    color_2 = mix(vec4<f32>(1.0, 0.0, 0.55, 1.0), vec4<f32>(0.25, 0.45, 1.0, 1.0), (sin(time * 0.001 * 3.1415 * 3) + 1) / 2);
-                }
-                if (id == DELETER && floor_pos.x * 4 >= 1 && floor_pos.x * 4 <= 3 && floor_pos.y * 4 >= 1 && floor_pos.y * 4 <= 3) {
-                    color_2 = mix(vec4<f32>(0.8, 0.0, 1.0, 1.0), vec4<f32>(1.0, 0.0, 1.0, 1.0), (sin(time * 0.001 * 3.1415) + 1) / 2);
+                    color_2 = mix(sampledColor2, sampledInterpolationColor2, texture_interpolation2);
                 }
                 if (color_2.w != 1.0) {
                     color_2 = mix(background_color, color_2, color_2.w);

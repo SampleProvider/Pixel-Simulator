@@ -1,4 +1,4 @@
-const pixelTexture = await createImageBitmap(await (await fetch("pixels.png")).blob());
+const pixelTexture = await createImageBitmap(await (await fetch("pixel-mipmaps.png")).blob());
 
 const ID = 0;
 const PIXEL_DATA = 1;
@@ -4883,6 +4883,8 @@ canvas.height = 1;
 // ctx.mozImageSmoothingEnabled = false;
 
 let pixelColors = [];
+let textureMap = new Map();
+let textureLayers = 0;
 for (let i = 0; i < pixels.length; i++) {
     // if (!pixels[i].pickable) {
     //     continue;
@@ -4898,10 +4900,23 @@ for (let i = 0; i < pixels.length; i++) {
         ctx.fillRect(0, 0, 1, 1);
     }
     else {
-        // ctx.drawImage(pixelTexture, pixels[i].texture[0], pixels[i].texture[1], pixels[i].texture[2], pixels[i].texture[3], 0, 0, 48, 48);
-        ctx.drawImage(pixelTexture, pixels[i].texture[0], pixels[i].texture[1], pixels[i].texture[2], pixels[i].texture[3], 0, 0, 1, 1);
+        ctx.drawImage(pixelTexture, 235, textureLayers * 120, 1, 1, 0, 0, 1, 1);
+        if (Array.isArray(pixels[i].texture)) {
+            for (let j in pixels[i].texture) {
+                if (textureMap.has(pixels[i].texture[j][0] + ":" + pixels[i].texture[j][1] + ":" + pixels[i].texture[j][2] + ":" + pixels[i].texture[j][3])) {
+                    continue;
+                }
+                textureMap.set(pixels[i].texture[j][0] + ":" + pixels[i].texture[j][1] + ":" + pixels[i].texture[j][2] + ":" + pixels[i].texture[j][3], textureLayers);
+                textureLayers += 1;
+            }
+        }
+        else {
+            if (!textureMap.has(pixels[i].texture[0] + ":" + pixels[i].texture[1] + ":" + pixels[i].texture[2] + ":" + pixels[i].texture[3])) {
+                textureMap.set(pixels[i].texture[0] + ":" + pixels[i].texture[1] + ":" + pixels[i].texture[2] + ":" + pixels[i].texture[3], textureLayers);
+                textureLayers += 1;
+            }
+        }
     }
-    // let imageData = ctx.getImageData(24, 24, 1, 1);
     let imageData = ctx.getImageData(0, 0, 1, 1);
     pixelColors.push(imageData.data);
 }
@@ -4957,6 +4972,7 @@ input.onchange = function() {
 let generating = false;
 
 let calculatedColors = new Map();
+let calculatedColors2 = new Map();
 
 generateButton.onclick = function() {
     if (generating) {
@@ -4973,6 +4989,7 @@ generateButton.onclick = function() {
                 let scale = scaleInput.value;
                 let width = Math.round(image.width * scale);
                 let height = Math.round(image.height * scale);
+                let noise = noiseInput.value;
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext("2d");
@@ -5152,10 +5169,17 @@ generateButton.onclick = function() {
                         }
                         let best = null;
                         let bestDistance = 0;
+                        let best2 = null;
+                        let best2Distance = 0;
+
+                        // imageData.data[i] += Math.random() * noise;
+                        // imageData.data[i + 1] += Math.random() * noise;
+                        // imageData.data[i + 2] += Math.random() * noise;
                         
                         let imageColor = imageData.data[i] * 256 * 256 + imageData.data[i + 1] * 256 + imageData.data[i + 2];
                         if (calculatedColors.has(imageColor)) {
-                            best = calculatedColors.get(imageColor);
+                            [best, bestDistance] = calculatedColors.get(imageColor);
+                            [best2, best2Distance] = calculatedColors.get(imageColor);
                         }
                         else {
                             for (let j in pixels) {
@@ -5178,19 +5202,34 @@ generateButton.onclick = function() {
                                                 }
                                                 let distance = Math.abs(color[0] - imageData.data[i]) + Math.abs(color[1] - imageData.data[i + 1]) + Math.abs(color[2] - imageData.data[i + 2]);
                                                 if (best == null || distance < bestDistance) {
+                                                    best2 = best;
+                                                    best2Distance = bestDistance;
                                                     best = [j, k, l + m * 4 + n * 8];
                                                     bestDistance = distance;
+                                                }
+                                                else if (best2 == null || distance < best2Distance) {
+                                                    best2 = [j, k, l + m * 4 + n * 8];
+                                                    best2Distance = distance;
                                                 }
                                             }
                                         }
                                     }
                                 }
                             }
-                            calculatedColors.set(imageColor, best);
+                            calculatedColors.set(imageColor, [best, bestDistance]);
+                            calculatedColors.set(imageColor, [best2, best2Distance]);
                         }
+                        // if (Math.random() * bestDistance < Math.random() * best2Distance) {
                         grid[i + ID] = best[0];
                         grid[i + PIXEL_DATA] = best[1];
                         grid[i + PUZZLE_DATA] = best[2];
+                        // }
+                        // else {
+                            
+                        // grid[i + ID] = best2[0];
+                        // grid[i + PIXEL_DATA] = best2[1];
+                        // grid[i + PUZZLE_DATA] = best2[2];
+                        // }
                         i += 4;
                     }
                     progressBarText.innerText = (i / imageData.data.length * 100).toFixed(2) + "%";

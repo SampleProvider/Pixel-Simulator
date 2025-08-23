@@ -1,10 +1,5 @@
-import { grid, gridWidth, gridHeight, gridStride, chunks, nextChunks, drawChunks, chunkWidth, chunkHeight, chunkXAmount, chunkYAmount, chunkStride, gridUpdatedChunks, tick, modal, brushPixel, setBrushPixel, showTooltip, hideTooltip, moveTooltip, setRunState } from "./game.js";
-// import { imageBitmap } from "./renderer.js";
-import { random, randomSeed } from "./random.js";
-import { currentPuzzle } from "./puzzles.js";
-import { multiplayerId, multiplayerGameId, multiplayerGames, multiplayerPixelInventory } from "./multiplayer.js";
-
 const pixelTexture = await createImageBitmap(await (await fetch("pixels.png")).blob());
+
 const ID = 0;
 const PIXEL_DATA = 1;
 const PUZZLE_DATA = 2;
@@ -19,2726 +14,6 @@ const VEL_Y = 6;
 const GAS = 0;
 const LIQUID = 1;
 const SOLID = 2;
-
-function isOnGrid(x, y) {
-    return x >= 0 && x < gridWidth && y >= 0 && y < gridHeight;
-};
-function isAir(x, y) {
-    return isOnGrid(x, y) && (grid[(x + y * gridWidth) * gridStride + ID] == AIR || grid[(x + y * gridWidth) * gridStride + ID] == DELETER || grid[(x + y * gridWidth) * gridStride + ID] == MONSTER);
-};
-function isGas(x, y) {
-    return isOnGrid(x, y) && pixels[grid[(x + y * gridWidth) * gridStride + ID]].state == GAS;
-};
-function isFluid(x, y) {
-    return isOnGrid(x, y) && pixels[grid[(x + y * gridWidth) * gridStride + ID]].state != SOLID;
-};
-function isPassableSolid(x, y) {
-    return isOnGrid(x, y) && pixels[grid[(x + y * gridWidth) * gridStride + ID]].state != SOLID;
-};
-function isMoveableSolid(x, y) {
-    return isOnGrid(x, y) && grid[(x + y * gridWidth) * gridStride + UPDATED] != tick && pixels[grid[(x + y * gridWidth) * gridStride + ID]].state != SOLID;
-};
-function updated(x, y) {
-    return isOnGrid(x, y) && grid[(x + y * gridWidth) * gridStride + UPDATED] == tick;
-};
-// function isAir(x, y) {
-//     return isOnGrid(x, y) && grid[(x + y * gridWidth) * gridStride + ID] == 0 && grid[(x + y * gridWidth) * gridStride + UPDATED] != tick;
-// };
-function isId(x, y, id) {
-    return isOnGrid(x, y) && grid[(x + y * gridWidth) * gridStride + ID] == id;
-};
-
-function isTouching(x, y, array) {
-    if (x > 0) {
-        let index = (x - 1 + y * gridWidth) * gridStride;
-        for (let i in array) {
-            if (grid[index + ID] == array[i]) {
-                return true;
-            }
-        }
-    }
-    if (x < gridWidth - 1) {
-        let index = (x + 1 + y * gridWidth) * gridStride;
-        for (let i in array) {
-            if (grid[index + ID] == array[i]) {
-                return true;
-            }
-        }
-    }
-    if (y > 0) {
-        let index = (x + (y - 1) * gridWidth) * gridStride;
-        for (let i in array) {
-            if (grid[index + ID] == array[i]) {
-                return true;
-            }
-        }
-    }
-    if (y < gridHeight - 1) {
-        let index = (x + (y + 1) * gridWidth) * gridStride;
-        for (let i in array) {
-            if (grid[index + ID] == array[i]) {
-                return true;
-            }
-        }
-    }
-    return false;
-};
-function getTouching(x, y, array) {
-    let number = 0;
-    if (x > 0) {
-        let index = (x - 1 + y * gridWidth) * gridStride;
-        for (let i in array) {
-            if (grid[index + ID] == array[i]) {
-                number += 1;
-                break;
-            }
-        }
-    }
-    if (x < gridWidth - 1) {
-        let index = (x + 1 + y * gridWidth) * gridStride;
-        for (let i in array) {
-            if (grid[index + ID] == array[i]) {
-                number += 1;
-                break;
-            }
-        }
-    }
-    if (y > 0) {
-        let index = (x + (y - 1) * gridWidth) * gridStride;
-        for (let i in array) {
-            if (grid[index + ID] == array[i]) {
-                number += 1;
-                break;
-            }
-        }
-    }
-    if (y < gridHeight - 1) {
-        let index = (x + (y + 1) * gridWidth) * gridStride;
-        for (let i in array) {
-            if (grid[index + ID] == array[i]) {
-                number += 1;
-                break;
-            }
-        }
-    }
-    return number;
-};
-function forTouching(x, y, action) {
-    if (x > 0) {
-        action(x - 1, y);
-    }
-    if (x < gridWidth - 1) {
-        action(x + 1, y);
-    }
-    if (y > 0) {
-        action(x, y - 1);
-    }
-    if (y < gridHeight - 1) {
-        action(x, y + 1);
-    }
-};
-function isTouchingDiagonal(x, y, array) {
-    for (let i = Math.max(y - 1, 0); i <= Math.min(y + 1, gridHeight - 1); i++) {
-        for (let j = Math.max(x - 1, 0); j <= Math.min(x + 1, gridWidth - 1); j++) {
-            if (j == x && i == y) {
-                continue;
-            }
-            let index = (j + i * gridWidth) * gridStride;
-            for (let i in array) {
-                if (grid[index + ID] == array[i]) {
-                    return true;
-                }
-            }
-        }
-    }
-    return false;
-};
-function getTouchingDiagonal(x, y, array) {
-    let number = 0;
-    for (let i = Math.max(y - 1, 0); i <= Math.min(y + 1, gridHeight - 1); i++) {
-        for (let j = Math.max(x - 1, 0); j <= Math.min(x + 1, gridWidth - 1); j++) {
-            if (j == x && i == y) {
-                continue;
-            }
-            let index = (j + i * gridWidth) * gridStride;
-            for (let i in array) {
-                if (grid[index + ID] == array[i]) {
-                    number += 1;
-                    break;
-                }
-            }
-        }
-    }
-    return number;
-};
-function forTouchingDiagonal(x, y, action) {
-    for (let i = Math.max(y - 1, 0); i <= Math.min(y + 1, gridHeight - 1); i++) {
-        for (let j = Math.max(x - 1, 0); j <= Math.min(x + 1, gridWidth - 1); j++) {
-            if (j == x && i == y) {
-                continue;
-            }
-            action(j, i);
-        }
-    }
-};
-function isInRange(x, y, radiusSquared, array) {
-    let radius = Math.floor(Math.sqrt(radiusSquared));
-    for (let i = Math.max(y - radius, 0); i <= Math.min(y + radius, gridHeight - 1); i++) {
-        for (let j = Math.max(x - radius, 0); j <= Math.min(x + radius, gridWidth - 1); j++) {
-            if (Math.pow(x - j, 2) + Math.pow(y - i, 2) <= radiusSquared) {
-                let index = (j + i * gridWidth) * gridStride;
-                for (let i in array) {
-                    if (grid[index + ID] == array[i]) {
-                        return true;
-                    }
-                }
-            }
-        }
-    }
-    return false;
-};
-
-function addPixel(x, y, id) {
-    let index = (x + y * gridWidth) * gridStride;
-    grid[index + ID] = id;
-    grid[index + UPDATED] = tick;
-    // if (pixels[id].color != null) {
-    //     grid[index + COLOR_R] = pixels[id].color[0] / 255;
-    //     grid[index + COLOR_G] = pixels[id].color[1] / 255;
-    //     grid[index + COLOR_B] = pixels[id].color[2] / 255;
-    //     grid[index + COLOR_A] = pixels[id].color[3];
-    //     if (pixels[id].noise != null) {
-    //         let r = random();
-    //         grid[index + COLOR_R] += pixels[id].noise[0] / 255 * r;
-    //         grid[index + COLOR_G] += pixels[id].noise[1] / 255 * r;
-    //         grid[index + COLOR_B] += pixels[id].noise[2] / 255 * r;
-    //         grid[index + COLOR_A] += pixels[id].noise[3] * r;
-    //     }
-    // }
-    addUpdatedChunk(x, y);
-};
-function addFire(x, y, fire) {
-    let index = (x + y * gridWidth) * gridStride;
-    grid[index + PIXEL_DATA] &= ~1;
-    grid[index + PIXEL_DATA] |= fire;
-    addUpdatedChunk(x, y);
-};
-
-function addTeam(x, y, team) {
-    grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] &= 1;
-    if (team == 0) {
-        grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] |= 2;
-    }
-    else if (team == 1) {
-        grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] |= 4;
-    }
-};
-function copyTeam(x, y, x1, y1) {
-    if (x == x1 && y == y1) {
-        return;
-    }
-    let index = (x + y * gridWidth) * gridStride;
-    let index1 = (x1 + y1 * gridWidth) * gridStride;
-    grid[index1 + PIXEL_DATA] &= 1;
-    grid[index1 + PIXEL_DATA] |= (grid[index + PIXEL_DATA] & ~1);
-};
-
-function addUpdatedChunk(x, y) {
-    if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) {
-        alert(x + " " + y)
-    }
-    let buffer = 2;
-
-    let chunkX = Math.floor(x / chunkWidth);
-    let chunkY = Math.floor(y / chunkHeight);
-    let index = (Math.floor(x / chunkWidth) + Math.floor(y / chunkHeight) * chunkXAmount) * chunkStride;
-    nextChunks[index] = Math.min(nextChunks[index], Math.max(x - buffer, chunkX * chunkWidth));
-    nextChunks[index + 1] = Math.max(nextChunks[index + 1], Math.min(x + buffer, chunkX * chunkWidth + chunkWidth - 1));
-    nextChunks[index + 2] = Math.min(nextChunks[index + 2], Math.max(y - buffer, chunkY * chunkHeight));
-    nextChunks[index + 3] = Math.max(nextChunks[index + 3], Math.min(y + buffer, chunkY * chunkHeight + chunkHeight - 1));
-
-    if (x >= buffer && x % chunkWidth < buffer) {
-        nextChunks[index - chunkStride] = Math.min(nextChunks[index - chunkStride], x - buffer);
-        nextChunks[index - chunkStride + 1] = Math.max(nextChunks[index - chunkStride + 1], chunkX * chunkWidth - 1);
-        nextChunks[index - chunkStride + 2] = Math.min(nextChunks[index - chunkStride + 2], Math.max(y - buffer, chunkY * chunkHeight));
-        nextChunks[index - chunkStride + 3] = Math.max(nextChunks[index - chunkStride + 3], Math.min(y + buffer, chunkY * chunkHeight + chunkHeight - 1));
-    }
-    if (x < gridWidth - buffer && x % chunkWidth >= chunkWidth - buffer) {
-        nextChunks[index + chunkStride] = Math.min(nextChunks[index + chunkStride], chunkX * chunkWidth + chunkWidth);
-        nextChunks[index + chunkStride + 1] = Math.max(nextChunks[index + chunkStride + 1], x + buffer);
-        nextChunks[index + chunkStride + 2] = Math.min(nextChunks[index + chunkStride + 2], Math.max(y - buffer, chunkY * chunkHeight));
-        nextChunks[index + chunkStride + 3] = Math.max(nextChunks[index + chunkStride + 3], Math.min(y + buffer, chunkY * chunkHeight + chunkHeight - 1));
-    }
-    if (y >= buffer && y % chunkHeight < buffer) {
-        nextChunks[index - chunkXAmount * chunkStride] = Math.min(nextChunks[index - chunkXAmount * chunkStride], Math.max(x - buffer, chunkX * chunkWidth));
-        nextChunks[index - chunkXAmount * chunkStride + 1] = Math.max(nextChunks[index - chunkXAmount * chunkStride + 1], Math.min(x + buffer, chunkX * chunkWidth + chunkWidth - 1));
-        nextChunks[index - chunkXAmount * chunkStride + 2] = Math.min(nextChunks[index - chunkXAmount * chunkStride + 2], y - buffer);
-        nextChunks[index - chunkXAmount * chunkStride + 3] = Math.max(nextChunks[index - chunkXAmount * chunkStride + 3], chunkY * chunkHeight - 1);
-    }
-    if (y < gridHeight - buffer && y % chunkHeight >= chunkHeight - buffer) {
-        nextChunks[index + chunkXAmount * chunkStride] = Math.min(nextChunks[index + chunkXAmount * chunkStride], Math.max(x - buffer, chunkX * chunkWidth));
-        nextChunks[index + chunkXAmount * chunkStride + 1] = Math.max(nextChunks[index + chunkXAmount * chunkStride + 1], Math.min(x + buffer, chunkX * chunkWidth + chunkWidth - 1));
-        nextChunks[index + chunkXAmount * chunkStride + 2] = Math.min(nextChunks[index + chunkXAmount * chunkStride + 2], chunkY * chunkHeight + chunkHeight);
-        nextChunks[index + chunkXAmount * chunkStride + 3] = Math.max(nextChunks[index + chunkXAmount * chunkStride + 3], y + buffer);
-    }
-    if (x >= buffer && x % chunkWidth < buffer) {
-        if (y >= buffer && y % chunkHeight < buffer) {
-            nextChunks[index - chunkStride - chunkXAmount * chunkStride] = Math.min(nextChunks[index - chunkStride - chunkXAmount * chunkStride], x - buffer);
-            nextChunks[index - chunkStride - chunkXAmount * chunkStride + 1] = Math.max(nextChunks[index - chunkStride - chunkXAmount * chunkStride + 1], chunkX * chunkWidth - 1);
-            nextChunks[index - chunkStride - chunkXAmount * chunkStride + 2] = Math.min(nextChunks[index - chunkStride - chunkXAmount * chunkStride + 2], y - buffer);
-            nextChunks[index - chunkStride - chunkXAmount * chunkStride + 3] = Math.max(nextChunks[index - chunkStride - chunkXAmount * chunkStride + 3], chunkY * chunkHeight - 1);
-        }
-        if (y < gridHeight - buffer && y % chunkHeight >= chunkHeight - buffer) {
-            nextChunks[index - chunkStride + chunkXAmount * chunkStride] = Math.min(nextChunks[index - chunkStride + chunkXAmount * chunkStride], x - buffer);
-            nextChunks[index - chunkStride + chunkXAmount * chunkStride + 1] = Math.max(nextChunks[index - chunkStride + chunkXAmount * chunkStride + 1], chunkX * chunkWidth - 1);
-            nextChunks[index - chunkStride + chunkXAmount * chunkStride + 2] = Math.min(nextChunks[index - chunkStride + chunkXAmount * chunkStride + 2], chunkY * chunkHeight + chunkHeight);
-            nextChunks[index - chunkStride + chunkXAmount * chunkStride + 3] = Math.max(nextChunks[index - chunkStride + chunkXAmount * chunkStride + 3], y + buffer);
-        }
-    }
-    if (x < gridWidth - buffer && x % chunkWidth >= chunkWidth - buffer) {
-        if (y >= buffer && y % chunkHeight < buffer) {
-            nextChunks[index + chunkStride - chunkXAmount * chunkStride] = Math.min(nextChunks[index + chunkStride - chunkXAmount * chunkStride], chunkX * chunkWidth + chunkWidth);
-            nextChunks[index + chunkStride - chunkXAmount * chunkStride + 1] = Math.max(nextChunks[index + chunkStride - chunkXAmount * chunkStride + 1], x + buffer);
-            nextChunks[index + chunkStride - chunkXAmount * chunkStride + 2] = Math.min(nextChunks[index + chunkStride - chunkXAmount * chunkStride + 2], y - buffer);
-            nextChunks[index + chunkStride - chunkXAmount * chunkStride + 3] = Math.max(nextChunks[index + chunkStride - chunkXAmount * chunkStride + 3], chunkY * chunkHeight - 1);
-        }
-        if (y < gridHeight - buffer && y % chunkHeight >= chunkHeight - buffer) {
-            nextChunks[index + chunkStride + chunkXAmount * chunkStride] = Math.min(nextChunks[index + chunkStride + chunkXAmount * chunkStride], chunkX * chunkWidth + chunkWidth);
-            nextChunks[index + chunkStride + chunkXAmount * chunkStride + 1] = Math.max(nextChunks[index + chunkStride + chunkXAmount * chunkStride + 1], x + buffer);
-            nextChunks[index + chunkStride + chunkXAmount * chunkStride + 2] = Math.min(nextChunks[index + chunkStride + chunkXAmount * chunkStride + 2], chunkY * chunkHeight + chunkHeight);
-            nextChunks[index + chunkStride + chunkXAmount * chunkStride + 3] = Math.max(nextChunks[index + chunkStride + chunkXAmount * chunkStride + 3], y + buffer);
-        }
-    }
-    addGridUpdatedChunk(x, y);
-}
-function addGridUpdatedChunk(x, y) {
-    let index = (Math.floor(x / chunkWidth) + Math.floor(y / chunkHeight) * chunkXAmount) * chunkStride;
-    gridUpdatedChunks[index] = Math.min(gridUpdatedChunks[index], x);
-    gridUpdatedChunks[index + 1] = Math.max(gridUpdatedChunks[index + 1], x);
-    gridUpdatedChunks[index + 2] = Math.min(gridUpdatedChunks[index + 2], y);
-    gridUpdatedChunks[index + 3] = Math.max(gridUpdatedChunks[index + 3], y);
-};
-function addUpdatedChunk2(x, y) {
-    let index = (Math.floor(x / chunkWidth) + Math.floor(y / chunkHeight) * chunkXAmount) * chunkStride;
-    chunks[index] = Math.min(chunks[index], x);
-    chunks[index + 1] = Math.max(chunks[index + 1], x);
-    chunks[index + 2] = Math.min(chunks[index + 2], y);
-    chunks[index + 3] = Math.max(chunks[index + 3], y);
-
-    let buffer = 2;
-
-    if (x >= buffer && x % chunkWidth < buffer) {
-        chunks[index - chunkStride] = Math.min(chunks[index - chunkStride], x);
-        chunks[index - chunkStride + 1] = Math.max(chunks[index - chunkStride + 1], x - 2);
-        chunks[index - chunkStride + 2] = Math.min(chunks[index - chunkStride + 2], y);
-        chunks[index - chunkStride + 3] = Math.max(chunks[index - chunkStride + 3], y);
-    }
-    if (x < gridWidth - buffer && x % chunkWidth >= chunkWidth - buffer) {
-        chunks[index + chunkStride] = Math.min(chunks[index + chunkStride], x + 2);
-        chunks[index + chunkStride + 1] = Math.max(chunks[index + chunkStride + 1], x);
-        chunks[index + chunkStride + 2] = Math.min(chunks[index + chunkStride + 2], y);
-        chunks[index + chunkStride + 3] = Math.max(chunks[index + chunkStride + 3], y);
-    }
-    if (y >= buffer && y % chunkHeight < buffer) {
-        chunks[index - chunkXAmount * chunkStride] = Math.min(chunks[index - chunkXAmount * chunkStride], x);
-        chunks[index - chunkXAmount * chunkStride + 1] = Math.max(chunks[index - chunkXAmount * chunkStride + 1], x);
-        chunks[index - chunkXAmount * chunkStride + 2] = Math.min(chunks[index - chunkXAmount * chunkStride + 2], y);
-        chunks[index - chunkXAmount * chunkStride + 3] = Math.max(chunks[index - chunkXAmount * chunkStride + 3], y - 2);
-    }
-    if (y < gridHeight - buffer && y % chunkHeight >= chunkHeight - buffer) {
-        chunks[index + chunkXAmount * chunkStride] = Math.min(chunks[index + chunkXAmount * chunkStride], x);
-        chunks[index + chunkXAmount * chunkStride + 1] = Math.max(chunks[index + chunkXAmount * chunkStride + 1], x);
-        chunks[index + chunkXAmount * chunkStride + 2] = Math.min(chunks[index + chunkXAmount * chunkStride + 2], y + 2);
-        chunks[index + chunkXAmount * chunkStride + 3] = Math.max(chunks[index + chunkXAmount * chunkStride + 3], y);
-    }
-    if (x >= buffer && x % chunkWidth < buffer) {
-        if (y >= buffer && y % chunkHeight < buffer) {
-            chunks[index - chunkStride - chunkXAmount * chunkStride] = Math.min(chunks[index - chunkStride - chunkXAmount * chunkStride], x);
-            chunks[index - chunkStride - chunkXAmount * chunkStride + 1] = Math.max(chunks[index - chunkStride - chunkXAmount * chunkStride + 1], x - 2);
-            chunks[index - chunkStride - chunkXAmount * chunkStride + 2] = Math.min(chunks[index - chunkStride - chunkXAmount * chunkStride + 2], y);
-            chunks[index - chunkStride - chunkXAmount * chunkStride + 3] = Math.max(chunks[index - chunkStride - chunkXAmount * chunkStride + 3], y - 2);
-        }
-        if (y < gridHeight - buffer && y % chunkHeight >= chunkHeight - buffer) {
-            chunks[index - chunkStride + chunkXAmount * chunkStride] = Math.min(chunks[index - chunkStride + chunkXAmount * chunkStride], x);
-            chunks[index - chunkStride + chunkXAmount * chunkStride + 1] = Math.max(chunks[index - chunkStride + chunkXAmount * chunkStride + 1], x - 2);
-            chunks[index - chunkStride + chunkXAmount * chunkStride + 2] = Math.min(chunks[index - chunkStride + chunkXAmount * chunkStride + 2], y + 2);
-            chunks[index - chunkStride + chunkXAmount * chunkStride + 3] = Math.max(chunks[index - chunkStride + chunkXAmount * chunkStride + 3], y);
-        }
-    }
-    if (x < gridWidth - buffer && x % chunkWidth >= chunkWidth - buffer) {
-        if (y >= buffer && y % chunkHeight < buffer) {
-            chunks[index + chunkStride - chunkXAmount * chunkStride] = Math.min(chunks[index + chunkStride - chunkXAmount * chunkStride], x + 2);
-            chunks[index + chunkStride - chunkXAmount * chunkStride + 1] = Math.max(chunks[index + chunkStride - chunkXAmount * chunkStride + 1], x);
-            chunks[index + chunkStride - chunkXAmount * chunkStride + 2] = Math.min(chunks[index + chunkStride - chunkXAmount * chunkStride + 2], y);
-            chunks[index + chunkStride - chunkXAmount * chunkStride + 3] = Math.max(chunks[index + chunkStride - chunkXAmount * chunkStride + 3], y - 2);
-        }
-        if (y < gridHeight - buffer && y % chunkHeight >= chunkHeight - buffer) {
-            chunks[index + chunkStride + chunkXAmount * chunkStride] = Math.min(chunks[index + chunkStride + chunkXAmount * chunkStride], x + 2);
-            chunks[index + chunkStride + chunkXAmount * chunkStride + 1] = Math.max(chunks[index + chunkStride + chunkXAmount * chunkStride + 1], x);
-            chunks[index + chunkStride + chunkXAmount * chunkStride + 2] = Math.min(chunks[index + chunkStride + chunkXAmount * chunkStride + 2], y + 2);
-            chunks[index + chunkStride + chunkXAmount * chunkStride + 3] = Math.max(chunks[index + chunkStride + chunkXAmount * chunkStride + 3], y);
-        }
-    }
-};
-function addDrawingChunk(x, y) {
-    let index = (Math.floor(x / chunkWidth) + Math.floor(y / chunkHeight) * chunkXAmount) * chunkStride;
-    drawChunks[index] = Math.min(drawChunks[index], x);
-    drawChunks[index + 1] = Math.max(drawChunks[index + 1], x);
-    drawChunks[index + 2] = Math.min(drawChunks[index + 2], y);
-    drawChunks[index + 3] = Math.max(drawChunks[index + 3], y);
-};
-
-function flow1(x, y, isPassable = isAir, slide = false, slope = 1, disperse = false, dispersion = 5, moveChance = 1) {
-    let index = (x + y * gridWidth) * gridStride;
-    let id = grid[index + ID];
-    let velX = grid[index + VEL_X];
-    let velY = grid[index + VEL_Y];
-    let colorR = grid[index + COLOR_R];
-    let colorG = grid[index + COLOR_G];
-    let colorB = grid[index + COLOR_B];
-    let colorA = grid[index + COLOR_A];
-    let onFire = grid[index + PIXEL_DATA];
-    velY += 1;
-    velX *= 0.9;
-    if (Math.abs(velX) < 1) {
-        velX = 0;
-    }
-    if (velY > 1) {
-        velY = 1;
-    }
-
-    let dispersed = false;
-
-    let yLonger = Math.abs(velY) > Math.abs(velX);
-
-    let shortLen = yLonger ? velX : velY;
-    let longLen = yLonger ? velY : velX;
-
-    let bounciness = 0.25;
-
-    if (longLen != 0) {
-        let inc = Math.sign(longLen);
-
-        let multDiff = shortLen / longLen;
-        let side = Math.sign(shortLen);
-        if (side == 0) {
-            // side = 1;
-            side = Math.round(random()) * 2 - 1;
-            // if ((x * x + y * y + tick * tick) % grid_size > grid_size / 2) {
-            //     side = -1;
-            // }
-            //side = tick % 2) * 2 - 1;
-            //side = floor(f32(x % 4) / 2)) * 2 - 1;
-        }
-
-        let offsetX = 0;
-        let offsetY = 0;
-        let sx = x;
-        let sy = y;
-        let cx = x;
-        let cy = y;
-        let ix = x;
-        let iy = y;
-
-        let moveStopped = random() > moveChance;
-
-        if (yLonger) {
-            // get optimal stop location
-            for (let i = inc; ; i += inc) {
-                cx = ix;
-                cy = iy;
-                ix = x + Math.floor(i * multDiff) + offsetX;
-                iy = y + i + offsetY;
-                let optimal = isPassable(ix, iy);
-                let stuck = false;
-                move: {
-                    if (cx == ix) {
-                        if (!optimal) {
-                            if (slide) {
-                                left: {
-                                    for (let j = 0; j <= slope; j++) {
-                                        if (!isPassable(cx + side, cy + inc * j)) {
-                                            break left;
-                                        }
-                                    }
-                                    offsetX += side;
-                                    break move;
-                                }
-                                right: if (shortLen == 0) {
-                                    for (let j = 0; j <= slope; j++) {
-                                        if (!isPassable(cx - side, cy + inc * j)) {
-                                            break right;
-                                        }
-                                    }
-                                    offsetX -= side;
-                                    break move;
-                                }
-                            }
-                            if (disperse) {
-                                left: {
-                                    let stop = 0;
-                                    for (let j = 1; j <= dispersion; j++) {
-                                        let sameId = isId(cx + side * j, cy, id);
-                                        if (!isPassable(cx + side * j, cy) && !sameId) {
-                                            if (stop != 0) {
-                                                offsetX += side * stop;
-                                                offsetY -= inc;
-                                                dispersed = true;
-                                                break move;
-                                            }
-                                            break left;
-                                        }
-                                        else if (isPassable(cx + side * j, cy + inc)) {
-                                            if (stop != 0) {
-                                                offsetX += side * stop;
-                                                offsetY -= inc;
-                                                dispersed = true;
-                                                break move;
-                                            }
-                                            break left;
-                                        }
-                                        // if (!sameId && isPassable(cx + side * j, cy - inc)) {
-                                        if (!sameId) {
-                                            stop = j;
-                                        }
-                                    }
-                                    if (stop != 0) {
-                                        offsetX += side * stop;
-                                        offsetY -= inc;
-                                        dispersed = true;
-                                        break move;
-                                    }
-                                }
-                                right: if (shortLen == 0) {
-                                    let stop = 0;
-                                    for (let j = 1; j <= dispersion; j++) {
-                                        let sameId = isId(cx - side * j, cy, id);
-                                        if (!isPassable(cx - side * j, cy) && !sameId) {
-                                            if (stop != 0) {
-                                                offsetX -= side * stop;
-                                                offsetY -= inc;
-                                                dispersed = true;
-                                                break move;
-                                            }
-                                            break right;
-                                        }
-                                        else if (isPassable(cx - side * j, cy + inc)) {
-                                            if (stop != 0) {
-                                                offsetX -= side * stop;
-                                                offsetY -= inc;
-                                                dispersed = true;
-                                                break move;
-                                            }
-                                            break right;
-                                        }
-                                        // if (!sameId && isPassable(cx - side * j, cy - inc)) {
-                                        if (!sameId) {
-                                            stop = j;
-                                        }
-                                    }
-                                    if (stop != 0) {
-                                        offsetX -= side * stop;
-                                        offsetY -= inc;
-                                        dispersed = true;
-                                        break move;
-                                    }
-                                }
-                            }
-                            velX = 0;
-                            velY = 0;
-                            // if (velY >= 4) {
-                            //     velX = velY * bounciness * -1 * f32(side);
-                            //     velY *= -bounciness;
-                            // }
-                            // else {
-                            //     velX = 0;
-                            //     velY = 0;
-                            // }
-                            stuck = true;
-                            break move;
-                        }
-                    }
-                    else {
-                        if (!optimal) {
-                            if (isPassable(cx, cy + inc)) { // forward
-                                offsetX -= side;
-                            }
-                            else if (isPassable(cx + side, cy)) {
-                                offsetY -= inc;
-                            }
-                            else {
-                                velX = 0;
-                                velY = 0;
-                                stuck = true;
-                            }
-                        }
-                        else {
-                            if (!isPassable(cx, cy + inc) && !isPassable(cx + side, cy)) {
-                                velX = 0;
-                                velY = 0;
-                                stuck = true;
-                            }
-                        }
-                    }
-                }
-                let cIndex = (cx + cy * gridWidth) * gridStride;
-                if (stuck) {
-                    if (cIndex != index) {
-                        addUpdatedChunk(x, y);
-                        addUpdatedChunk(cx, cy);
-                    }
-                    grid[cIndex + ID] = id;
-                    grid[cIndex + VEL_X] = velX;
-                    if (dispersed) {
-                        velY -= 1;
-                    }
-                    grid[cIndex + VEL_Y] = velY;
-                    grid[cIndex + COLOR_R] = colorR;
-                    grid[cIndex + COLOR_G] = colorG;
-                    grid[cIndex + COLOR_B] = colorB;
-                    grid[cIndex + COLOR_A] = colorA;
-                    grid[cIndex + UPDATED] = tick;
-                    grid[cIndex + PIXEL_DATA] = onFire;
-                    break;
-                }
-                if (moveStopped) {
-                    addUpdatedChunk(x, y);
-                    grid[index + ID] = id;
-                    grid[index + VEL_X] = velX;
-                    velY -= 1;
-                    grid[index + VEL_Y] = velY - Math.sign(velY);
-                    grid[index + COLOR_R] = colorR;
-                    grid[index + COLOR_G] = colorG;
-                    grid[index + COLOR_B] = colorB;
-                    grid[index + COLOR_A] = colorA;
-                    grid[index + UPDATED] = tick;
-                    grid[index + PIXEL_DATA] = onFire;
-                    break;
-                }
-                ix = x + Math.floor(i * multDiff) + offsetX;
-                iy = y + i + offsetY;
-                // if (stopPassable(ix, iy)) {
-                //     sx = ix;
-                //     sy = iy;
-                // }
-                let iIndex = (ix + iy * gridWidth) * gridStride;
-
-                for (let j = 0; j < gridStride; j++) {
-                    grid[cIndex + j] = grid[iIndex + j];
-                }
-
-                if (Math.abs(i) >= Math.abs(longLen)) {
-                    addUpdatedChunk(x, y);
-                    addUpdatedChunk(ix, iy);
-                    grid[iIndex + ID] = id;
-                    grid[iIndex + VEL_X] = velX;
-                    if (dispersed) {
-                        velY -= 1;
-                    }
-                    grid[iIndex + VEL_Y] = velY;
-                    grid[iIndex + COLOR_R] = colorR;
-                    grid[iIndex + COLOR_G] = colorG;
-                    grid[iIndex + COLOR_B] = colorB;
-                    grid[iIndex + COLOR_A] = colorA;
-                    grid[iIndex + UPDATED] = tick;
-                    grid[iIndex + PIXEL_DATA] = onFire;
-                    break;
-                }
-            }
-
-            // let sIndex = (sx + sy * gridWidth) * gridStride;
-            // if (sIndex != index) {
-            //     let minX = gridSize;
-            //     let maxX = 0;
-            //     let minY = gridSize;
-            //     let maxY = 0;
-            //     for (let i = 1; i < move.length; i++) {
-            //         let x = (move[i] / gridStride) % gridSize;
-            //         let y = Math.floor((move[i] / gridStride) / gridSize);
-            //         minX = Math.min(minX, x);
-            //         maxX = Math.max(maxX, x);
-            //         minY = Math.min(minY, y);
-            //         maxY = Math.max(maxY, y);
-            //         for (let j = 0; j < gridStride; j++) {
-            //             grid[move[i - 1] + j] = grid[move[i] + j];
-            //         }
-            //         if (move[i] == sIndex) {
-            //             grid[sIndex + ID] = id;
-            //             grid[sIndex + VEL_X] = velX;
-            //             grid[sIndex + VEL_Y] = velY;
-            //             grid[sIndex + COLOR_R] = colorR;
-            //             grid[sIndex + COLOR_G] = colorG;
-            //             grid[sIndex + COLOR_B] = colorB;
-            //             grid[sIndex + COLOR_A] = colorA;
-            //             grid[sIndex + UPDATED] = tick;
-            //             break;
-            //         }
-            //     }
-            // }
-        }
-        else {
-            for (let i = inc; ; i += inc) {
-                cx = ix;
-                cy = iy;
-                ix = x + i + offsetY;
-                iy = y + Math.floor(i * multDiff) + offsetX;
-                let optimal = isPassable(ix, iy);
-                let stuck = false;
-                move: {
-                    if (cy == iy) {
-                        if (!optimal) {
-                            if (slide) {
-                                left: {
-                                    for (let j = 0; j <= slope; j++) {
-                                        if (!isPassable(cx + inc * j, cy + side)) {
-                                            break left;
-                                        }
-                                    }
-                                    offsetX += side;
-                                    break move;
-                                }
-                                right: if (shortLen == 0) {
-                                    for (let j = 0; j <= slope; j++) {
-                                        if (!isPassable(cx + inc * j, cy - side)) {
-                                            break right;
-                                        }
-                                    }
-                                    offsetX -= side;
-                                    break move;
-                                }
-                            }
-                            if (disperse) {
-                                left: {
-                                    let stop = 0;
-                                    for (let j = 1; j <= dispersion; j++) {
-                                        let sameId = isId(cx, cy + side * j, id);
-                                        if (!isPassable(cx, cy + side * j) && !sameId) {
-                                            if (stop != 0) {
-                                                offsetX += side * stop;
-                                                offsetY -= inc;
-                                                break move;
-                                            }
-                                            break left;
-                                        }
-                                        if (!sameId) {
-                                            stop = j;
-                                        }
-                                    }
-                                    if (stop != 0) {
-                                        offsetX += side * stop;
-                                        offsetY -= inc;
-                                        break move;
-                                    }
-                                }
-                                right: if (shortLen == 0) {
-                                    let stop = 0;
-                                    for (let j = 1; j <= dispersion; j++) {
-                                        let sameId = isId(cx, cy - side * j, id);
-                                        if (!isPassable(cx, cy - side * j) && !sameId) {
-                                            if (stop != 0) {
-                                                offsetX -= side * stop;
-                                                offsetY -= inc;
-                                                break move;
-                                            }
-                                            break right;
-                                        }
-                                        if (!sameId) {
-                                            stop = j;
-                                        }
-                                    }
-                                    if (stop != 0) {
-                                        offsetX -= side * stop;
-                                        offsetY -= inc;
-                                        break move;
-                                    }
-                                }
-                            }
-                            velX = 0;
-                            velY = 0;
-                            // if (velY >= 4) {
-                            //     velX = velY * bounciness * -1 * f32(side);
-                            //     velY *= -bounciness;
-                            // }
-                            // else {
-                            //     velX = 0;
-                            //     velY = 0;
-                            // }
-                            stuck = true;
-                            break move;
-                        }
-                    }
-                    else {
-                        if (!optimal) {
-                            if (isPassable(cx + inc, cy)) { // forward
-                                offsetX -= side;
-                            }
-                            else if (isPassable(cx, cy + side)) {
-                                offsetY -= inc;
-                            }
-                            else {
-                                velX = 0;
-                                velY = 0;
-                                stuck = true;
-                            }
-                        }
-                        else {
-                            if (!isPassable(cx + inc, cy) && !isPassable(cx, cy + side)) {
-                                velX = 0;
-                                velY = 0;
-                                stuck = true;
-                            }
-                        }
-                    }
-                }
-                let cIndex = (cx + cy * gridWidth) * gridStride;
-                if (stuck) {
-                    if (cIndex != index) {
-                        addUpdatedChunk(x, y);
-                        addUpdatedChunk(cx, cy);
-                    }
-                    grid[cIndex + ID] = id;
-                    if (dispersed) {
-                        velX -= 1;
-                    }
-                    grid[cIndex + VEL_X] = velX;
-                    grid[cIndex + VEL_Y] = velY;
-                    grid[cIndex + COLOR_R] = colorR;
-                    grid[cIndex + COLOR_G] = colorG;
-                    grid[cIndex + COLOR_B] = colorB;
-                    grid[cIndex + COLOR_A] = colorA;
-                    grid[cIndex + UPDATED] = tick;
-                    grid[cIndex + PIXEL_DATA] = onFire;
-                    break;
-                }
-                if (moveStopped) {
-                    addUpdatedChunk(x, y);
-                    grid[index + ID] = id;
-                    grid[index + VEL_X] = velX - Math.sign(velX);
-                    velY -= 1;
-                    grid[index + VEL_Y] = velY;
-                    grid[index + COLOR_R] = colorR;
-                    grid[index + COLOR_G] = colorG;
-                    grid[index + COLOR_B] = colorB;
-                    grid[index + COLOR_A] = colorA;
-                    grid[index + UPDATED] = tick;
-                    grid[index + PIXEL_DATA] = onFire;
-                    break;
-                }
-                ix = x + i + offsetY;
-                iy = y + Math.floor(i * multDiff) + offsetX;
-
-                let iIndex = (ix + iy * gridWidth) * gridStride;
-
-                for (let j = 0; j < gridStride; j++) {
-                    grid[cIndex + j] = grid[iIndex + j];
-                }
-
-                if (Math.abs(i) >= Math.abs(longLen)) {
-                    addUpdatedChunk(x, y);
-                    addUpdatedChunk(ix, iy);
-                    grid[iIndex + ID] = id;
-                    grid[iIndex + VEL_X] = velX;
-                    grid[iIndex + VEL_Y] = velY;
-                    grid[iIndex + COLOR_R] = colorR;
-                    grid[iIndex + COLOR_G] = colorG;
-                    grid[iIndex + COLOR_B] = colorB;
-                    grid[iIndex + COLOR_A] = colorA;
-                    grid[iIndex + UPDATED] = tick;
-                    grid[iIndex + PIXEL_DATA] = onFire;
-                    break;
-                }
-            }
-        }
-    }
-    else {
-        addUpdatedChunk(x, y);
-        grid[index + ID] = id;
-        grid[index + VEL_X] = velX;
-        grid[index + VEL_Y] = velY;
-        grid[index + COLOR_R] = colorR;
-        grid[index + COLOR_G] = colorG;
-        grid[index + COLOR_B] = colorB;
-        grid[index + COLOR_A] = colorA;
-        grid[index + UPDATED] = tick;
-        grid[index + PIXEL_DATA] = onFire;
-    }
-};
-
-function move(x, y, x1, y1) {
-    // this entire function is spaghetti
-    let index = (x + y * gridWidth) * gridStride;
-    let index1 = (x1 + y1 * gridWidth) * gridStride;
-    addUpdatedChunk(x, y);
-    addUpdatedChunk(x1, y1);
-    if (grid[index1 + ID] == DELETER) {
-        grid[index + 0] = AIR;
-        grid[index + 1] = 0;
-        grid[index + 3] = tick;
-        return;
-    }
-    if (grid[index1 + ID] == MONSTER) {
-        grid[index + 0] = AIR;
-        grid[index + 1] = 0;
-        grid[index + 3] = tick;
-        grid[index1 + 0] = AIR;
-        grid[index1 + 3] = tick;
-        return;
-    }
-    let data0 = grid[index + 0]; // id
-    let data1 = grid[index + 1]; // on fire
-    // let data2 = grid[index + 2]; // updated
-    let data3 = grid[index + 3]; // updated
-    // let data3 = grid[index + 3]; // r
-    // let data4 = grid[index + 4]; // g
-    // let data5 = grid[index + 5]; // b
-    // let data6 = grid[index + 6]; // a
-    grid[index + 0] = grid[index1 + 0];
-    grid[index + 1] = grid[index1 + 1];
-    // grid[index + 2] = grid[index1 + 2];
-    // grid[index + 2] = grid[index1 + 2];
-    grid[index + 3] = tick;
-    // grid[index + 3] = grid[index1 + 3];
-    // grid[index + 4] = grid[index1 + 4];
-    // grid[index + 5] = grid[index1 + 5];
-    // grid[index + 6] = grid[index1 + 6];
-    grid[index1 + 0] = data0;
-    grid[index1 + 1] = data1;
-    // grid[index1 + 2] = data2;
-    // grid[index1 + 2] = data2;
-    grid[index1 + 3] = tick;
-    // grid[index1 + 3] = data3;
-    // grid[index1 + 4] = data4;
-    // grid[index1 + 5] = data5;
-    // grid[index1 + 6] = data6;
-};
-function fall(x, y, isMoveable = isAir) {
-    if (isMoveable(x, y + 1)) {
-        move(x, y, x, y + 1);
-    }
-};
-function flowSearch(x, y, distance, height, isPassable = isAir, isMoveable = isPassable) {
-    if (y >= gridHeight - height) {
-        return false;
-    }
-    let left = 0;
-    let right = 0;
-    for (let i = 1; i <= distance; i++) {
-        if (left < 0) {
-
-        }
-        else if (!isMoveable(x - i, y)) {
-            left = -i;
-            if (isPassable(x - i + 1, y + 1) && !isPassable(x - i, y)) {
-                let air = true;
-                for (let j = 1; j <= height; j++) {
-                    if (!isMoveable(x - i, y + j)) {
-                        air = false;
-                        break;
-                    }
-                }
-                if (air) {
-                    left = 1;
-                }
-            }
-        }
-        else {
-            let air = true;
-            for (let j = 0; j <= height; j++) {
-                if (!isMoveable(x - i, y + j)) {
-                    air = false;
-                    break;
-                }
-            }
-            if (air) {
-                left = 1;
-            }
-        }
-        if (right < 0) {
-
-        }
-        else if (!isMoveable(x + i, y)) {
-            right = -i;
-            if (isPassable(x + i - 1, y + 1) && !isPassable(x + i, y)) {
-                let air = true;
-                for (let j = 1; j <= height; j++) {
-                    if (!isMoveable(x + i, y + j)) {
-                        air = false;
-                        break;
-                    }
-                }
-                if (air) {
-                    right = 1;
-                }
-            }
-        }
-        else {
-            let air = true;
-            for (let j = 0; j <= height; j++) {
-                if (!isMoveable(x + i, y + j)) {
-                    air = false;
-                    break;
-                }
-            }
-            if (air) {
-                right = 1;
-            }
-        }
-        if (left == 1 || right == 1) {
-            if (left == 1 && right == 1) {
-                if (random() < 0.5) {
-                    return -i;
-                }
-                else {
-                    return i;
-                }
-            }
-            else if (left == 1) {
-                return -i;
-            }
-            else if (right == 1) {
-                return i;
-            }
-        }
-        if (left < 0 && right < 0) {
-            if (!isPassable(x, y - 1)) {
-                let leftAir = 0;
-                let rightAir = 0;
-                for (let j = i; j <= distance; j++) {
-                    if (leftAir == 0 && !isPassable(x - j, y)) {
-                        leftAir = j;
-                    }
-                    if (rightAir == 0 && !isPassable(x + j, y)) {
-                        rightAir = j;
-                    }
-                    if (leftAir != 0 || rightAir != 0) {
-                        if (leftAir != 0) {
-                            if (isMoveable(x - 1, y)) {
-                                return -i;
-                            }
-                        }
-                        else if (rightAir != 0) {
-                            if (isMoveable(x + 1, y)) {
-                                return i;
-                            }
-                        }
-                        break;
-                    }
-                }
-                // if (left < right) {
-                //     if (isMoveable(x + 1, y)) {
-                //         return i;
-                //     }
-                //     // if (isPassable(x + 1, y) || isId(x + 1, y, WATER)) {
-                //     //     return -i;
-                //     // }
-                // }
-                // else if (right < left) {
-                //     if (isMoveable(x - 1, y)) {
-                //         return -i;
-                //     }
-                //     // if (isPassable(x - 1, y) || isId(x - 1, y, WATER)) {
-                //     //     return i;
-                //     // }
-                // }
-            }
-            if (left == -1 && right == -1) {
-                return false;
-            }
-            return 0;
-        }
-    }
-    return 0;
-};
-function flow(x, y, distance, height, isPassable = isAir, isMoveable = isPassable) {
-    if (isMoveable(x, y + 1)) {
-        move(x, y, x, y + 1);
-        return;
-    }
-    let direction = flowSearch(x, y, distance, height, isPassable, isMoveable);
-    if (direction === false) {
-    }
-    else if (direction == 0) {
-        if (distance > 2 || height > 2) {
-            addUpdatedChunk(x, y);
-        }
-    }
-    else if (Math.abs(direction) == 1) {
-        move(x, y, x + direction, y + 1);
-    }
-    else {
-        move(x, y, x + Math.sign(direction), y);
-    }
-};
-function riseSearch(x, y, distance, height, isPassable = isAir, isMoveable = isPassable) {
-    if (y < height) {
-        return false;
-    }
-    let left = 0;
-    let right = 0;
-    for (let i = 1; i <= distance; i++) {
-        if (left < 0) {
-
-        }
-        else if (!isMoveable(x - i, y)) {
-            left = -i;
-            // if (isPassable(x - i + 1, y - 1) && !isPassable(x - i, y)) {
-            //     let air = true;
-            //     for (let j = 1; j <= height; j++) {
-            //         if (!isMoveable(x - i, y - j)) {
-            //             air = false;
-            //             break;
-            //         }
-            //     }
-            //     if (air) {
-            //         left = 1;
-            //     }
-            // }
-        }
-        else {
-            let air = true;
-            for (let j = 0; j <= height; j++) {
-                if (!isMoveable(x - i, y - j)) {
-                    air = false;
-                    break;
-                }
-            }
-            if (air) {
-                left = 1;
-            }
-        }
-        if (right < 0) {
-
-        }
-        else if (!isMoveable(x + i, y)) {
-            right = -i;
-            // if (isPassable(x + i - 1, y - 1) && !isPassable(x + i, y)) {
-            //     let air = true;
-            //     for (let j = 1; j <= height; j++) {
-            //         if (!isMoveable(x + i, y - j)) {
-            //             air = false;
-            //             break;
-            //         }
-            //     }
-            //     if (air) {
-            //         right = 1;
-            //     }
-            // }
-        }
-        else {
-            let air = true;
-            for (let j = 0; j <= height; j++) {
-                if (!isMoveable(x + i, y - j)) {
-                    air = false;
-                    break;
-                }
-            }
-            if (air) {
-                right = 1;
-            }
-        }
-        if (left == 1 || right == 1) {
-            if (left == 1 && right == 1) {
-                if (random() < 0.5) {
-                    return -i;
-                }
-                else {
-                    return i;
-                }
-            }
-            else if (left == 1) {
-                return -i;
-            }
-            else if (right == 1) {
-                return i;
-            }
-        }
-        if (left < 0 && right < 0) {
-            if (!isPassable(x, y + 1)) {
-                let leftAir = 0;
-                let rightAir = 0;
-                for (let j = 1; j <= distance; j++) {
-                    if (leftAir == 0 && !isPassable(x - j, y)) {
-                        leftAir = j;
-                    }
-                    if (rightAir == 0 && !isPassable(x + j, y)) {
-                        rightAir = j;
-                    }
-                    if (leftAir != 0 || rightAir != 0) {
-                        if (leftAir != 0) {
-                            if (isMoveable(x - 1, y)) {
-                                return -i;
-                            }
-                        }
-                        else if (rightAir != 0) {
-                            if (isMoveable(x + 1, y)) {
-                                return i;
-                            }
-                        }
-                        break;
-                    }
-                }
-            }
-            return 0;
-        }
-    }
-    return 0;
-};
-function rise(x, y, distance, height, isPassable = isAir, isMoveable = isPassable) {
-    if (isMoveable(x, y - 1)) {
-        move(x, y, x, y - 1);
-        return;
-    }
-    let direction = riseSearch(x, y, distance, height, isPassable, isMoveable);
-    if (direction === false) {
-    }
-    else if (direction == 0) {
-        if (distance > 2 || height > 2) {
-            addUpdatedChunk(x, y);
-        }
-    }
-    else if (Math.abs(direction) == 1) {
-        move(x, y, x + direction, y - 1);
-    }
-    else {
-        move(x, y, x + Math.sign(direction), y);
-    }
-};
-
-function fillEllipse(x, y, width, height, action) {
-    let widthSquared = width ** 2;
-    let heightSquared = height ** 2;
-    for (let i = -Math.ceil(height); i <= Math.ceil(height); i++) {
-        for (let j = -Math.ceil(width); j <= Math.ceil(width); j++) {
-            if (((j ** 2) / widthSquared) + ((i ** 2) / heightSquared) < 1 && isOnGrid(x + j, y + i)) {
-                action(x + j, y + i);
-            }
-        }
-    }
-};
-
-function raycast(x, y, dx, dy, isPassable) {
-    let yLonger = Math.abs(dy) > Math.abs(dx);
-
-    let shortLen = yLonger ? dx : dy;
-    let longLen = yLonger ? dy : dx;
-
-    let inc = Math.sign(longLen);
-
-    let multDiff = shortLen / longLen;
-
-    let cx, cy;
-    if (yLonger) {
-        for (let i = inc; ; i += inc) {
-            cx = x + Math.round(i * multDiff);
-            cy = y + i;
-            if (!isOnGrid(cx, cy)) {
-                return;
-            }
-            if (!isPassable(cx, cy)) {
-                return;
-            }
-        }
-    }
-    else {
-        for (let i = inc; ; i += inc) {
-            cx = x + i;
-            cy = y + Math.round(i * multDiff);
-            if (!isOnGrid(cx, cy)) {
-                return;
-            }
-            if (!isPassable(cx, cy)) {
-                return;
-            }
-        }
-    }
-};
-function raycast2(x, y, dx, dy, isPassable) {
-    if (!isPassable(x, y)) {
-        return;
-    }
-    let yLonger = Math.abs(dy) > Math.abs(dx);
-
-    let shortLen = yLonger ? dx : dy;
-    let longLen = yLonger ? dy : dx;
-
-    let inc = Math.sign(longLen);
-
-    let multDiff = shortLen / longLen;
-
-    let cx, cy;
-    if (yLonger) {
-        for (let i = inc; ; i += inc) {
-            cx = x + Math.round(i * multDiff);
-            cy = y + i;
-            if (!isOnGrid(cx, cy)) {
-                return;
-            }
-            if (!isPassable(cx, cy)) {
-                return;
-            }
-        }
-    }
-    else {
-        for (let i = inc; ; i += inc) {
-            cx = x + i;
-            cy = y + Math.round(i * multDiff);
-            if (!isOnGrid(cx, cy)) {
-                return;
-            }
-            if (!isPassable(cx, cy)) {
-                return;
-            }
-        }
-    }
-};
-// raytrace
-// function raytrace(x1, y1, x2, y2, isPassable) {
-//     let slope = (y2 - y1) / (x2 - x1);
-//     if (slope == 0 || !isFinite(slope)) {
-
-//     }
-//     if (Math.abs(slope) < 1) {
-//         let minY = x2 < x1 ? y2 : y1;
-//         let minX = Math.min(x1, x2);
-//         let maxX = Math.max(x1, x2);
-//         let start = Math.max(0, Math.max(minX, (-minY / slope - 0.5) + minX);
-//         let end = Math.min(gridWidth - 1, maxX);
-//         for (let x = start; x <= end; x++) {
-//             let y = Math.round(slope * (x - minX)) + minY;
-//             if (y < 0 || y >= gridHeight || isPassable(x, y)) {
-//                 break;
-//             }
-//         }
-//     } else {
-//         slope = (x2 - x1) / (y1 - y1);
-//         let xmin = y2 < y1 ? x2 : x1;
-//         let start = Math.max(0, Math.min(y2, y1));
-//         let end = Math.min(gridHeight - 1, Math.max(y2, y1));
-//         for (let y = start, x = 0; y <= end; y++) {
-//             x = Math.round(slope * (y - start)) + xmin;
-//             if (x < 0 || x >= gridWidth || cb(x, y)) break;
-//         }
-//     }
-// };
-
-function explode(x, y, radiusSquared, rays, power) {
-    let changed = [];
-    addPixel(x, y, AIR);
-    addFire(x, y, true);
-    addTeam(x, y, -1);
-    // let size = 150;
-    // let rays = 15;
-    for (let i = 0; i < rays; i++) {
-        let angle = i * Math.PI * 2 / rays;
-        let rayPower = power;
-        raycast(x, y, Math.cos(angle), Math.sin(angle), (x1, y1) => {
-            let dist = Math.sqrt(((x1 - x) ** 2 + (y1 - y) ** 2) / radiusSquared);
-            let index1 = (x1 + y1 * gridWidth) * gridStride;
-            rayPower -= dist * power;
-            if (rayPower < 0) {
-                return false;
-            }
-            let id = grid[index1 + ID];
-            let blastResistance = pixels[id].blastResistance;
-            if (blastResistance == -1) {
-                return false;
-            }
-            if (random() > blastResistance / rayPower) {
-                if (!changed[x1 + y1 * gridWidth]) {
-                    changed[x1 + y1 * gridWidth] = true;
-                    if (random() > blastResistance / rayPower + 0.5) {
-                        addFire(x1, y1, true);
-                    }
-                    if (id == AIR) {
-
-                    }
-                    else if (id == ASH) {
-                        addPixel(x1, y1, AIR);
-                        addTeam(x1, y1, -1);
-                    }
-                    else if ((id == WATER || id == ICE || id == SNOW) && random() > 3200 / rayPower) {
-                        addPixel(x1, y1, STEAM);
-                    }
-                    else if (id == GUNPOWDER) {
-                        addPixel(x1, y1, ACTIVATED_GUNPOWDER);
-                    }
-                    else if (id == ACTIVATED_GUNPOWDER) {
-
-                    }
-                    else if (id == C4) {
-                        addPixel(x1, y1, ACTIVATED_C4);
-                    }
-                    else if (id == ACTIVATED_C4) {
-
-                    }
-                    else if (id == NUKE) {
-                        addPixel(x1, y1, ACTIVATED_NUKE);
-                    }
-                    else if (id == ACTIVATED_NUKE) {
-
-                    }
-                    // else if (random() < 40 / power) {
-                    else if (random() < 0.5) {
-                        if (id == CONCRETE || id == STONE || id == BASALT || id == BRICKS) {
-                            addPixel(x1, y1, GRAVEL);
-                        }
-                        else {
-                            addPixel(x1, y1, ASH);
-                        }
-                    }
-                    else {
-                        addPixel(x1, y1, AIR);
-                        addTeam(x1, y1, -1);
-                    }
-                }
-                rayPower -= blastResistance / 40;
-            }
-            else {
-                rayPower -= blastResistance / 5;
-            }
-            rayPower += dist * power;
-            return true;
-        });
-    }
-};
-
-let workedPushPixels = null;
-let failedPushPixels = null;
-
-let workedPushPixelsArray = [new Int32Array(), new Int32Array(), new Int32Array()];
-let failedPushPixelsArray = [new Int32Array(), new Int32Array(), new Int32Array()];
-
-function resetPushPixels() {
-    let pushPixelsArray = [];
-    for (let y = 0; y < gridHeight; y++) {
-        for (let x = 0; x < gridWidth; x++) {
-            pushPixelsArray.push(0);
-        }
-    }
-    for (let i = 0; i < 3; i++) {
-        workedPushPixelsArray[i] = new Int32Array(pushPixelsArray);
-        failedPushPixelsArray[i] = new Int32Array(pushPixelsArray);
-    }
-};
-
-// there are spaghetti push comments
-
-
-let pushStrength = 0;
-
-function setPushPixels() {
-    workedPushPixels = workedPushPixelsArray[pushStrength];
-    failedPushPixels = failedPushPixelsArray[pushStrength];
-};
-
-function pushLeft(x, y, selfX, selfY, strength) {
-    pushStrength = strength;
-    setPushPixels();
-    let [worked, pushPixels] = pushLeftCheck(x, y, -1, -1, true);
-    let pushedSelf = false;
-    if (worked && pushPixels[selfY] != null && pushPixels[selfY][selfX] != null) {
-        // prevent cloners from marking themselves as unpushable
-        pushedSelf = true;
-        for (let i in pushPixels) {
-            for (let j in pushPixels[i]) {
-                if (pushPixels[i][j] != 2 && pushPixels[i][j] != 1) {
-                    continue;
-                }
-                // necessary
-                workedPushPixels[Number(j) + Number(i) * gridWidth] = tick;
-            }
-        }
-        [worked, pushPixels] = pushLeftCheck(x, y, selfX, selfY, true);
-    }
-    if (worked) {
-        for (let i in pushPixels) {
-            for (let j in pushPixels[i]) {
-                if (pushPixels[i][j] != 2 && pushPixels[i][j] != 1) {
-                    continue;
-                }
-                i = Number(i);
-                j = Number(j);
-                // unnecessary
-                workedPushPixels[j + i * gridWidth] = tick;
-                let index = (j - 1 + i * gridWidth) * gridStride;
-                if (grid[index + ID] != AIR && grid[index + ID] != MONSTER) {
-                    addPixel(j, i, AIR);
-                    addTeam(j, i, -1);
-                }
-                else {
-                    move(j, i, j - 1, i);
-                    addFire(j, i, 0);
-                }
-            }
-        }
-        // if (grid[(x + y * gridWidth) * gridStride + ID] == MONSTER) {
-        //     addPixel(x, y, AIR);
-        // }
-        return true;
-    }
-    else if (!pushedSelf) {
-        for (let i in pushPixels) {
-            for (let j in pushPixels[i]) {
-                if (pushPixels[i][j] != 2 && pushPixels[i][j] != 3) {
-                    continue;
-                }
-                failedPushPixels[Number(j) + Number(i) * gridWidth] = tick;
-            }
-        }
-    }
-    return false;
-};
-function pushLeftCheck(x, y, selfX, selfY, allowRecursion) {
-    let pushPixels = [];
-    let queue = [x + y * gridWidth + gridWidth * gridHeight];
-    let worked = true;
-    push: while (queue.length > 0) {
-        let index = queue.pop();
-        let stronglyConnected = index > gridWidth * gridHeight;
-        index = index % (gridWidth * gridHeight);
-        let x1 = index % gridWidth;
-        let y1 = (index - x1) / gridWidth;
-        function pushFail(x2) {
-            if (selfX == -1 && selfY == -1) {
-                for (let x3 = x1; x3 >= x2; x3--) {
-                    // pushPixels[y][x2] = 3;
-                    // failedPushPixels[x3 + y1 * gridWidth + (canCollapse ? (gridWidth * gridHeight) : 0)] = tick;
-                    failedPushPixels[x3 + y1 * gridWidth] = tick;
-                }
-            }
-            worked = false;
-        };
-        let xPos;
-        let x2;
-        for (x2 = x1; x2 >= 0; x2--) {
-            if (x2 == selfX && y1 == selfY) {
-                pushFail(x2);
-                break push;
-            }
-            let index1 = (x2 + y1 * gridWidth) * gridStride;
-            let id = grid[index1 + ID];
-            if (id == AIR || id == DELETER || id == MONSTER) {
-                // cloner can push all
-                // piston can't push piston
-                // pusher can't push piston
-                // fan can't push piston and pusher and fan?
-                if (pushStrength == 0 && x2 != 0) {
-                    let index2 = (x2 - 1 + y1 * gridWidth) * gridStride;
-                    let id1 = grid[index2 + ID];
-                    if ((id1 == PUSHER_RIGHT || id1 == FAN_RIGHT) && !isDeactivated(x2 - 1, y1)) {
-                        pushFail(x2);
-                        break push;
-                    }
-                }
-                xPos = x2;
-                break;
-            }
-            if (failedPushPixels[x2 + y1 * gridWidth] == tick) {
-                if (x2 != x1) {
-                    pushFail(x2 + 1);
-                }
-                worked = false;
-                break push;
-            }
-            if (!allowRecursion && selfX == -1 && selfY == -1 && workedPushPixels[x2 + y1 * gridWidth] == tick) {
-                xPos = x2;
-                break;
-            }
-            if (grid[index1 + UPDATED] == tick) {
-                if (x2 != x1) {
-                    pushFail(x2 + 1);
-                    modal("Push error", "Tried to push updated pixel left (this might not be an error)", "error");
-                    break push;
-                }
-                worked = false;
-                modal("Push error", "Tried to push updated pixel left 2 (this might not be an error)", "error");
-                // continue push;
-                break push;
-            }
-            if (pushPixels[y1] == null) {
-                pushPixels[y1] = [];
-            }
-            if (id == COLLAPSABLE) {
-                if (!allowRecursion) {
-                    xPos = x2 - 1;
-                    break;
-                }
-                // it shouldn't be possilbe for the pixel in front to be updated
-                // if (x2 == 0 || failedPushPixels[x2 - 1 + y1 * gridWidth] == tick || grid[(x2 - 1 + y1 * gridWidth) * gridStride + UPDATED] == tick) {
-                if (x2 == 0) {
-                    xPos = x2 - 1;
-                    break;
-                }
-                else {
-                    // see if we can push with collapsing
-                    // if we cannot, then we collapse this one
-                    let [worked1, pushPixels1] = pushLeftCheck(x2 - 1, y1, selfX, selfY, false);
-                    // we will collapse if we cannot push, allowing collapses (instant) but not unsticks
-                    if (worked1) {
-                        for (let i in pushPixels1) {
-                            for (let j in pushPixels1[i]) {
-                                if (pushPixels1[i][j] != 2 && pushPixels1[i][j] != 1) {
-                                    continue;
-                                }
-                                workedPushPixels[Number(j) + Number(i) * gridWidth] = tick;
-                            }
-                        }
-                    }
-                    else {
-                        // prevent cloners from marking themselves as unpushable
-                        if (selfX == -1 && selfY == -1) {
-                            for (let i in pushPixels1) {
-                                for (let j in pushPixels1[i]) {
-                                    if (pushPixels1[i][j] != 2 && pushPixels1[i][j] != 3) {
-                                        continue;
-                                    }
-                                    failedPushPixels[Number(j) + Number(i) * gridWidth] = tick;
-                                }
-                            }
-                        }
-                        xPos = x2 - 1;
-                        break;
-                    }
-                }
-            }
-            if (pushPixels[y1][x2] == null) {
-                if (pushStrength < 2 && id == PISTON_RIGHT && !isDeactivated(x2, y1)) {
-                    pushFail(x2);
-                    break push;
-                }
-                if (!pixels[id].pushableLeft) {
-                    pushFail(x2);
-                    break push;
-                }
-            }
-            else {
-                xPos = x2;
-                break;
-            }
-        }
-        if (xPos == null) {
-            pushFail(x2);
-            break push;
-        }
-        function canUnstick(slimeX, slimeY) {
-            if (!allowRecursion) {
-                return true;
-            }
-            let [worked1, pushPixels1] = pushLeftCheck(slimeX, slimeY, selfX, selfY, false);
-            // we will unstick if we cannot push, allowing collapses (instant) AND unsticks (instant)
-            if (worked1) {
-                for (let i in pushPixels1) {
-                    for (let j in pushPixels1[i]) {
-                        if (pushPixels1[i][j] != 2 && pushPixels1[i][j] != 1) {
-                            continue;
-                        }
-                        workedPushPixels[Number(j) + Number(i) * gridWidth] = tick;
-                    }
-                }
-            }
-            else {
-                // prevent cloners from marking themselves as unpushable
-                if (selfX == -1 && selfY == -1) {
-                    for (let i in pushPixels1) {
-                        for (let j in pushPixels1[i]) {
-                            if (pushPixels1[i][j] != 2 && pushPixels1[i][j] != 3) {
-                                continue;
-                            }
-                            failedPushPixels[Number(j) + Number(i) * gridWidth] = tick;
-                        }
-                    }
-                }
-                return true;
-            }
-            return false;
-        };
-        for (let x2 = x1; x2 > xPos; x2--) {
-            let index1 = (x2 + y1 * gridWidth) * gridStride;
-            let id = grid[index1 + ID];
-            pushPixels[y1][x2] = stronglyConnected ? 2 : 1;
-            if (pixels[id].sticky) {
-                stick: if (y1 > 0) {
-                    let slimeX = x2;
-                    let slimeY = y1 - 1;
-                    let slimeIndex = (slimeX + slimeY * gridWidth) * gridStride;
-                    if (slimeX == selfX && slimeY == selfY) {
-                        break stick;
-                    }
-                    if (pixels[id].sticky == 1 && canUnstick(slimeX, slimeY)) {
-                        break stick;
-                    }
-                    if (pixels[grid[slimeIndex + ID]].stickableDown && grid[slimeIndex + UPDATED] != tick && (pushPixels[slimeY] == null || pushPixels[slimeY][slimeX] == null)) {
-                        queue.push(slimeX + slimeY * gridWidth + (pixels[grid[slimeIndex + ID]].sticky && stronglyConnected ? (gridWidth * gridHeight) : 0));
-                    }
-                }
-                stick: if (y1 < gridHeight - 1) {
-                    let slimeX = x2;
-                    let slimeY = y1 + 1;
-                    let slimeIndex = (slimeX + slimeY * gridWidth) * gridStride;
-                    if (slimeX == selfX && slimeY == selfY) {
-                        break stick;
-                    }
-                    if (pixels[id].sticky == 1 && canUnstick(slimeX, slimeY)) {
-                        break stick;
-                    }
-                    if (pixels[grid[slimeIndex + ID]].stickableUp && grid[slimeIndex + UPDATED] != tick && (pushPixels[slimeY] == null || pushPixels[slimeY][slimeX] == null)) {
-                        queue.push(slimeX + slimeY * gridWidth + (pixels[grid[slimeIndex + ID]].sticky && stronglyConnected ? (gridWidth * gridHeight) : 0));
-                    }
-                }
-                stick: if (x2 == x1 && x2 < gridWidth - 1) {
-                    let slimeX = x2 + 1;
-                    let slimeY = y1;
-                    let slimeIndex = (slimeX + slimeY * gridWidth) * gridStride;
-                    if (slimeX == selfX && slimeY == selfY) {
-                        break stick;
-                    }
-                    if (pixels[id].sticky == 1 && canUnstick(slimeX, slimeY)) {
-                        break stick;
-                    }
-                    if (pixels[grid[slimeIndex + ID]].stickableLeft && grid[slimeIndex + UPDATED] != tick && (pushPixels[slimeY] == null || pushPixels[slimeY][slimeX] == null)) {
-                        queue.push(slimeX + slimeY * gridWidth + (pixels[grid[slimeIndex + ID]].sticky && stronglyConnected ? (gridWidth * gridHeight) : 0));
-                    }
-                }
-            }
-            else {
-                // if (y1 > 0) {
-                //     let slimeX = x2;
-                //     let slimeY = y1 - 1;
-                //     if (grid[slimeIndex + ID] == GLUE && (pushPixels[slimeY] == null || pushPixels[slimeY][slimeX] == null)) {
-                //         queue.push(slimeX + slimeY * gridWidth + (pixels[grid[slimeIndex + ID]].sticky && stronglyConnected ? (gridWidth * gridHeight) : 0));
-                //     }
-                // }
-                // if (y1 < gridHeight - 1) {
-                //     let slimeX = x2;
-                //     let slimeY = y1 + 1;
-                //     if (grid[slimeIndex + ID] == GLUE && (pushPixels[slimeY] == null || pushPixels[slimeY][slimeX] == null)) {
-                //         queue.push(slimeX + slimeY * gridWidth + (pixels[grid[slimeIndex + ID]].sticky && stronglyConnected ? (gridWidth * gridHeight) : 0));
-                //     }
-                // }
-                // if (x2 == x1) {
-                //     if (x2 < gridWidth - 1) {
-                //         let slimeX = x2 + 1;
-                //         let slimeY = y1;
-                //         if (grid[slimeIndex + ID] == GLUE && (pushPixels[slimeY] == null || pushPixels[slimeY][slimeX] == null)) {
-                //             queue.push(slimeX + slimeY * gridWidth + (pixels[grid[slimeIndex + ID]].sticky && stronglyConnected ? (gridWidth * gridHeight) : 0));
-                //         }
-                //     }
-                // }
-                stronglyConnected = false;
-            }
-        }
-    }
-    return [worked, pushPixels];
-};
-function pushRight(x, y, selfX, selfY, strength) {
-    pushStrength = strength;
-    setPushPixels();
-    let [worked, pushPixels] = pushRightCheck(x, y, -1, -1, true);
-    let pushedSelf = false;
-    if (worked && pushPixels[selfY] != null && pushPixels[selfY][gridWidth - selfX] != null) {
-        pushedSelf = true;
-        for (let i in pushPixels) {
-            for (let j in pushPixels[i]) {
-                if (pushPixels[i][j] != 2 && pushPixels[i][j] != 1) {
-                    continue;
-                }
-                workedPushPixels[gridWidth - Number(j) + Number(i) * gridWidth] = tick;
-            }
-        }
-        [worked, pushPixels] = pushRightCheck(x, y, selfX, selfY, true);
-    }
-    if (worked) {
-        for (let i in pushPixels) {
-            for (let j in pushPixels[i]) {
-                if (pushPixels[i][j] != 2 && pushPixels[i][j] != 1) {
-                    continue;
-                }
-                i = Number(i);
-                let j2 = gridWidth - Number(j);
-                workedPushPixels[j2 + i * gridWidth] = tick;
-                let index = (j2 + 1 + i * gridWidth) * gridStride;
-                if (grid[index + ID] != AIR && grid[index + ID] != MONSTER) {
-                    addPixel(j2, i, AIR);
-                    addTeam(j2, i, -1);
-                }
-                else {
-                    move(j2, i, j2 + 1, i);
-                    addFire(j2, i, 0);
-                }
-            }
-        }
-        // if (grid[(x + y * gridWidth) * gridStride + ID] == MONSTER) {
-        //     addPixel(x, y, AIR);
-        // }
-        return true;
-    }
-    else if (!pushedSelf) {
-        for (let i in pushPixels) {
-            for (let j in pushPixels[i]) {
-                if (pushPixels[i][j] != 2 && pushPixels[i][j] != 3) {
-                    continue;
-                }
-                failedPushPixels[gridWidth - Number(j) + Number(i) * gridWidth] = tick;
-            }
-        }
-    }
-    return false;
-};
-function pushRightCheck(x, y, selfX, selfY, allowRecursion) {
-    let pushPixels = [];
-    let queue = [x + y * gridWidth + gridWidth * gridHeight];
-    let worked = true;
-    push: while (queue.length > 0) {
-        let index = queue.pop();
-        let stronglyConnected = index > gridWidth * gridHeight;
-        index = index % (gridWidth * gridHeight);
-        let x1 = index % gridWidth;
-        let y1 = (index - x1) / gridWidth;
-        function pushFail(x2) {
-            if (selfX == -1 && selfY == -1) {
-                for (let x3 = x1; x3 <= x2; x3++) {
-                    // pushPixels[y][x2] = 3;
-                    // failedPushPixels[x3 + y1 * gridWidth + (canCollapse ? (gridWidth * gridHeight) : 0)] = tick;
-                    failedPushPixels[x3 + y1 * gridWidth] = tick;
-                }
-            }
-            worked = false;
-        };
-        let xPos;
-        let x2;
-        for (x2 = x1; x2 < gridWidth; x2++) {
-            if (x2 == selfX && y1 == selfY) {
-                pushFail(x2);
-                break push;
-            }
-            let index1 = (x2 + y1 * gridWidth) * gridStride;
-            let id = grid[index1 + ID];
-            if (id == AIR || id == DELETER || id == MONSTER) {
-                if (pushStrength == 0 && x2 != gridWidth - 1) {
-                    let index2 = (x2 + 1 + y1 * gridWidth) * gridStride;
-                    let id1 = grid[index2 + ID];
-                    if ((id1 == PUSHER_LEFT || id1 == FAN_LEFT) && !isDeactivated(x2 + 1, y1)) {
-                        pushFail(x2);
-                        break push;
-                    }
-                }
-                xPos = x2;
-                break;
-            }
-            if (failedPushPixels[x2 + y1 * gridWidth] == tick) {
-                if (x2 != x1) {
-                    pushFail(x2 + 1);
-                }
-                worked = false;
-                break push;
-            }
-            if (!allowRecursion && selfX == -1 && selfY == -1 && workedPushPixels[x2 + y1 * gridWidth] == tick) {
-                xPos = x2;
-                break;
-            }
-            if (grid[index1 + UPDATED] == tick) {
-                if (x2 != x1) {
-                    pushFail(x2 + 1);
-                    modal("Push error", "Tried to push updated pixel right (this might not be an error)", "error");
-                    break push;
-                }
-                worked = false;
-                modal("Push error", "Tried to push updated pixel right 2 (this might not be an error)", "error");
-                // continue push;
-                break push;
-            }
-            if (pushPixels[y1] == null) {
-                pushPixels[y1] = [];
-            }
-            if (id == COLLAPSABLE) {
-                if (!allowRecursion) {
-                    xPos = x2 + 1;
-                    break;
-                }
-                if (x2 == gridWidth - 1) {
-                    xPos = x2 + 1;
-                    break;
-                }
-                else {
-                    // see if we can push with collapsing
-                    // if we cannot, then we collapse this one
-                    let [worked1, pushPixels1] = pushRightCheck(x2 + 1, y1, selfX, selfY, false);
-                    if (worked1) {
-                        for (let i in pushPixels1) {
-                            for (let j in pushPixels1[i]) {
-                                if (pushPixels1[i][j] != 2 && pushPixels1[i][j] != 1) {
-                                    continue;
-                                }
-                                workedPushPixels[gridWidth - Number(j) + Number(i) * gridWidth] = tick;
-                            }
-                        }
-                    }
-                    else {
-                        // prevent cloners from marking themselves as unpushable
-                        if (selfX == -1 && selfY == -1) {
-                            for (let i in pushPixels1) {
-                                for (let j in pushPixels1[i]) {
-                                    if (pushPixels1[i][j] != 2 && pushPixels1[i][j] != 3) {
-                                        continue;
-                                    }
-                                    failedPushPixels[gridWidth - Number(j) + Number(i) * gridWidth] = tick;
-                                }
-                            }
-                        }
-                        xPos = x2 + 1;
-                        break;
-                    }
-                }
-            }
-            if (pushPixels[y1][gridWidth - x2] == null) {
-                if (pushStrength < 2 && id == PISTON_LEFT && !isDeactivated(x2, y1)) {
-                    pushFail(x2);
-                    break push;
-                }
-                if (!pixels[id].pushableRight) {
-                    pushFail(x2);
-                    break push;
-                }
-            }
-            else {
-                xPos = x2;
-                break;
-            }
-        }
-        if (xPos == null) {
-            pushFail(x2);
-            break push;
-        }
-        function canUnstick(slimeX, slimeY) {
-            if (!allowRecursion) {
-                return true;
-            }
-            let [worked1, pushPixels1] = pushRightCheck(slimeX, slimeY, selfX, selfY, false);
-            // we will unstick if we cannot push, allowing collapses (instant) AND unsticks (instant)
-            if (worked1) {
-                for (let i in pushPixels1) {
-                    for (let j in pushPixels1[i]) {
-                        if (pushPixels1[i][j] != 2 && pushPixels1[i][j] != 1) {
-                            continue;
-                        }
-                        workedPushPixels[gridWidth - Number(j) + Number(i) * gridWidth] = tick;
-                    }
-                }
-            }
-            else {
-                // prevent cloners from marking themselves as unpushable
-                if (selfX == -1 && selfY == -1) {
-                    for (let i in pushPixels1) {
-                        for (let j in pushPixels1[i]) {
-                            if (pushPixels1[i][j] != 2 && pushPixels1[i][j] != 3) {
-                                continue;
-                            }
-                            failedPushPixels[gridWidth - Number(j) + Number(i) * gridWidth] = tick;
-                        }
-                    }
-                }
-                return true;
-            }
-            return false;
-        };
-        for (let x2 = x1; x2 < xPos; x2++) {
-            let index1 = (x2 + y1 * gridWidth) * gridStride;
-            let id = grid[index1 + ID];
-            pushPixels[y1][gridWidth - x2] = stronglyConnected ? 2 : 1;
-            if (pixels[id].sticky) {
-                stick: if (y1 > 0) {
-                    let slimeX = x2;
-                    let slimeY = y1 - 1;
-                    let slimeIndex = (slimeX + slimeY * gridWidth) * gridStride;
-                    if (slimeX == selfX && slimeY == selfY) {
-                        break stick;
-                    }
-                    if (pixels[id].sticky == 1 && canUnstick(slimeX, slimeY)) {
-                        break stick;
-                    }
-                    if (pixels[grid[slimeIndex + ID]].stickableDown && grid[slimeIndex + UPDATED] != tick && (pushPixels[slimeY] == null || pushPixels[slimeY][gridWidth - slimeX] == null)) {
-                        queue.push(slimeX + slimeY * gridWidth + (pixels[grid[slimeIndex + ID]].sticky && stronglyConnected ? (gridWidth * gridHeight) : 0));
-                    }
-                }
-                stick: if (y1 < gridHeight - 1) {
-                    let slimeX = x2;
-                    let slimeY = y1 + 1;
-                    let slimeIndex = (slimeX + slimeY * gridWidth) * gridStride;
-                    if (slimeX == selfX && slimeY == selfY) {
-                        break stick;
-                    }
-                    if (pixels[id].sticky == 1 && canUnstick(slimeX, slimeY)) {
-                        break stick;
-                    }
-                    if (pixels[grid[slimeIndex + ID]].stickableUp && grid[slimeIndex + UPDATED] != tick && (pushPixels[slimeY] == null || pushPixels[slimeY][gridWidth - slimeX] == null)) {
-                        queue.push(slimeX + slimeY * gridWidth + (pixels[grid[slimeIndex + ID]].sticky && stronglyConnected ? (gridWidth * gridHeight) : 0));
-                    }
-                }
-                stick: if (x2 == x1 && x2 > 0) {
-                    let slimeX = x2 - 1;
-                    let slimeY = y1;
-                    let slimeIndex = (slimeX + slimeY * gridWidth) * gridStride;
-                    if (slimeX == selfX && slimeY == selfY) {
-                        break stick;
-                    }
-                    if (pixels[id].sticky == 1 && canUnstick(slimeX, slimeY)) {
-                        break stick;
-                    }
-                    if (pixels[grid[slimeIndex + ID]].stickableRight && grid[slimeIndex + UPDATED] != tick && (pushPixels[slimeY] == null || pushPixels[slimeY][gridWidth - slimeX] == null)) {
-                        queue.push(slimeX + slimeY * gridWidth + (pixels[grid[slimeIndex + ID]].sticky && stronglyConnected ? (gridWidth * gridHeight) : 0));
-                    }
-                }
-            }
-            else {
-                stronglyConnected = false;
-            }
-        }
-    }
-    return [worked, pushPixels];
-};
-function pushUp(x, y, selfX, selfY, strength) {
-    pushStrength = strength;
-    setPushPixels();
-    let [worked, pushPixels] = pushUpCheck(x, y, -1, -1, true);
-    // alert("setp1")
-    let pushedSelf = false;
-    if (worked && pushPixels[selfY] != null && pushPixels[selfY][selfX] != null) {
-        pushedSelf = true;
-        for (let i in pushPixels) {
-            for (let j in pushPixels[i]) {
-                if (pushPixels[i][j] != 2 && pushPixels[i][j] != 1) {
-                    continue;
-                }
-                workedPushPixels[Number(j) + Number(i) * gridWidth] = tick;
-            }
-        }
-        [worked, pushPixels] = pushUpCheck(x, y, selfX, selfY, true);
-        // alert("setp2")
-    }
-    if (worked) {
-        for (let i in pushPixels) {
-            for (let j in pushPixels[i]) {
-                if (pushPixels[i][j] != 2 && pushPixels[i][j] != 1) {
-                    continue;
-                }
-                i = Number(i);
-                j = Number(j);
-                workedPushPixels[j + i * gridWidth] = tick;
-                let index = (j + (i - 1) * gridWidth) * gridStride;
-                if (grid[index + ID] != AIR && grid[index + ID] != MONSTER) {
-                    addPixel(j, i, AIR);
-                    addTeam(j, i, -1);
-                }
-                else {
-                    move(j, i, j, i - 1);
-                    addFire(j, i, 0);
-                }
-            }
-        }
-        // if (grid[(x + y * gridWidth) * gridStride + ID] == MONSTER) {
-        //     addPixel(x, y, AIR);
-        // }
-        return true;
-    }
-    else if (!pushedSelf) {
-        for (let i in pushPixels) {
-            for (let j in pushPixels[i]) {
-                if (pushPixels[i][j] != 2 && pushPixels[i][j] != 3) {
-                    continue;
-                }
-                failedPushPixels[Number(j) + Number(i) * gridWidth] = tick;
-            }
-        }
-    }
-    return false;
-};
-function pushUpCheck(x, y, selfX, selfY, allowRecursion) {
-    let pushPixels = [];
-    let queue = [x + y * gridWidth + gridWidth * gridHeight];
-    let worked = true;
-    push: while (queue.length > 0) {
-        let index = queue.pop();
-        let stronglyConnected = index > gridWidth * gridHeight;
-        index = index % (gridWidth * gridHeight);
-        let x1 = index % gridWidth;
-        let y1 = (index - x1) / gridWidth;
-        function pushFail(y2) {
-            if (selfX == -1 && selfY == -1) {
-                for (let y3 = y1; y3 >= y2; y3--) {
-                    // pushPixels[y][x2] = 3;
-                    // failedPushPixels[x1 + y3 * gridWidth + (canCollapse ? (gridWidth * gridHeight) : 0)] = tick;
-                    failedPushPixels[x1 + y3 * gridWidth] = tick;
-                }
-            }
-            worked = false;
-        };
-        let yPos;
-        let y2;
-        for (y2 = y1; y2 >= 0; y2--) {
-            if (x1 == selfX && y2 == selfY) {
-                pushFail(y2);
-                break push;
-            }
-            let index1 = (x1 + y2 * gridWidth) * gridStride;
-            let id = grid[index1 + ID];
-            if (id == AIR || id == DELETER || id == MONSTER) {
-                if (pushStrength == 0 && y2 != 0) {
-                    let index2 = (x1 + (y2 - 1) * gridWidth) * gridStride;
-                    let id1 = grid[index2 + ID];
-                    if ((id1 == PUSHER_DOWN || id1 == FAN_DOWN) && !isDeactivated(x1, y2 - 1)) {
-                        pushFail(y2);
-                        break push;
-                    }
-                }
-                yPos = y2;
-                break;
-            }
-            if (failedPushPixels[x1 + y2 * gridWidth] == tick) {
-                if (y2 != y1) {
-                    pushFail(y2 + 1);
-                }
-                worked = false;
-                break push;
-            }
-            if (!allowRecursion && selfX == -1 && selfY == -1 && workedPushPixels[x1 + y2 * gridWidth] == tick) {
-                yPos = y2;
-                break;
-            }
-            if (grid[index1 + UPDATED] == tick) {
-                if (y2 != y1) {
-                    pushFail(y2 + 1);
-                    modal("Push error", "Tried to push updated pixel up (this might not be an error)", "error");
-                    break push;
-                }
-                worked = false;
-                modal("Push error", "Tried to push updated pixel up 2 (this might not be an error)", "error");
-                // continue push;
-                break push;
-            }
-            if (pushPixels[y2] == null) {
-                pushPixels[y2] = [];
-            }
-            if (id == COLLAPSABLE) {
-                if (!allowRecursion) {
-                    yPos = y2 - 1;
-                    break;
-                }
-                if (y2 == 0) {
-                    yPos = y2 - 1;
-                    break;
-                }
-                else {
-                    // see if we can push with collapsing
-                    // if we cannot, then we collapse this one
-                    let [worked1, pushPixels1] = pushUpCheck(x1, y2 - 1, selfX, selfY, false);
-                    // alert(worked1)
-                    if (worked1) {
-                        for (let i in pushPixels1) {
-                            for (let j in pushPixels1[i]) {
-                                if (pushPixels1[i][j] != 2 && pushPixels1[i][j] != 1) {
-                                    continue;
-                                }
-                                workedPushPixels[Number(j) + Number(i) * gridWidth] = tick;
-                            }
-                        }
-                    }
-                    else {
-                        // prevent cloners from marking themselves as unpushable
-                        if (selfX == -1 && selfY == -1) {
-                            for (let i in pushPixels1) {
-                                for (let j in pushPixels1[i]) {
-                                    if (pushPixels1[i][j] != 2 && pushPixels1[i][j] != 3) {
-                                        continue;
-                                    }
-                                    failedPushPixels[Number(j) + Number(i) * gridWidth] = tick;
-                                }
-                            }
-                        }
-                        yPos = y2 - 1;
-                        break;
-                    }
-                }
-            }
-            if (pushPixels[y2][x1] == null) {
-                if (pushStrength < 2 && id == PISTON_DOWN && !isDeactivated(x1, y2)) {
-                    pushFail(y2);
-                    break push;
-                }
-                if (!pixels[id].pushableUp) {
-                    pushFail(y2);
-                    break push;
-                }
-            }
-            else {
-                yPos = y2;
-                break;
-            }
-        }
-        if (yPos == null) {
-            pushFail(y2);
-            break push;
-        }
-        function canUnstick(slimeX, slimeY) {
-            if (!allowRecursion) {
-                return true;
-            }
-            let [worked1, pushPixels1] = pushUpCheck(slimeX, slimeY, selfX, selfY, false);
-            // we will unstick if we cannot push, allowing collapses (instant) AND unsticks (instant)
-            if (worked1) {
-                for (let i in pushPixels1) {
-                    for (let j in pushPixels1[i]) {
-                        if (pushPixels1[i][j] != 2 && pushPixels1[i][j] != 1) {
-                            continue;
-                        }
-                        workedPushPixels[Number(j) + Number(i) * gridWidth] = tick;
-                    }
-                }
-            }
-            else {
-                // prevent cloners from marking themselves as unpushable
-                if (selfX == -1 && selfY == -1) {
-                    for (let i in pushPixels1) {
-                        for (let j in pushPixels1[i]) {
-                            if (pushPixels1[i][j] != 2 && pushPixels1[i][j] != 3) {
-                                continue;
-                            }
-                            failedPushPixels[Number(j) + Number(i) * gridWidth] = tick;
-                        }
-                    }
-                }
-                return true;
-            }
-            return false;
-        };
-        for (let y2 = y1; y2 > yPos; y2--) {
-            let index1 = (x1 + y2 * gridWidth) * gridStride;
-            let id = grid[index1 + ID];
-            pushPixels[y2][x1] = stronglyConnected ? 2 : 1;
-            if (pixels[id].sticky) {
-                stick: if (x1 > 0) {
-                    let slimeX = x1 - 1;
-                    let slimeY = y2;
-                    let slimeIndex = (slimeX + slimeY * gridWidth) * gridStride;
-                    if (slimeX == selfX && slimeY == selfY) {
-                        break stick;
-                    }
-                    if (pixels[id].sticky == 1 && canUnstick(slimeX, slimeY)) {
-                        break stick;
-                    }
-                    if (pixels[grid[slimeIndex + ID]].stickableRight && grid[slimeIndex + UPDATED] != tick && (pushPixels[slimeY] == null || pushPixels[slimeY][slimeX] == null)) {
-                        queue.push(slimeX + slimeY * gridWidth + (pixels[grid[slimeIndex + ID]].sticky && stronglyConnected ? (gridWidth * gridHeight) : 0));
-                    }
-                }
-                stick: if (x1 < gridWidth - 1) {
-                    let slimeX = x1 + 1;
-                    let slimeY = y2;
-                    let slimeIndex = (slimeX + slimeY * gridWidth) * gridStride;
-                    if (slimeX == selfX && slimeY == selfY) {
-                        break stick;
-                    }
-                    if (pixels[id].sticky == 1 && canUnstick(slimeX, slimeY)) {
-                        break stick;
-                    }
-                    if (pixels[grid[slimeIndex + ID]].stickableLeft && grid[slimeIndex + UPDATED] != tick && (pushPixels[slimeY] == null || pushPixels[slimeY][slimeX] == null)) {
-                        queue.push(slimeX + slimeY * gridWidth + (pixels[grid[slimeIndex + ID]].sticky && stronglyConnected ? (gridWidth * gridHeight) : 0));
-                    }
-                }
-                stick: if (y2 == y1 && y2 < gridHeight - 1) {
-                    let slimeX = x1;
-                    let slimeY = y2 + 1;
-                    let slimeIndex = (slimeX + slimeY * gridWidth) * gridStride;
-                    if (slimeX == selfX && slimeY == selfY) {
-                        break stick;
-                    }
-                    if (pixels[id].sticky == 1 && canUnstick(slimeX, slimeY)) {
-                        break stick;
-                    }
-                    if (pixels[grid[slimeIndex + ID]].stickableUp && grid[slimeIndex + UPDATED] != tick && (pushPixels[slimeY] == null || pushPixels[slimeY][slimeX] == null)) {
-                        queue.push(slimeX + slimeY * gridWidth + (pixels[grid[slimeIndex + ID]].sticky && stronglyConnected ? (gridWidth * gridHeight) : 0));
-                    }
-                }
-            }
-            else {
-                stronglyConnected = false;
-            }
-        }
-    }
-    return [worked, pushPixels];
-};
-function pushDown(x, y, selfX, selfY, strength) {
-    pushStrength = strength;
-    setPushPixels();
-    let [worked, pushPixels] = pushDownCheck(x, y, -1, -1, true);
-    let pushedSelf = false;
-    if (worked && pushPixels[gridHeight - selfY] != null && pushPixels[gridHeight - selfY][selfX] != null) {
-        pushedSelf = true;
-        for (let i in pushPixels) {
-            for (let j in pushPixels[i]) {
-                if (pushPixels[i][j] != 2 && pushPixels[i][j] != 1) {
-                    continue;
-                }
-                workedPushPixels[Number(j) + (gridHeight - Number(i)) * gridWidth] = tick;
-            }
-        }
-        [worked, pushPixels] = pushDownCheck(x, y, selfX, selfY, true);
-    }
-    if (worked) {
-        for (let i in pushPixels) {
-            for (let j in pushPixels[i]) {
-                if (pushPixels[i][j] != 2 && pushPixels[i][j] != 1) {
-                    continue;
-                }
-                let i2 = gridHeight - Number(i);
-                j = Number(j);
-                workedPushPixels[j + i2 * gridWidth] = tick;
-                let index = (j + (i2 + 1) * gridWidth) * gridStride;
-                if (grid[index + ID] != AIR && grid[index + ID] != MONSTER) {
-                    addPixel(j, i2, AIR);
-                    addTeam(j, i2, -1);
-                }
-                else {
-                    move(j, i2, j, i2 + 1);
-                    addFire(j, i2, 0);
-                }
-            }
-        }
-        // if (grid[(x + y * gridWidth) * gridStride + ID] == MONSTER) {
-        //     addPixel(x, y, AIR);
-        // }
-        return true;
-    }
-    else if (!pushedSelf) {
-        for (let i in pushPixels) {
-            for (let j in pushPixels[i]) {
-                if (pushPixels[i][j] != 2 && pushPixels[i][j] != 3) {
-                    continue;
-                }
-                failedPushPixels[Number(j) + (gridHeight - Number(i)) * gridWidth] = tick;
-            }
-        }
-    }
-    return false;
-};
-function pushDownCheck(x, y, selfX, selfY, allowRecursion) {
-    let pushPixels = [];
-    let queue = [x + y * gridWidth + gridWidth * gridHeight];
-    let worked = true;
-    push: while (queue.length > 0) {
-        let index = queue.pop();
-        let stronglyConnected = index > gridWidth * gridHeight;
-        index = index % (gridWidth * gridHeight);
-        let x1 = index % gridWidth;
-        let y1 = (index - x1) / gridWidth;
-        function pushFail(y2) {
-            if (selfX == -1 && selfY == -1) {
-                for (let y3 = y1; y3 <= y2; y3++) {
-                    // pushPixels[y][x2] = 3;
-                    // failedPushPixels[x1 + y3 * gridWidth + (canCollapse ? (gridWidth * gridHeight) : 0)] = tick;
-                    failedPushPixels[x1 + y3 * gridWidth] = tick;
-                }
-            }
-            worked = false;
-        };
-        let yPos;
-        let y2;
-        for (y2 = y1; y2 < gridHeight; y2++) {
-            if (x1 == selfX && y2 == selfY) {
-                pushFail(y2);
-                break push;
-            }
-            let index1 = (x1 + y2 * gridWidth) * gridStride;
-            let id = grid[index1 + ID];
-            if (id == AIR || id == DELETER || id == MONSTER) {
-                if (pushStrength == 0 && y2 != gridHeight - 1) {
-                    let index2 = (x1 + (y2 + 1) * gridWidth) * gridStride;
-                    let id1 = grid[index2 + ID];
-                    if ((id1 == PUSHER_UP || id1 == FAN_UP) && !isDeactivated(x1, y2 + 1)) {
-                        pushFail(y2);
-                        break push;
-                    }
-                }
-                yPos = y2;
-                break;
-            }
-            if (failedPushPixels[x1 + y2 * gridWidth] == tick) {
-                if (y2 != y1) {
-                    pushFail(y2 + 1);
-                }
-                worked = false;
-                break push;
-            }
-            if (!allowRecursion && selfX == -1 && selfY == -1 && workedPushPixels[x1 + y2 * gridWidth] == tick) {
-                yPos = y2;
-                break;
-            }
-            if (grid[index1 + UPDATED] == tick) {
-                if (y2 != y1) {
-                    pushFail(y2 + 1);
-                    modal("Push error", "Tried to push updated pixel down (this might not be an error)", "error");
-                    break push;
-                }
-                worked = false;
-                modal("Push error", "Tried to push updated pixel down 2 (this might not be an error)", "error");
-                // continue push;
-                break push;
-            }
-            if (pushPixels[gridHeight - y2] == null) {
-                pushPixels[gridHeight - y2] = [];
-            }
-            if (id == COLLAPSABLE) {
-                if (!allowRecursion) {
-                    yPos = y2 + 1;
-                    break;
-                }
-                if (y2 == gridHeight - 1) {
-                    yPos = y2 + 1;
-                    break;
-                }
-                else {
-                    // see if we can push with collapsing
-                    // if we cannot, then we collapse this one
-                    let [worked1, pushPixels1] = pushDownCheck(x1, y2 + 1, selfX, selfY, false);
-                    if (worked1) {
-                        for (let i in pushPixels1) {
-                            for (let j in pushPixels1[i]) {
-                                if (pushPixels1[i][j] != 2 && pushPixels1[i][j] != 1) {
-                                    continue;
-                                }
-                                workedPushPixels[Number(j) + (gridHeight - Number(i)) * gridWidth] = tick;
-                            }
-                        }
-                    }
-                    else {
-                        // prevent cloners from marking themselves as unpushable
-                        if (selfX == -1 && selfY == -1) {
-                            for (let i in pushPixels1) {
-                                for (let j in pushPixels1[i]) {
-                                    if (pushPixels1[i][j] != 2 && pushPixels1[i][j] != 3) {
-                                        continue;
-                                    }
-                                    failedPushPixels[Number(j) + (gridHeight - Number(i)) * gridWidth] = tick;
-                                }
-                            }
-                        }
-                        yPos = y2 + 1;
-                        break;
-                    }
-                }
-            }
-            if (pushPixels[gridHeight - y2][x1] == null) {
-                if (pushStrength < 2 && id == PISTON_UP && !isDeactivated(x1, y2)) {
-                    pushFail(y2);
-                    break push;
-                }
-                if (!pixels[id].pushableDown) {
-                    pushFail(y2);
-                    break push;
-                }
-            }
-            else {
-                yPos = y2;
-                break;
-            }
-        }
-        if (yPos == null) {
-            pushFail(y2);
-            break push;
-        }
-        function canUnstick(slimeX, slimeY) {
-            if (!allowRecursion) {
-                return true;
-            }
-            let [worked1, pushPixels1] = pushDownCheck(slimeX, slimeY, selfX, selfY, false);
-            // we will unstick if we cannot push, allowing collapses (instant) AND unsticks (instant)
-            if (worked1) {
-                for (let i in pushPixels1) {
-                    for (let j in pushPixels1[i]) {
-                        if (pushPixels1[i][j] != 2 && pushPixels1[i][j] != 1) {
-                            continue;
-                        }
-                        workedPushPixels[Number(j) + (gridHeight - Number(i)) * gridWidth] = tick;
-                    }
-                }
-            }
-            else {
-                // prevent cloners from marking themselves as unpushable
-                if (selfX == -1 && selfY == -1) {
-                    for (let i in pushPixels1) {
-                        for (let j in pushPixels1[i]) {
-                            if (pushPixels1[i][j] != 2 && pushPixels1[i][j] != 3) {
-                                continue;
-                            }
-                            failedPushPixels[Number(j) + (gridHeight - Number(i)) * gridWidth] = tick;
-                        }
-                    }
-                }
-                return true;
-            }
-            return false;
-        };
-        for (let y2 = y1; y2 < yPos; y2++) {
-            let index1 = (x1 + y2 * gridWidth) * gridStride;
-            let id = grid[index1 + ID];
-            pushPixels[gridHeight - y2][x1] = stronglyConnected ? 2 : 1;
-            if (pixels[id].sticky) {
-                stick: if (x1 > 0) {
-                    let slimeX = x1 - 1;
-                    let slimeY = y2;
-                    let slimeIndex = (slimeX + slimeY * gridWidth) * gridStride;
-                    if (slimeX == selfX && slimeY == selfY) {
-                        break stick;
-                    }
-                    if (pixels[id].sticky == 1 && canUnstick(slimeX, slimeY)) {
-                        break stick;
-                    }
-                    if (pixels[grid[slimeIndex + ID]].stickableRight && grid[slimeIndex + UPDATED] != tick && (pushPixels[gridHeight - slimeY] == null || pushPixels[gridHeight - slimeY][slimeX] == null)) {
-                        queue.push(slimeX + slimeY * gridWidth + (pixels[grid[slimeIndex + ID]].sticky && stronglyConnected ? (gridWidth * gridHeight) : 0));
-                    }
-                }
-                stick: if (x1 < gridWidth - 1) {
-                    let slimeX = x1 + 1;
-                    let slimeY = y2;
-                    let slimeIndex = (slimeX + slimeY * gridWidth) * gridStride;
-                    if (slimeX == selfX && slimeY == selfY) {
-                        break stick;
-                    }
-                    if (pixels[id].sticky == 1 && canUnstick(slimeX, slimeY)) {
-                        break stick;
-                    }
-                    if (pixels[grid[slimeIndex + ID]].stickableLeft && grid[slimeIndex + UPDATED] != tick && (pushPixels[gridHeight - slimeY] == null || pushPixels[gridHeight - slimeY][slimeX] == null)) {
-                        queue.push(slimeX + slimeY * gridWidth + (pixels[grid[slimeIndex + ID]].sticky && stronglyConnected ? (gridWidth * gridHeight) : 0));
-                    }
-                }
-                stick: if (y2 == y1 && y2 > 0) {
-                    let slimeX = x1;
-                    let slimeY = y2 - 1;
-                    let slimeIndex = (slimeX + slimeY * gridWidth) * gridStride;
-                    if (slimeX == selfX && slimeY == selfY) {
-                        break stick;
-                    }
-                    if (pixels[id].sticky == 1 && canUnstick(slimeX, slimeY)) {
-                        break stick;
-                    }
-                    if (pixels[grid[slimeIndex + ID]].stickableDown && grid[slimeIndex + UPDATED] != tick && (pushPixels[gridHeight - slimeY] == null || pushPixels[gridHeight - slimeY][slimeX] == null)) {
-                        queue.push(slimeX + slimeY * gridWidth + (pixels[grid[slimeIndex + ID]].sticky && stronglyConnected ? (gridWidth * gridHeight) : 0));
-                    }
-                }
-            }
-            else {
-                stronglyConnected = false;
-            }
-        }
-    }
-    return [worked, pushPixels];
-};
-
-function isRotatable(x, y) {
-    return grid[(x + y * gridWidth) * gridStride + UPDATED] != tick && pixels[grid[(x + y * gridWidth) * gridStride + ID]].rotatable;
-};
-function rotatePixel(x, y) {
-    let index = (x + y * gridWidth) * gridStride;
-    let id = grid[index + ID];
-    if (pixels[id].rotations == null) {
-        return;
-    }
-    //sdfsdf fix for corruption
-    let rotations = pixels[id].rotation;
-    forTouching(x, y, (x1, y1) => {
-        let index1 = (x1 + y1 * gridWidth) * gridStride;
-        let id1 = grid[index1 + ID];
-        if (id1 == ROTATOR_LEFT) {
-            rotations += (4 - pixels[id].rotation);
-        }
-        if (id1 == ROTATOR_UP) {
-            rotations += (5 - pixels[id].rotation);
-        }
-        if (id1 == ROTATOR_RIGHT) {
-            rotations += (6 - pixels[id].rotation);
-        }
-        if (id1 == ROTATOR_DOWN) {
-            rotations += (7 - pixels[id].rotation);
-        }
-        if (id1 == ROTATOR_CLOCKWISE) {
-            rotations += 1;
-        }
-        if (id1 == ROTATOR_COUNTERCLOCKWISE) {
-            rotations += 3;
-        }
-    });
-    addPixel(x, y, pixels[id].rotations[rotations % pixels[id].rotations.length]);
-};
-
-function isDeactivated(x, y) {
-    if (x > 0) {
-        let index = (x - 1 + y * gridWidth) * gridStride;
-        if (grid[index + ID] == DEACTIVATOR || grid[index + ID] == OBSERVER_RIGHT_ON || grid[index + ID] == COMPARATOR_RIGHT_ON) {
-            return true;
-        }
-    }
-    if (x < gridWidth - 1) {
-        let index = (x + 1 + y * gridWidth) * gridStride;
-        if (grid[index + ID] == DEACTIVATOR || grid[index + ID] == OBSERVER_LEFT_ON || grid[index + ID] == COMPARATOR_LEFT_ON) {
-            return true;
-        }
-    }
-    if (y > 0) {
-        let index = (x + (y - 1) * gridWidth) * gridStride;
-        if (grid[index + ID] == DEACTIVATOR || grid[index + ID] == OBSERVER_DOWN_ON || grid[index + ID] == COMPARATOR_DOWN_ON) {
-            return true;
-        }
-    }
-    if (y < gridHeight - 1) {
-        let index = (x + (y + 1) * gridWidth) * gridStride;
-        if (grid[index + ID] == DEACTIVATOR || grid[index + ID] == OBSERVER_UP_ON || grid[index + ID] == COMPARATOR_UP_ON) {
-            return true;
-        }
-    }
-    return false;
-};
-function isDeactivatedObserver(x, y) {
-    if (x > 0) {
-        let index = (x - 1 + y * gridWidth) * gridStride;
-        if (grid[index + ID] == DEACTIVATOR) {
-            return true;
-        }
-        // if (grid[index + ID] == OBSERVER_LEFT_ON && grid[index + UPDATED] != tick) {
-        if ((grid[index + ID] == OBSERVER_RIGHT_OFF || grid[index + ID] == OBSERVER_RIGHT_ON) && (grid[index + UPDATED] == tick - 1 || grid[index + UPDATED] == tick - 3)) {
-            return true;
-        }
-    }
-    if (x < gridWidth - 1) {
-        let index = (x + 1 + y * gridWidth) * gridStride;
-        if (grid[index + ID] == DEACTIVATOR) {
-            return true;
-        }
-        if (grid[index + ID] == OBSERVER_LEFT_ON) {
-            return true;
-        }
-    }
-    if (y > 0) {
-        let index = (x + (y - 1) * gridWidth) * gridStride;
-        if (grid[index + ID] == DEACTIVATOR) {
-            return true;
-        }
-        if ((grid[index + ID] == OBSERVER_DOWN_OFF || grid[index + ID] == OBSERVER_DOWN_ON) && (grid[index + UPDATED] == tick - 1 || grid[index + UPDATED] == tick - 3)) {
-            return true;
-        }
-    }
-    if (y < gridHeight - 1) {
-        let index = (x + (y + 1) * gridWidth) * gridStride;
-        if (grid[index + ID] == DEACTIVATOR) {
-            return true;
-        }
-        if (grid[index + ID] == OBSERVER_UP_ON) {
-            return true;
-        }
-    }
-    return false;
-};
-
-function setObserverUpdated(x, y, updated, on) {
-    // tick = last tick updated, last tick off
-    // 
-    grid[(x + y * gridWidth) * gridStride + UPDATED] = tick + (updated ? -2 : 0) + (on ? 0 : -1);
-};
-
-function getLaserPath(x, y, dir) {
-    let path = [[x, y]];
-    switch (dir) {
-        case 0:
-            x -= 1;
-            break;
-        case 1:
-            y -= 1;
-            break;
-        case 2:
-            x += 1;
-            break;
-        case 3:
-            y += 1;
-            break;
-    }
-    while (isOnGrid(x, y)) {
-        let index = (x + y * gridWidth) * gridStride;
-        if (grid[index + ID] == MIRROR_1) {
-            path.push([x, y]);
-            // dir = 3 - dir;
-            switch (dir) {
-                case 0:
-                    dir = 3;
-                    break;
-                case 1:
-                    dir = 2;
-                    break;
-                case 2:
-                    dir = 1;
-                    break;
-                case 3:
-                    dir = 0;
-                    break;
-            }
-        }
-        else if (grid[index + ID] == MIRROR_2) {
-            path.push([x, y]);
-            switch (dir) {
-                case 0:
-                    dir = 1;
-                    break;
-                case 1:
-                    dir = 0;
-                    break;
-                case 2:
-                    dir = 3;
-                    break;
-                case 3:
-                    dir = 2;
-                    break;
-            }
-        }
-        else if (grid[index + ID] != AIR && grid[index + ID] != GLASS) {
-            break;
-        }
-        switch (dir) {
-            case 0:
-                x -= 1;
-                break;
-            case 1:
-                y -= 1;
-                break;
-            case 2:
-                x += 1;
-                break;
-            case 3:
-                y += 1;
-                break;
-        }
-    }
-    path.push([x, y]);
-    return path;
-};
-function drawLaserPath(ctx, cameraScale, path) {
-    // very scuffed code but it should work
-    path[0][0] += Math.sign(path[1][0] - path[0][0]) / 2;
-    path[0][1] += Math.sign(path[1][1] - path[0][1]) / 2;
-    path[path.length - 1][0] += Math.sign(path[path.length - 2][0] - path[path.length - 1][0]) / 2;
-    path[path.length - 1][1] += Math.sign(path[path.length - 2][1] - path[path.length - 1][1]) / 2;
-    if (path.length == 2 && path[0][0] == path[1][0] && path[0][1] == path[1][1]) {
-        return;
-    }
-    ctx.lineWidth = cameraScale / 3;
-    ctx.lineJoin = "bevel";
-    ctx.lineCap = "butt";
-    ctx.beginPath();
-    for (let i in path) {
-        if (i == 0) {
-            ctx.moveTo((path[i][0] + 0.5) * cameraScale, (path[i][1] + 0.5) * cameraScale);
-        }
-        else {
-            ctx.lineTo((path[i][0] + 0.5) * cameraScale, (path[i][1] + 0.5) * cameraScale);
-        }
-    }
-    ctx.stroke();
-};
 
 let pixels = [];
 let pixelData = {
@@ -2888,10 +163,6 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 125,
-        cost: {
-            color_gray: 1,
-            color_black: 1,
-        },
         update: function(x, y) {
             flow(x, y, 1, 1, isPassableSolid, isMoveableSolid);
         },
@@ -2931,7 +202,7 @@ let pixelData = {
         color: new Float32Array([75, 75, 75, 1]),
         state: SOLID,
         flammability: 0,
-        blastResistance: 1000,
+        blastResistance: 2500,
     },
     water: {
         name: "Water",
@@ -2941,11 +212,7 @@ let pixelData = {
         color: new Float32Array([75, 100, 255, 1]),
         state: LIQUID,
         flammability: 0,
-        blastResistance: 650,
-        cost: {
-            color_cyan: 1,
-            color_blue: 1,
-        },
+        blastResistance: 1750,
         update: function(x, y) {
             let changed = false;
             forTouching(x, y, (x1, y1) => {
@@ -2994,10 +261,6 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 60,
-        cost: {
-            color_cyan: 1,
-            color_blue: 1,
-        },
         randomUpdate: function(x, y) {
             let touchingIce = 10;
             touchingIce *= 2 ** getTouching(x, y, [ICE, ICE_FREEZER]);
@@ -3018,10 +281,6 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 60,
-        cost: {
-            color_cyan: 1,
-            color_blue: 1,
-        },
         update: function(x, y) {
             flow(x, y, 1, 1, isPassableSolid, isMoveableSolid);
         },
@@ -3044,10 +303,6 @@ let pixelData = {
         state: GAS,
         flammability: 0,
         blastResistance: 0,
-        cost: {
-            color_cyan: 1,
-            color_blue: 1,
-        },
         update: function(x, y) {
             let changed = false;
             forTouching(x, y, (x1, y1) => {
@@ -3097,11 +352,7 @@ let pixelData = {
         color: new Float32Array([255, 100, 0, 1]),
         state: LIQUID,
         flammability: 0,
-        blastResistance: 750,
-        cost: {
-            color_red: 1,
-            color_orange: 1,
-        },
+        blastResistance: 2200,
         update: function(x, y) {
             // let index = (x + y * gridWidth) * gridStride;
             forTouching(x, y, (x1, y1) => {
@@ -3112,8 +363,7 @@ let pixelData = {
                 let flammability = pixels[grid[index1 + ID]].flammability;
                 let touchingAir = true;
                 if (random() < flammability / (touchingAir ? 20 : 60) + (y1 < y ? 0.4 : 0) - (touchingAir ? 0 : 0.2)) {
-                    // grid[index1 + PIXEL_DATA] |= 1;
-                    addFire(x1, y1, 1);
+                    grid[index1 + PIXEL_DATA] |= 1;
                 }
                 if (grid[index1 + ID] == SAND && random() < 0.01) {
                     addPixel(x1, y1, GLASS);
@@ -3229,13 +479,11 @@ let pixelData = {
             let index = (x + y * gridWidth) * gridStride;
             let flammability = pixels[grid[index + ID]].flammability;
             if (grid[index + ID] == LAVA) {
-                // grid[index + PIXEL_DATA] &= ~1;
-                addFire(x, y, 0);
+                grid[index + PIXEL_DATA] &= ~1;
                 return;
             }
             if (flammability == 0 && (grid[index + ID] != AIR || random() < 0.3)) {
-                // grid[index + PIXEL_DATA] &= ~1;
-                addFire(x, y, 0);
+                grid[index + PIXEL_DATA] &= ~1;
                 forTouchingDiagonal(x, y, (x1, y1) => {
                     let index1 = (x1 + y1 * gridWidth) * gridStride;
                     if (grid[index1 + ID] == WATER && random() < 0.05) {
@@ -3251,13 +499,11 @@ let pixelData = {
                 return;
             }
             if (grid[index + ID] == WATER || isTouching(x, y, [WATER])) {
-                // grid[index + PIXEL_DATA] &= ~1;
-                addFire(x, y, 0);
+                grid[index + PIXEL_DATA] &= ~1;
             }
             let touchingAir = grid[index + ID] == AIR || isTouching(x, y, [AIR]);
             if (random() < (20 - flammability) / (touchingAir ? 280 : 20)) {
-                // grid[index + PIXEL_DATA] &= ~1;
-                addFire(x, y, 0);
+                grid[index + PIXEL_DATA] &= ~1;
             }
 
             // change to just adjacent pixels? also makes it more consistent
@@ -3345,9 +591,8 @@ let pixelData = {
                 let index1 = (x1 + y1 * gridWidth) * gridStride;
                 let flammability = pixels[grid[index1 + ID]].flammability;
                 if (random() < flammability / (touchingAir ? 20 : 60) + (y1 < y ? 0.4 : 0) - ((x1 != x && y1 != y) ? 0.4 : 0) - (touchingAir ? 0 : 0.2)) {
-                    // grid[index1 + PIXEL_DATA] |= 1;
-                    // grid[index1 + UPDATED] = tick;
-                    addFire(x1, y1, 1);
+                    grid[index1 + PIXEL_DATA] |= 1;
+                    grid[index1 + UPDATED] = tick;
                 }
                 if (grid[index1 + ID] == WATER && random() < 0.05) {
                     addPixel(x1, y1, STEAM);
@@ -3522,7 +767,7 @@ let pixelData = {
         texture: new Float32Array([0, 20, 8, 8]),
         state: SOLID,
         flammability: 0,
-        blastResistance: 600,
+        blastResistance: 1600,
         update: function(x, y) {
             if (isMoveableSolid(x, y + 1)) {
                 let stable = false;
@@ -3567,7 +812,7 @@ let pixelData = {
         color: new Float32Array([110, 110, 110, 1]),
         state: SOLID,
         flammability: 0,
-        blastResistance: 400,
+        blastResistance: 1000,
     },
     basalt: {
         name: "Basalt",
@@ -3577,7 +822,7 @@ let pixelData = {
         color: new Float32Array([90, 90, 110, 1]),
         state: SOLID,
         flammability: 0,
-        blastResistance: 750,
+        blastResistance: 2200,
     },
     iron: {
         name: "Raw Iron",
@@ -3588,7 +833,7 @@ let pixelData = {
         noise: new Float32Array([40, 20, -60, 0]),
         state: SOLID,
         flammability: 0,
-        blastResistance: 500,
+        blastResistance: 1250,
     },
     steel: {
         name: "Steel",
@@ -3598,7 +843,7 @@ let pixelData = {
         texture: new Float32Array([8, 20, 8, 8]),
         state: SOLID,
         flammability: 0,
-        blastResistance: 700,
+        blastResistance: 2000,
     },
     rubber: {
         name: "Rubber",
@@ -3994,7 +1239,7 @@ let pixelData = {
         texture: new Float32Array([40, 40, 40, 40]),
         state: SOLID,
         flammability: 0,
-        blastResistance: 500,
+        blastResistance: 1650,
         pushable: false,
         update: function(x, y) {
             fall(x, y, isMoveableSolid);
@@ -4727,7 +1972,7 @@ let pixelData = {
         description: "Unrealistically flows and may or may not be wet",
         group: "Mechanical",
         subgroup: "Rotator",
-        texture: [new Float32Array([12, 2, 3, 3]), new Float32Array([9, 2, 3, 3]), new Float32Array([18, 2, 3, 3]), new Float32Array([15, 2, 3, 3])],
+        texture: [new Float32Array([15, 2, 3, 3]), new Float32Array([18, 2, 3, 3]), new Float32Array([9, 2, 3, 3]), new Float32Array([12, 2, 3, 3])],
         state: SOLID,
         flammability: 10,
         blastResistance: 250,
@@ -4752,7 +1997,7 @@ let pixelData = {
         texture: new Float32Array([0, 5, 4, 4]),
         state: SOLID,
         flammability: 10,
-        blastResistance: 800,
+        blastResistance: 2500,
         rotatable: true,
         rotations: ["slider_horizontal", "slider_vertical"],
         pushableUp: false,
@@ -4766,7 +2011,7 @@ let pixelData = {
         texture: new Float32Array([4, 5, 4, 4]),
         state: SOLID,
         flammability: 10,
-        blastResistance: 800,
+        blastResistance: 2500,
         rotatable: true,
         rotations: ["slider_horizontal", "slider_vertical"],
         pushableLeft: false,
@@ -5754,7 +2999,7 @@ let pixelData = {
                 exploding = true;
             }
             if (exploding) {
-                explode(x, y, 5 * 5, 5 * 8, 800);
+                explode(x, y, 5 * 5, 5 * 8, 2000);
             }
             else {
                 flow(x, y, 1, 1, isPassableSolid, isMoveableSolid);
@@ -5772,7 +3017,7 @@ let pixelData = {
         flammability: 20,
         blastResistance: 20,
         update: function(x, y) {
-            explode(x, y, 5 * 5, 5 * 8, 800);
+            explode(x, y, 5 * 5, 5 * 8, 2000);
         },
     },
     c4: {
@@ -5797,7 +3042,7 @@ let pixelData = {
         flammability: 0,
         blastResistance: 20,
         update: function(x, y) {
-            explode(x, y, 15 * 15, 15 * 8, 1200);
+            explode(x, y, 15 * 15, 15 * 8, 3000);
         },
     },
     detonator: {
@@ -5811,7 +3056,7 @@ let pixelData = {
         blastResistance: 20,
         update: function(x, y) {
             if (isTouching(x, y, [GUNPOWDER, ACTIVATED_GUNPOWDER, C4, ACTIVATED_C4])) {
-                explode(x, y, 3 * 3, 3 * 8, 300);
+                explode(x, y, 3 * 3, 3 * 8, 800);
             }
         },
     },
@@ -5970,7 +3215,7 @@ let pixelData = {
                 // explode(x, y, 30 * 30, 4000);
                 // explode(x, y, 5 * 5, 20, 1500);
                 // explode(x, y, 30 * 30, 15, 4000);
-                explode(x, y, 30 * 30, 30 * 8, 2000);
+                explode(x, y, 30 * 30, 30 * 8, 4000);
                 // explode(x, y, 120 * 120, 120 * 4, 16000);
                 // explode(x, y, 5 * 5, 5 * 4, 1600);
             }
@@ -5990,7 +3235,7 @@ let pixelData = {
         blastResistance: 20,
         update: function(x, y) {
             // explode(x, y, 30 * 30, 15, 4000);
-            explode(x, y, 30 * 30, 30 * 8, 2000);
+            explode(x, y, 30 * 30, 30 * 8, 4000);
         },
     },
     nuke_defuser: {
@@ -6001,7 +3246,7 @@ let pixelData = {
         texture: new Float32Array([33, 2, 3, 3]),
         state: SOLID,
         flammability: 0,
-        blastResistance: 700,
+        blastResistance: 2100,
     },
     deleter: {
         name: "Deleter",
@@ -6022,7 +3267,7 @@ let pixelData = {
         color: new Float32Array([125, 255, 0, 1]),
         state: SOLID,
         flammability: 0,
-        blastResistance: 1000,
+        blastResistance: 1600,
         update: function(x, y) {
             forTouching(x, y, (x1, y1) => {
                 let index1 = (x1 + y1 * gridWidth) * gridStride;
@@ -6047,7 +3292,7 @@ let pixelData = {
                     if (random() < 0.005) {
                         // addPixel(x1, y1, NUKE);
                         let size = 8;
-                        explode(x, y, size * size, size * 8, 4000);
+                        explode(x, y, size * size, size * 8, 10000);
                         return true;
                     }
                 }
@@ -6062,7 +3307,7 @@ let pixelData = {
         color: new Float32Array([180, 255, 0, 1]),
         state: LIQUID,
         flammability: 0,
-        blastResistance: 650,
+        blastResistance: 1750,
         update: function(x, y) {
             let changed = false;
             forTouching(x, y, (x1, y1) => {
@@ -6119,7 +3364,7 @@ let pixelData = {
         color: new Float32Array([160, 0, 255, 1]),
         state: LIQUID,
         flammability: 0,
-        blastResistance: 650,
+        blastResistance: 1750,
         update: function(x, y) {
             let changed = false;
             forTouching(x, y, (x1, y1) => {
@@ -6933,7 +4178,7 @@ let pixelData = {
         name: "Laser (Left)",
         description: "Unrealistically flows and may or may not be wet",
         group: "Lasers",
-        subgroup: "Laser",
+        subgroup: "Goal",
         texture: [new Float32Array([108, 14, 6, 6]), new Float32Array([132, 14, 6, 6])],
         state: SOLID,
         flammability: 0,
@@ -6946,10 +4191,7 @@ let pixelData = {
             let y1 = path[path.length - 1][1];
             if (isOnGrid(x1, y1)) {
                 let index1 = (x1 + y1 * gridWidth) * gridStride;
-                if (grid[index1 + ID] == LASER_SCATTERER) {
-                    addPixel(x1, y1, ACTIVATED_LASER_SCATTERER);
-                }
-                else if (grid[index1 + ID] != ACTIVATED_LASER_SCATTERER) {
+                if (grid[index1 + ID] != LASER_SCATTERER) {
                     // if (random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
                     if (random() < pixels[grid[index1 + ID]].flammability / 100) {
                         addFire(x1, y1, true);
@@ -6977,7 +4219,7 @@ let pixelData = {
         name: "Laser (Up)",
         description: "Unrealistically flows and may or may not be wet",
         group: "Lasers",
-        subgroup: "Laser",
+        subgroup: "Goal",
         texture: [new Float32Array([114, 14, 6, 6]), new Float32Array([138, 14, 6, 6])],
         state: SOLID,
         flammability: 0,
@@ -6990,10 +4232,7 @@ let pixelData = {
             let y1 = path[path.length - 1][1];
             if (isOnGrid(x1, y1)) {
                 let index1 = (x1 + y1 * gridWidth) * gridStride;
-                if (grid[index1 + ID] == LASER_SCATTERER) {
-                    addPixel(x1, y1, ACTIVATED_LASER_SCATTERER);
-                }
-                else if (grid[index1 + ID] != ACTIVATED_LASER_SCATTERER) {
+                if (grid[index1 + ID] != LASER_SCATTERER) {
                     // if (random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
                     if (random() < pixels[grid[index1 + ID]].flammability / 100) {
                         addFire(x1, y1, true);
@@ -7021,7 +4260,7 @@ let pixelData = {
         name: "Laser (Right)",
         description: "Unrealistically flows and may or may not be wet",
         group: "Lasers",
-        subgroup: "Laser",
+        subgroup: "Goal",
         texture: [new Float32Array([120, 14, 6, 6]), new Float32Array([144, 14, 6, 6])],
         state: SOLID,
         flammability: 0,
@@ -7034,10 +4273,7 @@ let pixelData = {
             let y1 = path[path.length - 1][1];
             if (isOnGrid(x1, y1)) {
                 let index1 = (x1 + y1 * gridWidth) * gridStride;
-                if (grid[index1 + ID] == LASER_SCATTERER) {
-                    addPixel(x1, y1, ACTIVATED_LASER_SCATTERER);
-                }
-                else if (grid[index1 + ID] != ACTIVATED_LASER_SCATTERER) {
+                if (grid[index1 + ID] != LASER_SCATTERER) {
                     // if (random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
                     if (random() < pixels[grid[index1 + ID]].flammability / 100) {
                         addFire(x1, y1, true);
@@ -7065,7 +4301,7 @@ let pixelData = {
         name: "Laser (Down)",
         description: "Unrealistically flows and may or may not be wet",
         group: "Lasers",
-        subgroup: "Laser",
+        subgroup: "Goal",
         texture: [new Float32Array([126, 14, 6, 6]), new Float32Array([150, 14, 6, 6])],
         state: SOLID,
         flammability: 0,
@@ -7078,13 +4314,7 @@ let pixelData = {
             let y1 = path[path.length - 1][1];
             if (isOnGrid(x1, y1)) {
                 let index1 = (x1 + y1 * gridWidth) * gridStride;
-                if (grid[index1 + ID] == LASER_SCATTERER) {
-                    addPixel(x1, y1, ACTIVATED_LASER_SCATTERER);
-                }
-                else if (grid[index1 + ID] == ACTIVATED_LASER_SCATTERER) {
-                    addPixel(x1, y1, ACTIVATED_ACTIVATED_LASER_SCATTERER);
-                }
-                else if (grid[index1 + ID] != ACTIVATED_LASER_SCATTERER) {
+                if (grid[index1 + ID] != LASER_SCATTERER) {
                     // if (random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
                     if (random() < pixels[grid[index1 + ID]].flammability / 100) {
                         addFire(x1, y1, true);
@@ -7117,44 +4347,6 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 0,
-    },
-    activated_laser_scatterer: {
-        name: "Laser Scatterer (Activated)",
-        description: "Unrealistically flows and may or may not be wet",
-        group: "Lasers",
-        subgroup: "Laser Scatterer",
-        texture: new Float32Array([16, 5, 4, 4]),
-        state: SOLID,
-        flammability: 0,
-        blastResistance: 0,
-        update: function(x, y) {
-            addPixel(x, y, LASER_SCATTERER);
-            addDrawingChunk(x, y);
-        },
-        draw: function(ctx, cameraScale, x, y) {
-            let size = (Math.sin(performance.now() / 1000 * Math.PI / 2) + 1) / 4 * cameraScale;
-            ctx.strokeStyle = "rgb(70, 215, 160, 0.2)";
-            ctx.fillRect(x * cameraScale - size, y * cameraScale - size, cameraScale + size * 2, cameraScale + size * 2);
-        },
-    },
-    activated_activated_laser_scatterer: {
-        name: "Laser Scatterer (Activated x2)",
-        description: "Unrealistically flows and may or may not be wet",
-        group: "Lasers",
-        subgroup: "Laser Scatterer",
-        texture: new Float32Array([16, 5, 4, 4]),
-        state: SOLID,
-        flammability: 0,
-        blastResistance: 0,
-        update: function(x, y) {
-            addPixel(x, y, ACTIVATED_LASER_SCATTERER);
-            addDrawingChunk(x, y);
-        },
-        draw: function(ctx, cameraScale, x, y) {
-            let size = (Math.sin(performance.now() / 1000 * Math.PI / 2) + 1) / 4 * cameraScale;
-            ctx.strokeStyle = "rgb(70, 215, 160, 0.2)";
-            ctx.fillRect(x * cameraScale - size, y * cameraScale - size, cameraScale + size * 2, cameraScale + size * 2);
-        },
     },
     mirror_1: {
         name: "Mirror",
@@ -7268,34 +4460,23 @@ let pixelData = {
         flammability: 0,
         blastResistance: 0,
     },
-    team_marker_a: {
-        name: "Team Marker (Alpha)",
+    team_a: {
+        name: "Team (Alpha)",
         description: "Unrealistically flows and may or may not be wet",
         group: "Multiplayer",
-        subgroup: "Team Marker",
+        subgroup: "Team",
         color: new Float32Array([255, 204, 204, 1]),
         amountColor: "black",
         state: GAS,
         flammability: 0,
         blastResistance: 0,
     },
-    team_marker_b: {
-        name: "Team Marker (Beta)",
+    team_b: {
+        name: "Team (Beta)",
         description: "Unrealistically flows and may or may not be wet",
         group: "Multiplayer",
-        subgroup: "Team Marker",
+        subgroup: "Team",
         color: new Float32Array([204, 204, 255, 1]),
-        amountColor: "black",
-        state: GAS,
-        flammability: 0,
-        blastResistance: 0,
-    },
-    king_of_the_hill_marker: {
-        name: "King of the Hill Marker",
-        description: "Unrealistically flows and may or may not be wet",
-        group: "Multiplayer",
-        subgroup: "King of the Hill Marker",
-        color: new Float32Array([255, 204, 255, 1]),
         amountColor: "black",
         state: GAS,
         flammability: 0,
@@ -7626,7 +4807,6 @@ for (let i in pixelData) {
         stickableDown: true,
         cloneable: true,
         rotatable: false,
-        craftable: pixelData[i].cost != null,
         collectable: true,
     };
     for (let j in defaultProperties) {
@@ -7669,7 +4849,6 @@ for (let i in pixelData) {
     pixelData[i].description += "Stickable Down: " + pixelData[i].stickableDown + "<br>";
     pixelData[i].description += "Cloneable: " + pixelData[i].cloneable + "<br>";
     pixelData[i].description += "Rotatable: " + pixelData[i].rotatable + "<br>";
-    pixelData[i].description += "Craftable: " + pixelData[i].craftable + "<br>";
     pixelData[i].description += "Collectable: " + pixelData[i].collectable + "<br>";
     // pixelData[i].description += "Update Stage 0: " + (pixelData[i].update != null ? "True" : "False") + "<br>";
     // pixelData[i].description += "Update Stage 1: " + (pixelData[i].update1 != null ? "True" : "False") + "<br>";
@@ -7687,7 +4866,6 @@ for (let i in pixelData) {
     pixelData[i].description += "Update Stage 5: " + (pixelData[i].update5 != null ? pixelData[i].update5.toString() : "None") + "<br>";
     pixelData[i].description += "Random Update: " + (pixelData[i].randomUpdate != null ? pixelData[i].randomUpdate.toString() : "None") + "<br>";
     pixelData[i].description += "Draw: " + (pixelData[i].draw != null ? pixelData[i].draw.toString() : "None") + "<br>";
-    pixelData[i].description = "";
     pixels.push(pixelData[i]);
     pixels[pixels.length - 1].id = i;
     eval("window." + i.toUpperCase() + " = " + (pixels.length - 1) + ";");
@@ -7721,403 +4899,176 @@ for (let i = 0; i < pixels.length; i++) {
     }
 }
 
-let corruptionName = pixelData.corruption.name;
-setInterval(() => {
-    let characters = "abcdefghijklmnopqrstuvwxyzABCEDFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()-=_+[]{}\|;':\",./<>?`~";
-    let index = Math.floor(Math.random() * pixels[CORRUPTION].name.length);
-    if (Math.random() < 0.1) {
-        pixels[CORRUPTION].name = corruptionName;
-    }
-    pixels[CORRUPTION].name = pixels[CORRUPTION].name.substring(0, index) + characters[Math.floor(Math.random() * characters.length)] + pixels[CORRUPTION].name.substring(index + 1);
-});
+const input = document.getElementById("input");
+const resolutionInput = document.getElementById("resolutionInput");
+const generateButton = document.getElementById("generateButton");
+const progressBarText = document.getElementById("progressBarText");
+const progressBarBackground = document.getElementById("progressBarBackground");
+const timeRemaining = document.getElementById("timeRemaining");
 
-let pixelPicker = document.getElementById("pixelPicker");
-let pixelGroups = [];
-let pixelSubgroups = [];
-let pixelImageData = [];
-let pixelDivs = [];
-let pixelImages = [];
-let pixelAmounts = [];
-let pixelSubgroupToId = [];
-let pixelDivToId = [];
-let pixelIdToDiv = [];
-let canvas = document.createElement("canvas");
-let ctx = canvas.getContext("2d");
-canvas.width = 48;
-canvas.height = 48;
-ctx.imageSmoothingEnabled = false;
-ctx.webkitImageSmoothingEnabled = false;
-ctx.mozImageSmoothingEnabled = false;
+let generating = false;
 
-let selectedDiv = null;
-
-for (let i = 0; i < pixels.length; i++) {
-    // if (!pixels[i].pickable) {
-    //     continue;
-    // }
-    ctx.clearRect(0, 0, 48, 48);
-    if (pixels[i].color != null) {
-        ctx.fillStyle = "rgba(" + pixels[i].color[0] + ", " + pixels[i].color[1] + ", " + pixels[i].color[2] + ", 1)";
-        if (pixels[i].noise != null) {
-            ctx.fillStyle = "rgba(" + (pixels[i].color[0] + pixels[i].noise[0] / 2) + ", " + (pixels[i].color[1] + pixels[i].noise[1] / 2) + ", " + (pixels[i].color[2] + pixels[i].noise[2] / 2) + ", 1)";
-        }
-        ctx.fillRect(0, 0, 48, 48);
+generateButton.onclick = function() {
+    if (generating) {
+        return;
     }
-    else if (Array.isArray(pixels[i].texture)) {
-        ctx.drawImage(pixelTexture, pixels[i].texture[0][0], pixels[i].texture[0][1], pixels[i].texture[0][2], pixels[i].texture[0][3], 0, 0, 48, 48);
-    }
-    else {
-        ctx.drawImage(pixelTexture, pixels[i].texture[0], pixels[i].texture[1], pixels[i].texture[2], pixels[i].texture[3], 0, 0, 48, 48);
-    }
-    // ctx.clearRect(0, 0, 60, 60);
-    // ctx.fillStyle = "rgba(0, 0, 255, 0.2)";
-    // ctx.fillRect(0, 0, 60, 60);
-    // ctx.rotate(-Math.PI / 4);
-    // ctx.clearRect(-100, 0, 200, 6 / Math.sqrt(2));
-    // ctx.clearRect(-100, 54 / Math.sqrt(2), 200, 12 / Math.sqrt(2));
-    // ctx.clearRect(-100, 114 / Math.sqrt(2), 200, 6 / Math.sqrt(2));
-    // ctx.resetTransform();
-    let data = canvas.toDataURL("image/png");
-    pixelImageData.push(data);
-    if (pixelGroups[pixels[i].group] == null) {
-        let group = document.createElement("div");
-        group.classList.add("pixelGroup");
-        pixelPicker.appendChild(group);
-        pixelGroups[pixels[i].group] = group;
-        pixelSubgroups[pixels[i].group] = [];
-        let groupImg = document.createElement("div");
-        groupImg.classList.add("pixelGroupImg");
-        groupImg.style.backgroundImage = "url(" + data + ")";
-        groupImg.onclick = function() {
-            if (group.classList.contains("pixelGroupSelected")) {
-                group.classList.remove("pixelGroupSelected");
-            }
-            else {
-                for (let j in pixelGroups) {
-                    pixelGroups[j].classList.remove("pixelGroupSelected");
-                }
-                group.classList.add("pixelGroupSelected");
-            }
-        };
-        groupImg.onmouseover = function() {
-            showTooltip(pixels[i].group, pixels[i].groupDescription);
-            moveTooltip();
-        };
-        groupImg.onmouseout = function() {
-            hideTooltip();
-        };
-        groupImg.onmousemove = function() {
-            moveTooltip();
-        };
-        group.appendChild(groupImg);
-        let subgroups = document.createElement("div");
-        subgroups.classList.add("pixelSubgroups");
-        group.appendChild(subgroups);
-    }
-    if (pixelSubgroups[pixels[i].group][pixels[i].subgroup] == null) {
-        let subgroup = document.createElement("div");
-        subgroup.classList.add("pixelSubgroup");
-        pixelGroups[pixels[i].group].children[1].appendChild(subgroup);
-        pixelSubgroups[pixels[i].group][pixels[i].subgroup] = subgroup;
-        pixelSubgroupToId[pixels[i].subgroup] = i;
-        pixelDivs.push(subgroup);
-        let subgroupImg = document.createElement("div");
-        subgroupImg.classList.add("pixelSubgroupImg");
-        subgroupImg.style.backgroundImage = "url(" + data + ")";
-        subgroupImg.onclick = function() {
-            let id = pixelDivToId[i];
-            setBrushPixel(id);
-        };
-        let interval = 0;
-        subgroupImg.onmouseover = function() {
-            let id = pixelDivToId[i];
-            showTooltip(pixels[id].name, pixels[id].description);
-            if (id == CORRUPTION) {
-                interval = setInterval(() => {
-                    showTooltip(pixels[id].name, pixels[id].description);
-                });
-            }
-            moveTooltip();
-        };
-        subgroupImg.onmouseout = function() {
-            let id = pixelDivToId[i];
-            if (id == CORRUPTION) {
-                clearInterval(interval);
-            }
-            hideTooltip();
-        };
-        subgroupImg.onmousemove = function() {
-            moveTooltip();
-        };
-        subgroup.appendChild(subgroupImg);
-        pixelImages.push(subgroupImg);
-        let pixelAmount = document.createElement("div");
-        pixelAmount.classList.add("pixelAmount");
-        pixelAmount.style.color = pixels[i].amountColor ?? "white";
-        pixelAmounts.push(pixelAmount);
-        subgroupImg.appendChild(pixelAmount);
-
-        if (selectedDiv == null) {
-            selectedDiv = subgroupImg;
-        }
-    }
-    else {
-        let pixel = document.createElement("div");
-        pixel.classList.add("pixel");
-        pixelSubgroups[pixels[i].group][pixels[i].subgroup].appendChild(pixel);
-        pixelDivs.push(pixel);
-        let pixelImg = document.createElement("div");
-        pixelImg.classList.add("pixelImg");
-        pixelImg.style.backgroundImage = "url(" + data + ")";
-        pixelImg.onclick = function() {
-            let id = pixelDivToId[i];
-            setBrushPixel(id);
-        };
-        pixelImg.onmouseover = function() {
-            let id = pixelDivToId[i];
-            showTooltip(pixels[id].name, pixels[id].description);
-            moveTooltip();
-        };
-        pixelImg.onmouseout = function() {
-            hideTooltip();
-        };
-        pixelImg.onmousemove = function() {
-            moveTooltip();
-        };
-        pixel.appendChild(pixelImg);
-        pixelImages.push(pixelImg);
-        let pixelAmount = document.createElement("div");
-        pixelAmount.classList.add("pixelAmount");
-        pixelAmount.style.color = pixels[i].amountColor ?? "white";
-        pixelAmounts.push(pixelAmount);
-        pixelImg.appendChild(pixelAmount);
-    }
-}
-for (let i in pixels) {
-    if (pixels[i].craftable) {
-        for (let j in pixels[i].cost) {
-            pixels[i].description += pixels[j].name + " <img class=\"pixelCostImg\" src=\"" + pixelImageData[j] + "\"> x" + pixels[i].cost[j] + "<br>";
-        }
-    }
-}
-
-function updateBrushPixel() {
-    selectedDiv.classList.remove("pixelSelected");
-    selectedDiv = pixelImages[pixelIdToDiv[brushPixel]];
-    selectedDiv.classList.add("pixelSelected");
-};
-
-let pixelInventory = [];
-let pixelInventoryUpdates = [];
-function resetPixelInventory() {
-    if (currentPuzzle != null) {
-        for (let i in pixelGroups) {
-            pixelGroups[i].style.display = "none";
-            for (let j in pixelSubgroups[i]) {
-                pixelSubgroups[i][j].style.display = "none";
-            }
-        }
-        let pixelSubgroupIds = [];
-        for (let i in pixels) {
-            pixelDivToId[i] = i;
-            pixelIdToDiv[i] = i;
-            pixelDivs[i].classList.remove("shown");
-            if (pixelSubgroupIds[pixels[i].subgroup] == null) {
-                pixelSubgroupIds[pixels[i].subgroup] = [i];
-            }
-            else {
-                pixelSubgroupIds[pixels[i].subgroup].push(i);
-            }
-        }
-        for (let i in pixels) {
-            if (pixelInventory[i] == 0) {
-                continue;
-            }
-            let div = pixelSubgroupIds[pixels[i].subgroup].shift();
-            pixelDivToId[div] = i;
-            pixelIdToDiv[i] = div;
-            pixelDivs[div].classList.add("shown");
-            pixelAmounts[div].style.display = "";
-            pixelAmounts[div].innerText = pixelInventory[i] == Infinity ? "∞" : pixelInventory[i];
-            pixelImages[div].style.backgroundImage = "url(" + pixelImageData[i] + ")";
-            if (pixelImages[div].classList.contains("disabled")) {
-                pixelImages[div].classList.remove("disabled");
-            }
-            pixelGroups[pixels[i].group].style.display = "";
-            pixelSubgroups[pixels[i].group][pixels[i].subgroup].style.display = "";
-        }
-    }
-    else if (multiplayerId != null) {
-        if (multiplayerGames[multiplayerGameId].allowCrafting) {
-            for (let i in pixelGroups) {
-                pixelGroups[i].style.display = "none";
-                for (let j in pixelSubgroups[i]) {
-                    pixelSubgroups[i][j].style.display = "none";
-                }
-            }
-            let pixelSubgroupIds = [];
-            for (let i in pixels) {
-                pixelDivToId[i] = i;
-                pixelIdToDiv[i] = i;
-                pixelDivs[i].classList.remove("shown");
-                if (pixelSubgroupIds[pixels[i].subgroup] == null) {
-                    pixelSubgroupIds[pixels[i].subgroup] = [i];
-                }
-                else {
-                    pixelSubgroupIds[pixels[i].subgroup].push(i);
-                }
-            }
-            for (let i in pixels) {
-                if (pixels[i].cost == null) {
-                    continue;
-                }
-                let div = pixelSubgroupIds[pixels[i].subgroup].shift();
-                pixelDivToId[div] = i;
-                pixelIdToDiv[i] = div;
-                pixelDivs[div].classList.add("shown");
-                pixelAmounts[div].style.display = "";
-                pixelAmounts[div].innerText = pixelInventory[i] == Infinity ? "∞" : pixelInventory[i];
-                pixelImages[div].style.backgroundImage = "url(" + pixelImageData[i] + ")";
-                if (pixelInventory[i] == 0) {
-                    pixelImages[i].classList.add("disabled");
-                }
-                else {
-                    pixelImages[i].classList.remove("disabled");
-                }
-                pixelGroups[pixels[i].group].style.display = "";
-                pixelSubgroups[pixels[i].group][pixels[i].subgroup].style.display = "";
-            }
-        }
-        else {
-            for (let i in pixelGroups) {
-                pixelGroups[i].style.display = "";
-                for (let j in pixelSubgroups[i]) {
-                    pixelSubgroups[i][j].style.display = "";
-                }
-            }
-            for (let i in pixels) {
-                pixelDivToId[i] = i;
-                pixelIdToDiv[i] = i;
-                pixelDivs[i].classList.add("shown");
-                pixelAmounts[i].style.display = "";
-                pixelAmounts[i].innerText = pixelInventory[i] == Infinity ? "∞" : pixelInventory[i];
-                if (pixelInventory[i] == 0) {
-                    pixelImages[i].classList.add("disabled");
-                }
-                else {
-                    pixelImages[i].classList.remove("disabled");
-                }
-                pixelImages[i].style.backgroundImage = "url(" + pixelImageData[i] + ")";
-            }
-        }
-    }
-    else {
-        for (let i in pixelGroups) {
-            pixelGroups[i].style.display = "";
-            for (let j in pixelSubgroups[i]) {
-                pixelSubgroups[i][j].style.display = "";
-            }
-        }
-        for (let i in pixels) {
-            pixelDivToId[i] = i;
-            pixelIdToDiv[i] = i;
-            pixelDivs[i].classList.add("shown");
-            pixelAmounts[i].style.display = "none";
-            pixelImages[i].classList.remove("disabled");
-            pixelImages[i].style.backgroundImage = "url(" + pixelImageData[i] + ")";
-        }
-    }
-};
-function updatePixelInventory() {
-    for (let i in pixelInventoryUpdates) {
-        let div = pixelIdToDiv[i];
-        if (pixelInventory[i] != 0 && !pixelImages[div].classList.contains("shown")) {
-            let pixelSubgroupIds = [];
-            for (let j = 0; j < pixels.length; j++) {
-                // if (j < Number(i)) {
-                //     continue;
-                // }
-                if (pixels[j].subgroup == pixels[i].subgroup) {
-                    pixelSubgroupIds.push(j);
-                }
-            }
-            for (let j = 0; j < pixels.length; j++) {
-                // if (j < Number(i)) {
-                //     continue;
-                // }
-                if (pixelInventory[j] == 0 && (pixelDivToId[pixelIdToDiv[j]] != j || !pixelDivs[pixelIdToDiv[j]].classList.contains("shown"))) {
-                    continue;
-                }
-                if (pixels[j].subgroup != pixels[i].subgroup) {
-                    continue;
-                }
-                let div = pixelSubgroupIds.shift();
-                if (j >= Number(i)) {
-                    pixelDivToId[div] = j;
-                    pixelIdToDiv[j] = div;
-                    pixelDivs[div].classList.add("shown");
-                    pixelAmounts[div].style.display = "";
-                    pixelAmounts[div].innerText = pixelInventory[j] == Infinity ? "∞" : pixelInventory[j];
-                    pixelImages[div].style.backgroundImage = "url(" + pixelImageData[j] + ")";
-                    if (pixelInventory[j] != 0) {
-                        if (pixelImages[div].classList.contains("disabled")) {
-                            pixelImages[div].classList.remove("disabled");
+    if (input.files != null && input.files[0] != null) {
+        generating = true;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            const image = new Image();
+            image.src = e.target.result;
+            image.onload = function() {
+                const canvas = document.createElement("canvas");
+                let layers = 0;
+                let textures = new Map();
+                for (let i in pixels) {
+                    if (pixels[i].texture != null) {
+                        if (Array.isArray(pixels[i].texture)) {
+                            for (let j in pixels[i].texture) {
+                                if (textures.has(pixels[i].texture[j][0] + ":" + pixels[i].texture[j][1] + ":" + pixels[i].texture[j][2] + ":" + pixels[i].texture[j][3])) {
+                                    continue;
+                                }
+                                textures.set(pixels[i].texture[j][0] + ":" + pixels[i].texture[j][1] + ":" + pixels[i].texture[j][2] + ":" + pixels[i].texture[j][3], true);
+                                layers += 1;
+                            }
+                        }
+                        else {
+                            if (textures.has(pixels[i].texture[0] + ":" + pixels[i].texture[1] + ":" + pixels[i].texture[2] + ":" + pixels[i].texture[3])) {
+                                continue;
+                            }
+                            textures.set(pixels[i].texture[0] + ":" + pixels[i].texture[1] + ":" + pixels[i].texture[2] + ":" + pixels[i].texture[3], true);
+                            layers += 1;
                         }
                     }
-                    pixelGroups[pixels[j].group].style.display = "";
-                    pixelSubgroups[pixels[j].group][pixels[j].subgroup].style.display = "";
                 }
-            }
-            div = pixelIdToDiv[i];
-        }
-        pixelAmounts[div].innerText = pixelInventory[i] == Infinity ? "∞" : pixelInventory[i];
-        if ((pixelInventory[i] == 0) != pixelImages[div].classList.contains("disabled")) {
-            pixelImages[div].classList.toggle("disabled");
-        }
-    }
-    pixelInventoryUpdates = [];
-};
-function updateMultiplayerPixelInventory() {
-    if (multiplayerGames[multiplayerGameId].allowCrafting) {
-        for (let i = 0; i < multiplayerGames[multiplayerGameId].teams; i++) {
-            for (let j in multiplayerGames[multiplayerGameId].pixelInventoryDivs[i]) {
-                multiplayerGames[multiplayerGameId].pixelInventoryDivs[i][j].innerText = multiplayerPixelInventory[i][j];
-            }
-        }
-        // for (let i in multiplayerGames[multiplayerGameId].pixelInventoryDivs[multiplayerGames[multiplayerGameId].players[multiplayerId].team]) {
-        //     pixelInventory[i] = multiplayerPixelInventory[multiplayerGames[multiplayerGameId].players[multiplayerId].team][i];
-        //     if (pixelInventoryUpdates[i]) {
-        //         multiplayerGames[multiplayerGameId].pixelInventoryDivs[multiplayerGames[multiplayerGameId].players[multiplayerId].team][i].innerText = pixelInventory[i];
-        //     }
-        // }
-        for (let i in pixels) {
-            let amount = null;
-            if (!pixels[i].craftable) {
-                pixelInventory[i] = 0;
-                continue;
-            }
-            for (let j in pixels[i].cost) {
-                if (amount == null) {
-                    amount = Math.floor(multiplayerPixelInventory[multiplayerGames[multiplayerGameId].players[multiplayerId].team][j] / pixels[i].cost[j]);
-                }
-                else {
-                    amount = Math.min(amount, Math.floor(multiplayerPixelInventory[multiplayerGames[multiplayerGameId].players[multiplayerId].team][j] / pixels[i].cost[j]));
-                }
-            }
-            if (pixelInventory[i] != amount) {
-                pixelInventory[i] = amount;
-                pixelInventoryUpdates[i] = true;
-            }
-        }
+                let resolution = Number(resolutionInput.value);
+                let width = resolution * 2;
+                let height = layers * resolution;
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext("2d");
+                ctx.imageSmoothingEnabled = false;
+                ctx.webkitImageSmoothingEnabled = false;
+                ctx.mozImageSmoothingEnabled = false;
+                function drawMipmaps(texture, layer) {
+                    ctx.drawImage(image, texture[0], texture[1], texture[2], texture[3], 0, layer * resolution, resolution, resolution);
+                    let x = 0;
+                    let size = resolution;
+                    let nextSize = Math.floor(size / 2);
+                    while (nextSize > 0) {
+                        let imageData = ctx.getImageData(x, layer * resolution, size, size);
+                        let nextImageData = ctx.createImageData(nextSize, nextSize);
+                        for (let y1 = 0; y1 < nextSize; y1++) {
+                            for (let x1 = 0; x1 < nextSize; x1++) {
+                                let r = 0;
+                                let g = 0;
+                                let b = 0;
+                                let a = 0;
+                                let total = 0;
+                                for (let y2 = Math.floor(y1 / nextSize * size); y2 <= Math.floor((y1 + 1) / nextSize * size); y2++) {
+                                    if (y2 == size) {
+                                        break;
+                                    }
+                                    for (let x2 = Math.floor(x1 / nextSize * size); x2 <= Math.floor((x1 + 1) / nextSize * size); x2++) {
+                                        if (x2 == size) {
+                                            break;
+                                        }
+                                        let maxX = Math.max(x2, x1 / nextSize * size);
+                                        let minX = Math.min(x2 + 1, (x1 + 1) / nextSize * size);
+                                        let maxY = Math.max(y2, y1 / nextSize * size);
+                                        let minY = Math.min(y2 + 1, (y1 + 1) / nextSize * size);
+                                        let area = (minX - maxX) * (minY - maxY);
+                                        r += imageData.data[(x2 + y2 * size) * 4] * area;
+                                        g += imageData.data[(x2 + y2 * size) * 4 + 1] * area;
+                                        b += imageData.data[(x2 + y2 * size) * 4 + 2] * area;
+                                        a += imageData.data[(x2 + y2 * size) * 4 + 3] * area;
+                                        total += area;
+                                        // if (layer == 0) {
+                                        //     console.log(r,g,b,a,area, maxX, minX, maxY, minY)
+                                        // }
+                                    }
+                                }
+                                r /= total;
+                                g /= total;
+                                b /= total;
+                                a /= total;
+                                nextImageData.data[(x1 + y1 * nextSize) * 4] = r;
+                                nextImageData.data[(x1 + y1 * nextSize) * 4 + 1] = g;
+                                nextImageData.data[(x1 + y1 * nextSize) * 4 + 2] = b;
+                                nextImageData.data[(x1 + y1 * nextSize) * 4 + 3] = a;
+                            }
+                        }
+                        ctx.putImageData(nextImageData, x + size, layer * resolution);
+                        x += size;
+                        size = nextSize;
+                        nextSize = Math.floor(size / 2);
+                    }
+                };
+                let layersDrawn = 0;
+                let texturesDrawn = new Map();
+                let i = 0;
+                let start = performance.now();
+                let interval = setInterval(function() {
+                    for (i in pixels) {
+                        if (pixels[i].texture != null) {
+                            if (Array.isArray(pixels[i].texture)) {
+                                for (let j in pixels[i].texture) {
+                                    if (texturesDrawn.has(pixels[i].texture[j][0] + ":" + pixels[i].texture[j][1] + ":" + pixels[i].texture[j][2] + ":" + pixels[i].texture[j][3])) {
+                                        continue;
+                                    }
+                                    texturesDrawn.set(pixels[i].texture[j][0] + ":" + pixels[i].texture[j][1] + ":" + pixels[i].texture[j][2] + ":" + pixels[i].texture[j][3], true);
+                                    drawMipmaps(pixels[i].texture[j], layersDrawn);
+                                    layersDrawn += 1;
+                                }
+                            }
+                            else {
+                                if (texturesDrawn.has(pixels[i].texture[0] + ":" + pixels[i].texture[1] + ":" + pixels[i].texture[2] + ":" + pixels[i].texture[3])) {
+                                    continue;
+                                }
+                                texturesDrawn.set(pixels[i].texture[0] + ":" + pixels[i].texture[1] + ":" + pixels[i].texture[2] + ":" + pixels[i].texture[3], true);
+                                drawMipmaps(pixels[i].texture, layersDrawn);
+                                layersDrawn += 1;
+                            }
+                        }
+                    }
+                    if (layersDrawn == layers) {
+                        progressBarText.innerText = (layersDrawn / layers * 100).toFixed(2) + "%";
+                        progressBarBackground.style.width = (layersDrawn / layers * 100) + "%";
+                        timeRemaining.innerText = "Done";
+                        generating = false;
+                        clearInterval(interval);
+                        canvas.toBlob(function(blob) {
+                            const a = document.createElement("a");
+                            a.href = URL.createObjectURL(blob);
+                            a.download = "output.png";
+                            a.click();
+                        });
+                        return;
+                    }
+                    progressBarText.innerText = (layersDrawn / layers * 100).toFixed(2) + "%";
+                    progressBarBackground.style.width = (layersDrawn / layers * 100) + "%";
+                    let time = (performance.now() - start) / (layersDrawn / layers) / 1000 * (1 - layersDrawn / layers);
+                    let seconds = (time % 60).toFixed(2);
+                    if (time % 60 < 10) {
+                        seconds = "0" + seconds;
+                    }
+                    let minutes = Math.floor((time % 3600) / 60);
+                    if (time >= 3600) {
+                        if (minutes < 10) {
+                            minutes = "0" + minutes;
+                        }
+                        timeRemaining.innerText = Math.floor(time / 3600) + ":" + minutes + ":" + seconds;
+                    }
+                    else {
+                        timeRemaining.innerText = minutes + ":" + seconds;
+                    }
+                }, 1);
+            };
+        };
+        reader.readAsDataURL(input.files[0]);
     }
     else {
-        for (let i in multiplayerPixelInventory[multiplayerGames[multiplayerGameId].players[multiplayerId].team]) {
-            if (pixelInventory[i] != multiplayerPixelInventory[multiplayerGames[multiplayerGameId].players[multiplayerId].team][i]) {
-                pixelInventory[i] = multiplayerPixelInventory[multiplayerGames[multiplayerGameId].players[multiplayerId].team][i];
-                pixelInventoryUpdates[j] = true;
-            }
-        }
+        alert("No image uploaded!");
     }
 };
-
-export { pixels, addPixel, addFire, addTeam, addUpdatedChunk, addUpdatedChunk2, addGridUpdatedChunk, resetPushPixels, pixelTexture, pixelImageData, pixelInventory, pixelInventoryUpdates, updateBrushPixel, resetPixelInventory, updatePixelInventory, updateMultiplayerPixelInventory };

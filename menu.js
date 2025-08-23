@@ -299,12 +299,12 @@ multiplayerCloseButton.onclick = () => {
 };
 
 let mouseDown = false;
-menuCanvas.onmousedown = (e) => {
+document.addEventListener("mousedown", (e) => {
     mouseDown = true;
-};
-menuCanvas.ontouchstart = (e) => {
+});
+document.addEventListener("touchstart", (e) => {
     mouseDown = true;
-};
+});
 document.addEventListener("mouseup", (e) => {
     mouseDown = false;
 });
