@@ -36,7 +36,7 @@ if (device == null) {
         ctx.webkitImageSmoothingEnabled = false;
         ctx.mozImageSmoothingEnabled = false;
     };
-    const imageBitmap = await createImageBitmap(await (await fetch("pixels.png")).blob());
+    const imageBitmap = await createImageBitmap(await (await fetch("img/pixels.png")).blob());
     render = function(camera, drawPlacementRestriction, tick, grid, gridUpdated, gridUpdatedChunks, chunks, brush, selectionGrid) {
         ctx.fillStyle = "#000000";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -328,7 +328,7 @@ else {
     });
 
     let pixelTexture;
-    const imageBitmap = await createImageBitmap(await (await fetch("pixel-mipmaps.png")).blob());
+    const imageBitmap = await createImageBitmap(await (await fetch("img/pixel-mipmaps.png")).blob());
     // let mipLevelCount = Math.ceil(Math.log2(Math.max(imageBitmap.width, imageBitmap.height)));
     let mipLevelCount = Math.ceil(Math.log2(120));
 

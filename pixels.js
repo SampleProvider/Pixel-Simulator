@@ -4,7 +4,7 @@ import { random, randomSeed } from "./random.js";
 import { currentPuzzle } from "./puzzles.js";
 import { multiplayerId, multiplayerGameId, multiplayerGames, multiplayerPixelInventory } from "./multiplayer.js";
 
-const pixelTexture = await createImageBitmap(await (await fetch("pixels.png")).blob());
+const pixelTexture = await createImageBitmap(await (await fetch("img/pixels.png")).blob());
 const ID = 0;
 const PIXEL_DATA = 1;
 const PUZZLE_DATA = 2;

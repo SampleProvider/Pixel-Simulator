@@ -783,14 +783,22 @@ button {
 #menuButton {
     grid-row: 1;
     grid-column: 1 / 2;
-    background-position: -500% 0%;
+    background-position: -400% 0%;
 }
 #menuButton:active {
+    background-position: -400% 300%;
+}
+#settingsButton {
+    grid-row: 1;
+    grid-column: 2 / 3;
+    background-position: -500% 0%;
+}
+#settingsButton:active {
     background-position: -500% 300%;
 }
 #screenshotButton {
     grid-row: 1;
-    grid-column: 2 / 3;
+    grid-column: 3 / 4;
     background-position: -600% 0%;
 }
 #screenshotButton:active {
@@ -798,11 +806,11 @@ button {
 }
 #resetButton {
     grid-row: 1;
-    grid-column: 3 / 4;
-    background-position: -400% 0%;
+    grid-column: 4 / 5;
+    background-position: -700% 0%;
 }
 #resetButton:active {
-    background-position: -400% 300%;
+    background-position: -700% 300%;
 }
 
 #saveCodeSettings {
