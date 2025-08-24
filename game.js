@@ -176,10 +176,10 @@ let grid = new Int32Array();
 // let gridHeight = 32;
 let gridWidth = 128;
 let gridHeight = 128;
-gridWidth *= 2;
-gridHeight *= 2;
-gridWidth *= 2;
-gridHeight *= 2;
+// gridWidth *= 2;
+// gridHeight *= 2;
+// gridWidth *= 2;
+// gridHeight *= 2;
 // gridWidth = gridHeight = 2048;
 // gridWidth *= 2;
 // gridHeight *= 2;
@@ -1505,6 +1505,7 @@ function updateMouse() {
                             for (let x = x1; x <= x2; x++) {
                                 addPixel(x, y, AIR);
                                 // addUpdatedChunk2(x, y);
+                                grid[(x + y * gridWidth) * gridStride + UPDATED] = 0;
                                 changed = true;
                             }
                         }
@@ -1798,6 +1799,7 @@ function updateMouse() {
                     for (let x = Math.max(selectionX, 0); x < Math.min(selectionX + selectionWidth, gridWidth); x++) {
                         addPixel(x, y, AIR);
                         addFire(x, y, 0);
+                        grid[(x + y * gridWidth) * gridStride + UPDATED] = 0;
                         changed = true;
                     }
                 }
@@ -1837,6 +1839,7 @@ function updateMouse() {
                     for (let x = Math.max(selectionX, 0); x < Math.min(selectionX + selectionWidth, gridWidth); x++) {
                         addPixel(x, y, AIR);
                         addFire(x, y, 0);
+                        grid[(x + y * gridWidth) * gridStride + UPDATED] = 0;
                         changed = true;
                     }
                 }
