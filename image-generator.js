@@ -1,4 +1,4 @@
-const pixelTexture = await createImageBitmap(await (await fetch("pixel-mipmaps.png")).blob());
+const pixelTexture = await createImageBitmap(await (await fetch("img/pixel-mipmaps.png")).blob());
 
 const ID = 0;
 const PIXEL_DATA = 1;

@@ -1,5 +1,3 @@
-const pixelTexture = await createImageBitmap(await (await fetch("pixels.png")).blob());
-
 const ID = 0;
 const PIXEL_DATA = 1;
 const PUZZLE_DATA = 2;
