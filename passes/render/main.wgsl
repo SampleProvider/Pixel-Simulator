@@ -460,15 +460,27 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
         color = vec4<f32>(0.0, 200.0 / 255.0, 1.0, 1.0);
     }
 
+    var sampledPlacementRestrictionColor = textureSample(pixelTexture, pixelSampler, texture_pos, textures[PLACEMENT_RESTRICTION] + 1);
+
+    let useSampledPlacementRestruction = camera.z < 60;
+    var drawPlacementRestriction = true;
+    if (!useSampledPlacementRestruction) {
+        drawPlacementRestriction = abs(new_pos.x + new_pos.y - round(new_pos.x + new_pos.y)) > 0.1;
+        sampledPlacementRestrictionColor.w = 0.2;
+    }
+
     if (draw_placement_restriction == -1 || (grid[index + 2] & (1 << u32(draw_placement_restriction))) != 0) {
-        if ((grid[index + 2] & 1) == 1 && abs(new_pos.x + new_pos.y - round(new_pos.x + new_pos.y)) > 0.1) {
-            color = mix(color, vec4<f32>(0.0, 0.0, 0.0, 1.0), 0.2);
+        // if ((grid[index + 2] & 1) == 1 && abs(new_pos.x + new_pos.y - round(new_pos.x + new_pos.y)) > 0.1) {
+        if ((grid[index + 2] & 1) == 1 && drawPlacementRestriction) {
+            color = mix(color, vec4<f32>(0.0, 0.0, 0.0, 1.0), sampledPlacementRestrictionColor.w);
         }
-        if ((grid[index + 2] & 4) == 4 && abs(new_pos.x + new_pos.y - round(new_pos.x + new_pos.y)) > 0.1) {
-            color = mix(color, vec4<f32>(1.0, 0.0, 0.0, 1.0), 0.2);
+        // if ((grid[index + 2] & 4) == 4 && abs(new_pos.x + new_pos.y - round(new_pos.x + new_pos.y)) > 0.1) {
+        if ((grid[index + 2] & 4) == 4 && drawPlacementRestriction) {
+            color = mix(color, vec4<f32>(1.0, 0.0, 0.0, 1.0), sampledPlacementRestrictionColor.w);
         }
-        if ((grid[index + 2] & 8) == 8 && abs(new_pos.x + new_pos.y - round(new_pos.x + new_pos.y)) > 0.1) {
-            color = mix(color, vec4<f32>(0.0, 0.0, 1.0, 1.0), 0.2);
+        // if ((grid[index + 2] & 8) == 8 && abs(new_pos.x + new_pos.y - round(new_pos.x + new_pos.y)) > 0.1) {
+        if ((grid[index + 2] & 8) == 8 && drawPlacementRestriction) {
+            color = mix(color, vec4<f32>(0.0, 0.0, 1.0, 1.0), sampledPlacementRestrictionColor.w);
         }
     }
 
@@ -596,11 +608,17 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
             if (selection_grid[index_2 + 1] == 1) {
                 color_2 = get_fire_color(color_2, new_pos);
             }
-            if ((selection_grid[index_2 + 2] & 1) == 1 && abs(new_pos.x + new_pos.y - round(new_pos.x + new_pos.y)) > 0.1) {
-                color_2 = mix(color_2, vec4<f32>(0.0, 0.0, 0.0, 1.0), 0.2);
+            if ((selection_grid[index_2 + 2] & 1) == 1 && drawPlacementRestriction) {
+                color_2 = mix(color_2, vec4<f32>(0.0, 0.0, 0.0, 1.0), sampledPlacementRestrictionColor.w);
             }
             if ((selection_grid[index_2 + 2] & 2) == 2 && (abs(new_pos.x - round(new_pos.x)) < 0.2 || abs(new_pos.y - round(new_pos.y)) < 0.2)) {
                 color_2 = vec4<f32>(0.0, 0.8, 1.0, 1.0);
+            }
+            if ((selection_grid[index_2 + 2] & 4) == 4 && drawPlacementRestriction) {
+                color_2 = mix(color_2, vec4<f32>(1.0, 0.0, 0.0, 1.0), sampledPlacementRestrictionColor.w);
+            }
+            if ((selection_grid[index_2 + 2] & 8) == 8 && drawPlacementRestriction) {
+                color_2 = mix(color_2, vec4<f32>(0.0, 0.0, 1.0, 1.0), sampledPlacementRestrictionColor.w);
             }
             color = mix(color, color_2, 0.5 * color_2.w);
         }
@@ -611,18 +629,18 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
                 color = get_fire_color(color, new_pos);
             }
             else if (brush[3] == PLACEMENT_RESTRICTION) {
-                if (abs(new_pos.x + new_pos.y - round(new_pos.x + new_pos.y)) > 0.1) {
-                    color = mix(color, vec4<f32>(0.0, 0.0, 0.0, 1.0), 0.5);
+                if (drawPlacementRestriction) {
+                    color = mix(color, vec4<f32>(0.0, 0.0, 0.0, 1.0), sampledPlacementRestrictionColor.w * 2.5);
                 }
             }
             else if (brush[3] == TEAM_PLACEMENT_RESTRICTION_A) {
-                if (abs(new_pos.x + new_pos.y - round(new_pos.x + new_pos.y)) > 0.1) {
-                    color = mix(color, vec4<f32>(1.0, 0.0, 0.0, 1.0), 0.5);
+                if (drawPlacementRestriction) {
+                    color = mix(color, vec4<f32>(1.0, 0.0, 0.0, 1.0), sampledPlacementRestrictionColor.w * 2.5);
                 }
             }
             else if (brush[3] == TEAM_PLACEMENT_RESTRICTION_B) {
-                if (abs(new_pos.x + new_pos.y - round(new_pos.x + new_pos.y)) > 0.1) {
-                    color = mix(color, vec4<f32>(0.0, 0.0, 1.0, 1.0), 0.5);
+                if (drawPlacementRestriction) {
+                    color = mix(color, vec4<f32>(0.0, 0.0, 1.0, 1.0), sampledPlacementRestrictionColor.w * 2.5);
                 }
             }
             else {

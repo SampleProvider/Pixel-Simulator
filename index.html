@@ -105,9 +105,13 @@
                 <div class="multiplayerPixelInventory"></div>
             </div>
         </template>
-        <div id="settingsContainer">
-            <div id="settingsBackground"></div>
-        </div>
+        <dialog id="settingsContainer">
+            <div style="position: absolute; width: calc(100% - 8px); height: calc(100% - 8px); padding: 4px; display: flex; overflow-y: scroll; flex-direction: column; align-items: center;">
+                <div id="settingsGrid"></div>
+            </div>
+            <button id="settingsCloseButton" class="button"></button>
+        </dialog>
+        <dialog id="addKeybindContainer"></dialog>
         <div id="tooltip">
             <div id="tooltipName"></div>
             <div id="tooltipDescription"></div>
@@ -193,6 +197,7 @@
                                         <option value="destroyMonsters">Destroy Monsters</option>
                                         <option value="ticks">Ticks</option>
                                         <option value="pixels">Pixels</option>
+                                        <option value="custom">Custom</option>
                                     </select>
                                     <label for="createCustomPuzzleObjectiveTargetAll1">Target All:</label>
                                     <input id="createCustomPuzzleObjectiveTargetAll1" type="checkbox" class="createCustomPuzzleObjectiveTargetAll">
@@ -202,6 +207,8 @@
                                     <input type="number" class="createCustomPuzzleObjectiveMin">
                                     <label for="createCustomPuzzleObjectiveMax1">Max:</label>
                                     <input type="number" class="createCustomPuzzleObjectiveMax">
+                                    <label for="createCustomPuzzleObjectiveRun">Run:</label>
+                                    <textarea class="createCustomPuzzleObjectiveRun"></textarea>
                                     <button class="createCustomPuzzleObjectiveDeleteButton">Delete Objective</button>
                                 </div>
                             </template>
@@ -221,9 +228,68 @@
         <div id="multiplayerContainer" style="display: none;">
             <div id="multiplayerTitle">Multiplayer</div>
             <div id="multiplayerContainers">
+                <div id="multiplayerMenuContainer">
+                    <div style="display: grid; grid-gap: 4px; min-height: 0px; margin-top: 40px; margin-bottom: 4px;">
+                        <div class="multiplayerSignedInText"></div>
+                        <button id="multiplayerProfileButton">Profile</button>
+                        <button id="multiplayerGameListButton">Games</button>
+                        <button id="multiplayerLogOutButton">Log Out</button>
+                    </div>
+                </div>
+                <div id="multiplayerSignInContainer">
+                    <div style="display: grid; grid-gap: 4px; min-height: 0px; margin-bottom: 4px;">
+                        <div class="multiplayerTitle">Sign In:</div>
+                        <label for="multiplayerSignInUsername">Username:</label>
+                        <input id="multiplayerSignInUsername" type="text" maxlength="32">
+                        <label for="multiplayerSignInPassword">Password:</label>
+                        <input id="multiplayerSignInPassword" type="password">
+                        <label id="multiplayerSignInRetypePasswordLabel" for="multiplayerSignInRetypePassword" style="display: none;">Retype Password:</label>
+                        <input id="multiplayerSignInRetypePassword" type="password" style="display: none;">
+                        <div id="multiplayerSignInResponse"></div>
+                        <button id="multiplayerSignInButton">Sign In</button>
+                        <button id="multiplayerCreateAccountButton">Create Account</button>
+                    </div>
+                </div>
+                <div id="multiplayerProfileContainer">
+                    <button id="multiplayerProfileBackButton" class="multiplayerBackButton">&lt; Back to Menu</button>
+                    <div style="display: grid; grid-gap: 4px; min-height: 0px; margin-bottom: 4px;">
+                        <div class="multiplayerTitle">Profile:</div>
+                        <div class="multiplayerSignedInText"></div>
+                        <label for="multiplayerProfilePassword">Password:</label>
+                        <input id="multiplayerProfilePassword" type="password">
+                        <div id="multiplayerProfileResponse"></div>
+                        <div class="multiplayerProfileGroup">
+                            <label for="multiplayerProfileNewUsername">New Username:</label>
+                            <input id="multiplayerProfileNewUsername" type="text" maxlength="32">
+                            <button id="multiplayerChangeUsernameButton">Change Username</button>
+                        </div>
+                        <div class="multiplayerProfileGroup">
+                            <label for="multiplayerProfileNewPassword">New Password:</label>
+                            <input id="multiplayerProfileNewPassword" type="password" maxlength="32">
+                            <label for="multiplayerProfileRetypeNewPassword">Retype New Password:</label>
+                            <input id="multiplayerProfileRetypeNewPassword" type="password" maxlength="32">
+                            <button id="multiplayerChangePasswordButton">Change Password</button>
+                        </div>
+                        <div class="multiplayerProfileGroup">
+                            <label for="multiplayerDeleteAccountPassword">Retype Password:</label>
+                            <input id="multiplayerDeleteAccountPassword" type="password">
+                            <button id="multiplayerDeleteAccountButton">Delete Account</button>
+                        </div>
+                    </div>
+                </div>
                 <div id="multiplayerGameListContainer">
-                    <div style="display: grid; grid-gap: 4px; min-height: 0px; margin-bottom: 4px; ">
-                        <div id="multiplayerGameListTitle">Games:</div>
+                    <button id="multiplayerGameListBackButton" class="multiplayerBackButton">&lt; Back to Menu</button>
+                    <!-- <div id="multiplayerAccountContainer">
+                        <div id="multiplayerAccount">Signed in as sp</div>
+                        <div id="multiplayerAccountDropdown">
+                            <div id="multiplayerChangeUsernameButton">Change Username</div>
+                            <div id="multiplayerChangePasswordButton">Change Password</div>
+                            <div id="multiplayerDeleteAccountButton">Delete Account</div>
+                            <div id="multiplayerLogOutButton">Log Out</div>
+                        </div>
+                    </div> -->
+                    <div style="display: grid; grid-gap: 4px; min-height: 0px; margin-bottom: 4px;">
+                        <div class="multiplayerTitle">Games:</div>
                         <input id="multiplayerGameIdInput" type="text">
                         <button id="multiplayerJoinGameButton">Join Game</button>
                         <div id="multiplayerGameList">
@@ -242,13 +308,16 @@
                     </div>
                 </div>
                 <div id="multiplayerGameLobbyContainer">
-                    <button id="multiplayerLeaveGameButton">Leave Game</button>
-                    <div style="display: grid; grid-gap: 4px;">
-                        <div id="multiplayerGameLobbyTitle">Game Lobby</div>
+                    <button id="multiplayerLeaveGameButton" class="multiplayerBackButton">&lt; Leave Game</button>
+                    <div style="display: grid; grid-gap: 4px; max-height: calc(100% - 4px);">
+                        <div class="multiplayerTitle">Game Lobby</div>
                         <label for="multiplayerGameLobbyId">Join Code:</label>
                         <input type="text" id="multiplayerGameLobbyId" disabled>
                         <label for="multiplayerGameLobbyPublic">Public:</label>
                         <input type="checkbox" id="multiplayerGameLobbyPublic" disabled>
+                        <div style="grid-column: span 2; text-align: center;">Map:</div>
+                        <div id="multiplayerGameLobbyMap" class="multiplayerGameLobbyMap"></div>
+                        <div id="multiplayerGameLobbyMaps"></div>
                         <div id="multiplayerGameLobbyPlayers"></div>
                         <button id="multiplayerStartGameButton">Start Game</button>
                     </div>
@@ -268,9 +337,16 @@
         <div id="volumeSliderContainer">
             <input type="range" id="volumeSlider" min="0" max="100" step="1">
         </div>
-        <div id="puzzleTooltip">
-            <div id="puzzleTooltipName"></div>
-            <div id="puzzleTooltipDescription"></div>
+        <div id="menuInformation">
+            Licensed under the <a href="https://github.com/SampleProvider/Pixel-Simulator/blob/main/LICENSE" target="_blank">GNU General Public License v3.0</a>
+            <br>
+            All code open source on <a href="https://github.com/SampleProvider/Pixel-Simulator/" target="_blank">Github</a>
+            <br>
+            Join the <a href="https://discord.gg/NYaWXu3aQ2" target="_blank"> Pixel Simulator Discord!</a>
+        </div>
+        <div id="menuTooltip">
+            <div id="menuTooltipName"></div>
+            <div id="menuTooltipDescription"></div>
         </div>
         <div id="multiplayerGameLobbyDraggingPlayer" class="multiplayerGameLobbyPlayer" style="display: none;"></div>
     </div>
@@ -282,9 +358,12 @@
         <div id="modalTitle"></div>
         <div id="modalContent"></div>
         <div id="modalButtons" style="display: flex; justify-content: center;">
-            <button id="modalYes" class="modalButton button">Yes</button>
+            <!-- <button id="modalYes" class="modalButton button">Yes</button>
             <button id="modalNo" class="modalButton button">No</button>
-            <button id="modalOk" class="modalButton button">Ok</button>
+            <button id="modalOk" class="modalButton button">Ok</button> -->
+            <button id="modalYes" class="modalButton">Yes</button>
+            <button id="modalNo" class="modalButton">No</button>
+            <button id="modalOk" class="modalButton">Ok</button>
         </div>
     </dialog>
     <template id="blueprintTemplate">

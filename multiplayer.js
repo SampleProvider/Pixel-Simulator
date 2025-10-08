@@ -1,11 +1,11 @@
 // import { io } from "socket.io-client";
 import { modal } from "./game.js";
-import { transitionIn, transitionOut } from "./menu.js";
+import { transitionIn, transitionOut, showMenuTooltip, hideMenuTooltip, moveMenuTooltip } from "./menu.js";
 import { loadPuzzle } from "./puzzles.js";
 import { pixels, pixelImageData } from "./pixels.js";
 // dont forget this testing import
 
-const socket = io("http://localhost:4000", {
+const socket = io("http://spuh:4000", {
 // const socket = io("https://pixelsimulatorserver.onrender.com", {
     autoConnect: false,
     reconnection: false,
@@ -43,33 +43,264 @@ socket.on("id", function(data) {
     multiplayerId = data;
 });
 
+const multiplayerMenuContainer = document.getElementById("multiplayerMenuContainer");
+const multiplayerSignInContainer = document.getElementById("multiplayerSignInContainer");
+const multiplayerProfileContainer = document.getElementById("multiplayerProfileContainer");
 const multiplayerGameListContainer = document.getElementById("multiplayerGameListContainer");
 const multiplayerGameLobbyContainer = document.getElementById("multiplayerGameLobbyContainer");
 const multiplayerLoadingContainer = document.getElementById("multiplayerLoadingContainer");
+
+const multiplayerSignedInTexts = document.getElementsByClassName("multiplayerSignedInText");
+
+const multiplayerProfileButton = document.getElementById("multiplayerProfileButton");
+const multiplayerGameListButton = document.getElementById("multiplayerGameListButton");
+const multiplayerLogOutButton = document.getElementById("multiplayerLogOutButton");
+
+multiplayerProfileButton.onclick = function() {
+    multiplayerProfileContainer.style.transform = "translateX(0%)";
+    multiplayerMenuContainer.style.transform = "translateX(100%)";
+};
+multiplayerGameListButton.onclick = function() {
+    multiplayerGameListContainer.style.transform = "translateX(0%)";
+    multiplayerMenuContainer.style.transform = "translateX(-100%)";
+};
+multiplayerLogOutButton.onclick = function() {
+    multiplayerSignInContainer.style.transform = "translateX(0%)";
+    multiplayerMenuContainer.style.transform = "translateX(100%)";
+    socket.emit("logOut");
+};
+
+const multiplayerSignInUsername = document.getElementById("multiplayerSignInUsername");
+const multiplayerSignInPassword = document.getElementById("multiplayerSignInPassword");
+const multiplayerSignInRetypePassword = document.getElementById("multiplayerSignInRetypePassword");
+const multiplayerSignInRetypePasswordLabel = document.getElementById("multiplayerSignInRetypePasswordLabel");
+const multiplayerSignInResponse = document.getElementById("multiplayerSignInResponse");
+const multiplayerSignInButton = document.getElementById("multiplayerSignInButton");
+const multiplayerCreateAccountButton = document.getElementById("multiplayerCreateAccountButton");
+
+multiplayerSignInButton.onclick = function() {
+    multiplayerSignInUsername.disabled = true;
+    multiplayerSignInPassword.disabled = true;
+    multiplayerSignInRetypePassword.disabled = true;
+    multiplayerSignInButton.disabled = true;
+    multiplayerCreateAccountButton.disabled = true;
+    socket.emit("signIn", {
+        username: multiplayerSignInUsername.value,
+        password: multiplayerSignInPassword.value,
+    });
+};
+multiplayerCreateAccountButton.onclick = function() {
+    if (multiplayerSignInRetypePassword.style.display == "none") {
+        multiplayerSignInRetypePassword.style.display = "block";
+        multiplayerSignInRetypePasswordLabel.style.display = "block";
+    }
+    else {
+        if (multiplayerSignInPassword.value != multiplayerSignInRetypePassword.value) {
+            multiplayerSignInResponse.innerText = "Passwords do not match";
+            multiplayerSignInResponse.style.color = "red";
+            return;
+        }
+        multiplayerSignInUsername.disabled = true;
+        multiplayerSignInPassword.disabled = true;
+        multiplayerSignInRetypePassword.disabled = true;
+        multiplayerSignInButton.disabled = true;
+        multiplayerCreateAccountButton.disabled = true;
+        socket.emit("createAccount", {
+            username: multiplayerSignInUsername.value,
+            password: multiplayerSignInPassword.value,
+        });
+    }
+};
+
+socket.on("signIn", function(data) {
+    multiplayerSignInUsername.disabled = false;
+    multiplayerSignInPassword.disabled = false;
+    multiplayerSignInRetypePassword.disabled = false;
+    multiplayerSignInButton.disabled = false;
+    multiplayerCreateAccountButton.disabled = false;
+    switch (data.result) {
+        case true:
+            multiplayerSignInResponse.innerText = "";
+            for (let i = 0; i < multiplayerSignedInTexts.length; i++) {
+                multiplayerSignedInTexts[i].innerText = "Signed in as " + data.username;
+            }
+            multiplayerSignInContainer.style.transform = "translateX(-100%)";
+            multiplayerMenuContainer.style.transform = "translateX(0%)";
+            break;
+        case "usernameShort":
+        case "usernameLong":
+            multiplayerSignInResponse.innerText = "Your username must be between 3 and 32 characters long";
+            multiplayerSignInResponse.style.color = "red";
+            break;
+        case "usernameInvalid":
+            multiplayerSignInResponse.innerText = "Your username can only use the characters \"abcdefghijklmnopqrstuvwxyz1234567890-=`~!@#$%^&*()_+[]{}\\|;:'\",.<>/?\"";
+            multiplayerSignInResponse.style.color = "red";
+            break;
+        case "usernameIncorrect":
+            multiplayerSignInResponse.innerText = "Account \"" + data.username + "\" does not exist";
+            multiplayerSignInResponse.style.color = "red";
+            break;
+        case "passwordIncorrect":
+            multiplayerSignInResponse.innerText = "Incorrect password";
+            multiplayerSignInResponse.style.color = "red";
+            break;
+        case "alreadyLoggedIn":
+            multiplayerSignInResponse.innerText = "Account \"" + data.username + "\" is already logged in";
+            multiplayerSignInResponse.style.color = "red";
+            break;
+    }
+});
+socket.on("createAccount", function(data) {
+    multiplayerSignInUsername.disabled = false;
+    multiplayerSignInPassword.disabled = false;
+    multiplayerSignInRetypePassword.disabled = false;
+    multiplayerSignInButton.disabled = false;
+    multiplayerCreateAccountButton.disabled = false;
+    switch (data.result) {
+        case true:
+            multiplayerSignInResponse.innerText = "Successfully created account \"" + data.username + "\"";
+            multiplayerSignInResponse.style.color = "lime";
+            multiplayerSignInRetypePassword.style.display = "none";
+            multiplayerSignInRetypePasswordLabel.style.display = "none";
+            break;
+        case "usernameShort":
+        case "usernameLong":
+            multiplayerSignInResponse.innerText = "Your username must be between 3 and 32 characters long";
+            multiplayerSignInResponse.style.color = "red";
+            break;
+        case "usernameInvalid":
+            multiplayerSignInResponse.innerText = "Your username can only use the characters \"abcdefghijklmnopqrstuvwxyz1234567890-=`~!@#$%^&*()_+[]{}\\|;:'\",.<>/?\"";
+            multiplayerSignInResponse.style.color = "red";
+            break;
+        case "usernameExists":
+            multiplayerSignInResponse.innerText = "An account with username \"" + data.username + "\" already exists";
+            multiplayerSignInResponse.style.color = "red";
+            break;
+        case "passwordLong":
+            multiplayerSignInResponse.innerText = "Your password must be at most 128 characters long";
+            multiplayerSignInResponse.style.color = "red";
+            break;
+        case "alreadyLoggedIn":
+            multiplayerSignInResponse.innerText = "Account \"" + data.username + "\" is already logged in";
+            multiplayerSignInResponse.style.color = "red";
+            break;
+    }
+});
+
+const multiplayerProfilePassword = document.getElementById("multiplayerProfilePassword");
+const multiplayerProfileResponse = document.getElementById("multiplayerProfileResponse");
+const multiplayerProfileNewUsername = document.getElementById("multiplayerProfileNewUsername");
+const multiplayerChangeUsernameButton = document.getElementById("multiplayerChangeUsernameButton");
+const multiplayerProfileNewPassword = document.getElementById("multiplayerProfileNewPassword");
+const multiplayerProfileRetypeNewPassword = document.getElementById("multiplayerProfileRetypeNewPassword");
+const multiplayerChangePasswordButton = document.getElementById("multiplayerChangePasswordButton");
+const multiplayerDeleteAccountPassword = document.getElementById("multiplayerDeleteAccountPassword");
+const multiplayerDeleteAccountButton = document.getElementById("multiplayerDeleteAccountButton");
+const multiplayerProfileBackButton = document.getElementById("multiplayerProfileBackButton");
+
+multiplayerChangeUsernameButton.onclick = function() {
+    socket.emit("changeUsername", {
+        password: multiplayerProfilePassword.value,
+        newUsername: multiplayerProfileNewUsername.value,
+    });
+};
+multiplayerChangePasswordButton.onclick = function() {
+    if (multiplayerProfileNewPassword.value != multiplayerProfileRetypeNewPassword.value) {
+        multiplayerProfileResponse.innerText = "Passwords do not match";
+        multiplayerProfileResponse.style.color = "red";
+        return;
+    }
+    socket.emit("changePassword", {
+        password: multiplayerProfilePassword.value,
+        newPassword: multiplayerProfileNewPassword.value,
+    });
+};
+multiplayerDeleteAccountButton.onclick = function() {
+    socket.emit("deleteAccount", {
+        password: multiplayerDeleteAccountPassword.value,
+    });
+};
+
+multiplayerProfileBackButton.onclick = function() {
+    multiplayerProfileContainer.style.transform = "translateX(-100%)";
+    multiplayerMenuContainer.style.transform = "translateX(0%)";
+};
+
+socket.on("changeUsername", function(data) {
+    switch (data.result) {
+        case true:
+            multiplayerProfileResponse.innerText = "Successfully changed username to \"" + data.newUsername + "\"";
+            multiplayerProfileResponse.style.color = "lime";
+            for (let i = 0; i < multiplayerSignedInTexts.length; i++) {
+                multiplayerSignedInTexts[i].innerText = "Signed in as " + data.newUsername;
+            }
+            break;
+        case "newUsernameShort":
+        case "newUsernameLong":
+            multiplayerProfileResponse.innerText = "Your username must be between 3 and 32 characters long";
+            multiplayerProfileResponse.style.color = "red";
+            break;
+        case "newUsernameInvalid":
+            multiplayerProfileResponse.innerText = "Your username can only use the characters \"abcdefghijklmnopqrstuvwxyz1234567890-=`~!@#$%^&*()_+[]{}\\|;:'\",.<>/?\"";
+            multiplayerProfileResponse.style.color = "red";
+            break;
+        case "newUsernameExists":
+            multiplayerProfileResponse.innerText = "An account with username \"" + data.username + "\" already exists";
+            multiplayerProfileResponse.style.color = "red";
+            break;
+        case "usernameIncorrect":
+            multiplayerProfileResponse.innerText = "Account \"" + data.username + "\" does not exist";
+            multiplayerProfileResponse.style.color = "red";
+            break;
+        case "passwordIncorrect":
+            multiplayerProfileResponse.innerText = "Incorrect password";
+            multiplayerProfileResponse.style.color = "red";
+            break;
+    }
+});
+socket.on("changePassword", function(data) {
+    switch (data.result) {
+        case true:
+            multiplayerProfileResponse.innerText = "Successfully changed password";
+            multiplayerProfileResponse.style.color = "lime";
+            break;
+        case "newPasswordLong":
+            multiplayerProfileResponse.innerText = "Your password must be at most 128 characters long";
+            multiplayerProfileResponse.style.color = "red";
+            break;
+        case "usernameIncorrect":
+            multiplayerProfileResponse.innerText = "Account \"" + data.username + "\" does not exist";
+            multiplayerProfileResponse.style.color = "red";
+            break;
+        case "passwordIncorrect":
+            multiplayerProfileResponse.innerText = "Incorrect password";
+            multiplayerProfileResponse.style.color = "red";
+            break;
+    }
+});
+socket.on("deleteAccount", function(data) {
+    switch (data.result) {
+        case true:
+            multiplayerProfileResponse.innerText = "Successfully deleted account";
+            multiplayerProfileResponse.style.color = "lime";
+            break;
+        case "usernameIncorrect":
+            multiplayerProfileResponse.innerText = "Account \"" + data.username + "\" does not exist";
+            multiplayerProfileResponse.style.color = "red";
+            break;
+        case "passwordIncorrect":
+            multiplayerProfileResponse.innerText = "Incorrect password";
+            multiplayerProfileResponse.style.color = "red";
+            break;
+    }
+});
 
 const multiplayerGameList = document.getElementById("multiplayerGameList");
 const multiplayerGameTemplate = document.getElementById("multiplayerGameTemplate");
 const multiplayerGameIdInput = document.getElementById("multiplayerGameIdInput");
 const multiplayerJoinGameButton = document.getElementById("multiplayerJoinGameButton");
 const multiplayerCreateGameButton = document.getElementById("multiplayerCreateGameButton");
-
-const multiplayerGameLobbyId = document.getElementById("multiplayerGameLobbyId");
-const multiplayerGameLobbyPublic = document.getElementById("multiplayerGameLobbyPublic");
-const multiplayerGameLobbyPlayers = document.getElementById("multiplayerGameLobbyPlayers");
-const multiplayerStartGameButton = document.getElementById("multiplayerStartGameButton");
-const multiplayerLeaveGameButton = document.getElementById("multiplayerLeaveGameButton");
-
-const multiplayerGameLobbyDraggingPlayer = document.getElementById("multiplayerGameLobbyDraggingPlayer");
-let draggingPlayer = null;
-let draggingPlayerId = null;
-let draggingPlayerX = 0;
-let draggingPlayerY = 0;
-
-const multiplayerOverlay = document.getElementById("multiplayerOverlay");
-const multiplayerTeamTemplate = document.getElementById("multiplayerTeamTemplate");
-
-const multiplayerWinTitle = document.getElementById("multiplayerWinTitle");
-const multiplayerWinSubtitle = document.getElementById("multiplayerWinSubtitle");
+const multiplayerGameListBackButton = document.getElementById("multiplayerGameListBackButton");
 
 multiplayerJoinGameButton.onclick = () => {
     socket.emit("joinGame", Number(multiplayerGameIdInput.value));
@@ -77,6 +308,18 @@ multiplayerJoinGameButton.onclick = () => {
 multiplayerCreateGameButton.onclick = () => {
     socket.emit("createGame");
 };
+
+multiplayerGameListBackButton.onclick = function() {
+    multiplayerGameListContainer.style.transform = "translateX(100%)";
+    multiplayerMenuContainer.style.transform = "translateX(0%)";
+};
+
+const multiplayerGameLobbyId = document.getElementById("multiplayerGameLobbyId");
+const multiplayerGameLobbyPublic = document.getElementById("multiplayerGameLobbyPublic");
+const multiplayerGameLobbyPlayers = document.getElementById("multiplayerGameLobbyPlayers");
+const multiplayerStartGameButton = document.getElementById("multiplayerStartGameButton");
+const multiplayerLeaveGameButton = document.getElementById("multiplayerLeaveGameButton");
+
 multiplayerStartGameButton.onclick = () => {
     socket.emit("startGame");
 };
@@ -84,11 +327,74 @@ multiplayerLeaveGameButton.onclick = () => {
     socket.emit("leaveGame");
 };
 
+let draggingPlayer = null;
+let draggingPlayerId = null;
+let draggingPlayerX = 0;
+let draggingPlayerY = 0;
+
+const multiplayerGameLobbyDraggingPlayer = document.getElementById("multiplayerGameLobbyDraggingPlayer");
+
+const multiplayerOverlay = document.getElementById("multiplayerOverlay");
+const multiplayerTeamTemplate = document.getElementById("multiplayerTeamTemplate");
+
+const multiplayerWinTitle = document.getElementById("multiplayerWinTitle");
+const multiplayerWinSubtitle = document.getElementById("multiplayerWinSubtitle");
+
 multiplayerGameLobbyPublic.oninput = () => {
     socket.emit("updateGame", {
         public: multiplayerGameLobbyPublic.checked,
     });
 };
+
+let multiplayerMaps = {};
+
+let lastMultiplayerMapId = null;
+
+const multiplayerGameLobbyMap = document.getElementById("multiplayerGameLobbyMap");
+const multiplayerGameLobbyMaps = document.getElementById("multiplayerGameLobbyMaps");
+
+multiplayerGameLobbyMap.onmouseover = function() {
+    showMenuTooltip(multiplayerMaps[multiplayerGames[multiplayerGameId].map].name, multiplayerMaps[multiplayerGames[multiplayerGameId].map].author);
+    moveMenuTooltip();
+};
+multiplayerGameLobbyMap.onmouseout = function() {
+    hideMenuTooltip();
+};
+multiplayerGameLobbyMap.onmousemove = function() {
+    moveMenuTooltip();
+};
+
+function addMap(id) {
+    const map = document.createElement("div");
+    map.classList.add("multiplayerGameLobbyMap");
+    map.style.backgroundImage = "url(" + multiplayerMaps[id].img + ")";
+    map.onclick = async () => {
+        socket.emit("updateGame", {
+            map: id,
+        });
+    };
+    map.onmouseover = function() {
+        showMenuTooltip(multiplayerMaps[id].name, multiplayerMaps[id].author);
+        moveMenuTooltip();
+    };
+    map.onmouseout = function() {
+        hideMenuTooltip();
+    };
+    map.onmousemove = function() {
+        moveMenuTooltip();
+    };
+    multiplayerMaps[id].div = map;
+    multiplayerGameLobbyMaps.appendChild(map);
+};
+
+socket.on("maps", function(data) {
+    multiplayerMaps = data;
+    lastMultiplayerMapId = null;
+    multiplayerGameLobbyMaps.innerHTML = "";
+    for (let i in multiplayerMaps) {
+        addMap(i);
+    }
+});
 
 function getTeamName(team) {
     switch (team) {
@@ -103,6 +409,18 @@ function updateMultiplayerGameLobby() {
     multiplayerGameLobbyId.value = multiplayerGameId;
     multiplayerGameLobbyPublic.checked = multiplayerGames[multiplayerGameId].public;
     multiplayerGameLobbyPublic.disabled = multiplayerId != multiplayerGames[multiplayerGameId].host;
+    multiplayerGameLobbyMap.style.display = multiplayerId != multiplayerGames[multiplayerGameId].host ? "block" : "none";
+    multiplayerGameLobbyMaps.style.display = multiplayerId == multiplayerGames[multiplayerGameId].host ? "grid" : "none";
+    if (multiplayerGames[multiplayerGameId].map != lastMultiplayerMapId) {
+        multiplayerGameLobbyMap.style.backgroundImage = "url(" + multiplayerMaps[multiplayerGames[multiplayerGameId].map].img + ")";
+        if (multiplayerId == multiplayerGames[multiplayerGameId].host) {
+            if (lastMultiplayerMapId != null) {
+                multiplayerMaps[lastMultiplayerMapId].div.classList.remove("multiplayerGameLobbyMapSelected");
+            }
+            multiplayerMaps[multiplayerGames[multiplayerGameId].map].div.classList.add("multiplayerGameLobbyMapSelected");
+        }
+        lastMultiplayerMapId = multiplayerGames[multiplayerGameId].map;
+    }
     if (multiplayerGames[multiplayerGameId].teamDivs.length != multiplayerGames[multiplayerGameId].teams) {
         multiplayerGameLobbyPlayers.innerHTML = "";
         multiplayerGames[multiplayerGameId].teamDivs = [];
@@ -155,7 +473,7 @@ function updateMultiplayerGameLobby() {
         if (multiplayerGames[multiplayerGameId].playerDivs[i] == null) {
             const div = document.createElement("div");
             div.classList.add("multiplayerGameLobbyPlayer");
-            div.innerText = multiplayerGames[multiplayerGameId].players[i].id;
+            div.innerText = multiplayerGames[multiplayerGameId].players[i].username;
             multiplayerGames[multiplayerGameId].playerDivs[i] = div;
         }
         let div = multiplayerGames[multiplayerGameId].playerDivs[i];
@@ -163,7 +481,7 @@ function updateMultiplayerGameLobby() {
             div.classList.add("draggable");
             div.onmousedown = function(e) {
                 multiplayerGameLobbyDraggingPlayer.style.display = "flex";
-                multiplayerGameLobbyDraggingPlayer.innerText = multiplayerGames[multiplayerGameId].players[i].id;
+                multiplayerGameLobbyDraggingPlayer.innerText = multiplayerGames[multiplayerGameId].players[i].username;
                 div.classList.add("dragging");
                 draggingPlayer = div;
                 draggingPlayerId = multiplayerGames[multiplayerGameId].players[i].id;
@@ -276,6 +594,7 @@ socket.on("updateGame", function(data) {
             public: data.public,
             allowCrafting: data.allowCrafting,
             scores: [],
+            map: data.map,
             started: data.started,
             div: multiplayerGameList.lastElementChild,
             teamDivs: [],
@@ -293,6 +612,7 @@ socket.on("updateGame", function(data) {
     multiplayerGames[data.id].public = data.public;
     // gamemode here
     multiplayerGames[data.id].allowCrafting = data.allowCrafting;
+    multiplayerGames[data.id].map = data.map;
     multiplayerGames[data.id].started = data.started;
     if (data.id == multiplayerGameId) {
         updateMultiplayerGameLobby();
@@ -312,13 +632,13 @@ socket.on("joinGame", function(data) {
     multiplayerGameId = data;
     updateMultiplayerGameLobby();
     multiplayerGameListContainer.style.transform = "translateX(-100%)";
-    multiplayerGameLobbyContainer.style.transform = "translateX(100%)";
-    multiplayerGameLobbyContainer.innerText;
-    multiplayerGameLobbyContainer.style.transform = "translateX(0px)";
+    // multiplayerGameLobbyContainer.style.transform = "translateX(100%)";
+    // multiplayerGameLobbyContainer.innerText;
+    multiplayerGameLobbyContainer.style.transform = "translateX(0%)";
 });
 socket.on("leaveGame", function() {
     multiplayerGameId = null;
-    multiplayerGameListContainer.style.transform = "";
+    multiplayerGameListContainer.style.transform = "translateX(0%)";
     multiplayerGameLobbyContainer.style.transform = "translateX(100%)";
 });
 socket.on("startGame", async function() {
@@ -374,7 +694,10 @@ function updateMultiplayer() {
         multiplayerGameId = null;
         multiplayerGames = {};
         multiplayerGameList.innerHTML = "No Active Games";
-        multiplayerGameListContainer.style.transform = "";
+        multiplayerMenuContainer.style.transform = "translateX(100%)";
+        multiplayerSignInContainer.style.transform = "";
+        multiplayerProfileContainer.style.transform = "translateX(-100%)";
+        multiplayerGameListContainer.style.transform = "translateX(100%)";
         multiplayerGameLobbyContainer.style.transform = "translateX(100%)";
         multiplayerLoadingContainer.style.opacity = 1;
         multiplayerLoadingContainer.style.pointerEvents = "auto";

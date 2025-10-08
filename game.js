@@ -30,13 +30,13 @@ change chunk update from 3x5 to 5x5? - DONE
 
 change textures to left-right-up-down - oh wait rotations
 
-look at the all caps constants - maybe we can just repalce wtih string
+look at the all caps constants - maybe we can just repalce wtih string - DONE
 
 fix pushX pushY - DONE
 fix collapseX collapseY - DONE
 remove unnecessary workedPushPixels
 
-add explode functions to pumps
+add explode functions to pumps - DONE
 isId function is so useless - DONE
 deterministic random - DONE
 lava cooling? and lava heater heating stone
@@ -55,7 +55,7 @@ water needs to check for acid in ispassible
 
 button textures for 2x1 button clicked - DONE
 
-why is on_fire sometimes true/false and sometimes 0/1
+why is on_fire sometimes true/false and sometimes 0/1 - DONE
 
 check "for i in" stuff
 
@@ -98,7 +98,7 @@ multiplayerGameIdInput
 
 // clonenode removes the elements and leaves document fragment behind, some code like blueprints and puzzle creator might be borken
 
-TILE_DATA buh
+TILE_DATA buh - DONE
 
 change css of pixel picker to use css gap property
 
@@ -316,6 +316,13 @@ screenshotButton.onclick = async () => {
     downloadFile(await (await fetch(drawBlueprintImg(grid, gridWidth, gridHeight, gridWidth * 6, gridHeight * 6))).blob(), "pixelsimulator" + Math.floor(Math.random() * 1000) + ".png");
 };
 
+const settingsContainer = document.getElementById("settingsContainer");
+
+const settingsButton = document.getElementById("settingsButton");
+settingsButton.onclick = async () => {
+    settingsContainer.showModal();
+};
+
 const transitionContainer = document.getElementById("transitionContainer");
 const transitionTop = document.getElementById("transitionTop");
 const transitionBottom = document.getElementById("transitionBottom");
@@ -349,7 +356,7 @@ menuButton.onclick = async () => {
     menuContainer.style.opacity = 1;
     menuContainer.style.pointerEvents = "auto";
     menuContainer.style.display = "block";
-    if (currentPuzzle == null && multiplayerId == null) {
+    if (currentPuzzle == null && multiplayerContainer.style.display == "none") {
         transitionContainer.style.display = "none";
         transitionTop.style.transform = "";
         transitionBottom.style.transform = "";
@@ -987,9 +994,33 @@ function drawBlueprintImg(grid, gridWidth, gridHeight, width, height) {
 
 // settings
 
-let settings = {
-    volume: 100,
+let settingsData = {
+    volume: {
+        name: "Volume",
+        group: "Sound",
+        min: 0,
+        max: 100,
+        step: 1,
+        default: 100,
+    },
+    debug: {
+        name: "Debug",
+        group: "Debug",
+        default: false,
+    },
+    drawUpdatingChunks: {
+        name: "Draw Updating Chunks",
+        group: "Debug",
+        default: false,
+    },
 };
+
+let settings = {};
+
+for (let i in settingsData) {
+    settings[i] = structuredClone(settingsData[i].default);
+}
+
 if (localStorage.getItem("settings") != null) {
     try {
         let json = JSON.parse(localStorage.getItem("settings"));
@@ -1004,6 +1035,13 @@ if (localStorage.getItem("settings") != null) {
     }
 }
 
+const settingsGrid = document.getElementById("settingsGrid");
+
+const settingsCloseButton = document.getElementById("settingsCloseButton");
+settingsCloseButton.onclick = () => {
+    settingsContainer.close();
+};
+
 const volumeSlider = document.getElementById("volumeSlider");
 volumeSlider.value = settings.volume;
 volumeSlider.oninput();
@@ -1011,83 +1049,498 @@ volumeSlider.oninput();
 // controls
 
 let controls = {
+    Shift: false,
     Control: false,
     Alt: false,
     Meta: false,
 };
+
+let keybindsData = {
+    mainAction: {
+        name: "Main Action",
+        subgroup: "Controls",
+        default: [{ keys: ["LMB"], shift: false, ctrl: false, alt: false, meta: false }],
+    },
+    secondaryAction: {
+        name: "Secondary Action",
+        subgroup: "Controls",
+        default: [{ keys: ["RMB"], shift: false, ctrl: false, alt: false, meta: false }],
+    },
+    move: {
+        name: "Move",
+        subgroup: "Camera",
+        default: [{ keys: ["MMB"], shift: false, ctrl: false, alt: false, meta: false }],
+    },
+    moveLeft: {
+        name: "Move Left",
+        subgroup: "Camera",
+        default: [{ keys: ["A"], shift: false, ctrl: false, alt: false, meta: false }],
+    },
+    moveRight: {
+        name: "Move Right",
+        subgroup: "Camera",
+        default: [{ keys: ["D"], shift: false, ctrl: false, alt: false, meta: false }],
+    },
+    moveUp: {
+        name: "Move Up",
+        subgroup: "Camera",
+        default: [{ keys: ["W"], shift: false, ctrl: false, alt: false, meta: false }],
+    },
+    moveDown: {
+        name: "Move Down",
+        subgroup: "Camera",
+        default: [{ keys: ["S"], shift: false, ctrl: false, alt: false, meta: false }],
+    },
+    zoomIn: {
+        name: "Zoom In",
+        subgroup: "Camera",
+        default: [{ keys: ["E"], shift: false, ctrl: false, alt: false, meta: false }, { keys: ["]"], shift: false, ctrl: false, alt: false, meta: false }],
+    },
+    zoomOut: {
+        name: "Zoom Out",
+        subgroup: "Camera",
+        default: [{ keys: ["Q"], shift: false, ctrl: false, alt: false, meta: false }, { keys: ["["], shift: false, ctrl: false, alt: false, meta: false }],
+    },
+    incrementBrushSize: {
+        name: "Increment Brush Size",
+        subgroup: "Brush",
+        default: [{ keys: ["ArrowUp"], shift: false, ctrl: false, alt: false, meta: false }],
+    },
+    decrementBrushSize: {
+        name: "Decrement Brush Size",
+        subgroup: "Brush",
+        default: [{ keys: ["ArrowDown"], shift: false, ctrl: false, alt: false, meta: false }],
+    },
+    pickBrushPixel: {
+        name: "Pick Brush Pixel",
+        subgroup: "Brush",
+        default: [{ keys: ["MMB"], shift: false, ctrl: true, alt: false, meta: false }],
+    },
+    beginSelection: {
+        name: "Begin Selection",
+        subgroup: "Selection",
+        default: [{ keys: ["Control"], shift: false, ctrl: true, alt: false, meta: false }],
+    },
+    endSelection: {
+        name: "End Selection",
+        subgroup: "Selection",
+        default: [{ keys: ["Escape"], shift: false, ctrl: false, alt: false, meta: false }],
+    },
+    copySelection: {
+        name: "Copy Selection",
+        subgroup: "Selection",
+        default: [{ keys: ["C"], shift: false, ctrl: true, alt: false, meta: false }],
+    },
+    pasteSelection: {
+        name: "Paste Selection",
+        subgroup: "Selection",
+        default: [{ keys: ["V"], shift: false, ctrl: true, alt: false, meta: false }],
+    },
+    cutSelection: {
+        name: "Cut Selection",
+        subgroup: "Selection",
+        default: [{ keys: ["X"], shift: false, ctrl: true, alt: false, meta: false }],
+    },
+    deleteSelection: {
+        name: "Delete Selection",
+        subgroup: "Selection",
+        default: [{ keys: ["Backspace"], shift: false, ctrl: false, alt: false, meta: false }],
+    },
+    rotateSelectionClockwise: {
+        name: "Rotate Selection Clockwise",
+        subgroup: "Selection",
+        default: [{ keys: ["R"], shift: false, ctrl: false, alt: false, meta: false }],
+    },
+    rotateSelectionCounterClockwise: {
+        name: "Rotate Selection Counterclockwise",
+        subgroup: "Selection",
+        default: [{ keys: ["R"], shift: true, ctrl: false, alt: false, meta: false }],
+    },
+    flipSelectionHorizontally: {
+        name: "Flip Selection Horizontally",
+        subgroup: "Selection",
+        default: [{ keys: ["F"], shift: false, ctrl: false, alt: false, meta: false }],
+    },
+    flipSelectionVertically: {
+        name: "Flip Selection Vertically",
+        subgroup: "Selection",
+        default: [{ keys: ["G"], shift: false, ctrl: false, alt: false, meta: false }],
+    },
+    play: {
+        name: "Play",
+        subgroup: "Controls",
+        default: [{ keys: ["P"], shift: false, ctrl: false, alt: false, meta: false }, { keys: ["Space"], shift: false, ctrl: false, alt: false, meta: false }],
+    },
+    step: {
+        name: "Step",
+        subgroup: "Controls",
+        default: [{ keys: ["Enter"], shift: false, ctrl: false, alt: false, meta: false }],
+    },
+    debug: {
+        name: "Debug",
+        subgroup: "Debug",
+        default: [{ keys: ["\\"], shift: false, ctrl: false, alt: false, meta: false }],
+    },
+    drawUpdatingChunks: {
+        name: "Draw Updating Chunks",
+        subgroup: "Debug",
+        default: [{ keys: ["B"], shift: false, ctrl: false, alt: false, meta: false }],
+    },
+};
+
 let keybinds = {};
-keybinds["Main Action"] = [{ key: "LMB" }];
-keybinds["Secondary Action"] = [{ key: "RMB" }];
-keybinds["Move"] = [{ key: "MMB" }];
-keybinds["Move Left"] = [{ key: "a", ctrl: false, alt: false, meta: false }];
-keybinds["Move Right"] = [{ key: "d", ctrl: false, alt: false, meta: false }];
-keybinds["Move Up"] = [{ key: "w", ctrl: false, alt: false, meta: false }];
-keybinds["Move Down"] = [{ key: "s", ctrl: false, alt: false, meta: false }];
-keybinds["Zoom In"] = [{ key: "e", ctrl: false, alt: false, meta: false }, { key: "]", ctrl: false, alt: false, meta: false }];
-keybinds["Zoom Out"] = [{ key: "q", ctrl: false, alt: false, meta: false }, { key: "[", ctrl: false, alt: false, meta: false }];
-keybinds["Increment Brush Size"] = [{ key: "ArrowUp", ctrl: false, alt: false, meta: false }];
-keybinds["Decrement Brush Size"] = [{ key: "ArrowDown", ctrl: false, alt: false, meta: false }];
-keybinds["Pick Brush Pixel"] = [{ key: "MMB" }];
-keybinds["Begin Selection"] = [{ key: "Control", ctrl: true, alt: null, meta: null }];
-keybinds["End Selection"] = [{ key: "Escape", ctrl: false, alt: false, meta: false }];
-keybinds["Copy Selection"] = [{ key: "c", ctrl: true, alt: false, meta: false }];
-keybinds["Paste Selection"] = [{ key: "v", ctrl: true, alt: false, meta: false }];
-keybinds["Cut Selection"] = [{ key: "x", ctrl: true, alt: false, meta: false }];
-keybinds["Delete Selection"] = [{ key: "Backspace", ctrl: false, alt: false, meta: false }];
-keybinds["Rotate Selection Clockwise"] = [{ key: "r", ctrl: false, alt: false, meta: false }];
-keybinds["Rotate Selection Counterclockwise"] = [{ key: "R", ctrl: false, alt: false, meta: false }];
-keybinds["Flip Selection Horizontally"] = [{ key: "f", ctrl: false, alt: false, meta: false }];
-keybinds["Flip Selection Vertically"] = [{ key: "g", ctrl: false, alt: false, meta: false }];
-keybinds["Play"] = [{ key: "p", ctrl: false, alt: false, meta: false }, { key: "Space", ctrl: false, alt: false, meta: false }];
-keybinds["Step"] = [{ key: "Enter", ctrl: false, alt: false, meta: false }];
-keybinds["Draw Updating Chunks"] = [{ key: "b", ctrl: false, alt: false, meta: false }];
+
+for (let i in keybindsData) {
+    keybinds[i] = structuredClone(keybindsData[i].default);
+}
+
+if (localStorage.getItem("keybinds") != null) {
+    try {
+        let json = JSON.parse(localStorage.getItem("keybinds"));
+        for (let i in keybinds) {
+            if (typeof keybinds[i] == typeof json[i]) {
+                keybinds[i] = json[i];
+            }
+        }
+    }
+    catch (err) {
+        modal("Keybinds Error", "The stored keybinds were unable to be loaded.<br><br>" + err.stack, "error");
+    }
+}
+
+let keyboardLayoutMap = await navigator.keyboard.getLayoutMap();
+
+// keybinds["Main Action"] = [{ key: "LMB" }];
+// keybinds["Secondary Action"] = [{ key: "RMB" }];
+// keybinds["Move"] = [{ key: "MMB" }];
+// keybinds["Move Left"] = [{ key: "a", ctrl: false, alt: false, meta: false }];
+// keybinds["Move Right"] = [{ key: "d", ctrl: false, alt: false, meta: false }];
+// keybinds["Move Up"] = [{ key: "w", ctrl: false, alt: false, meta: false }];
+// keybinds["Move Down"] = [{ key: "s", ctrl: false, alt: false, meta: false }];
+// keybinds["Zoom In"] = [{ key: "e", ctrl: false, alt: false, meta: false }, { key: "]", ctrl: false, alt: false, meta: false }];
+// keybinds["Zoom Out"] = [{ key: "q", ctrl: false, alt: false, meta: false }, { key: "[", ctrl: false, alt: false, meta: false }];
+// keybinds["Increment Brush Size"] = [{ key: "ArrowUp", ctrl: false, alt: false, meta: false }];
+// keybinds["Decrement Brush Size"] = [{ key: "ArrowDown", ctrl: false, alt: false, meta: false }];
+// keybinds["Pick Brush Pixel"] = [{ key: "MMB" }];
+// keybinds["Begin Selection"] = [{ key: "Control", ctrl: true, alt: null, meta: null }];
+// keybinds["End Selection"] = [{ key: "Escape", ctrl: false, alt: false, meta: false }];
+// keybinds["Copy Selection"] = [{ key: "c", ctrl: true, alt: false, meta: false }];
+// keybinds["Paste Selection"] = [{ key: "v", ctrl: true, alt: false, meta: false }];
+// keybinds["Cut Selection"] = [{ key: "x", ctrl: true, alt: false, meta: false }];
+// keybinds["Delete Selection"] = [{ key: "Backspace", ctrl: false, alt: false, meta: false }];
+// keybinds["Rotate Selection Clockwise"] = [{ key: "r", ctrl: false, alt: false, meta: false }];
+// keybinds["Rotate Selection Counterclockwise"] = [{ key: "R", ctrl: false, alt: false, meta: false }];
+// keybinds["Flip Selection Horizontally"] = [{ key: "f", ctrl: false, alt: false, meta: false }];
+// keybinds["Flip Selection Vertically"] = [{ key: "g", ctrl: false, alt: false, meta: false }];
+// keybinds["Play"] = [{ key: "p", ctrl: false, alt: false, meta: false }, { key: "Space", ctrl: false, alt: false, meta: false }];
+// keybinds["Step"] = [{ key: "Enter", ctrl: false, alt: false, meta: false }];
+// keybinds["Draw Updating Chunks"] = [{ key: "b", ctrl: false, alt: false, meta: false }];
+
+function getKeybindText(keybind) {
+    let text = "";
+    for (let i in keybind.keys) {
+        if (i != 0) {
+            text += " + ";
+        }
+        let key = keybind.keys[i];
+        text += key;
+    }
+    if (keybind.shift) {
+        text = "Shift + " + text;
+    }
+    if (keybind.meta) {
+        text = "Meta + " + text;
+    }
+    if (keybind.alt) {
+        text = "Alt + " + text;
+    }
+    if (keybind.ctrl) {
+        text = "Ctrl + " + text;
+    }
+    return text;
+};
+
+let addingKeybind = null;
+const addKeybindContainer = document.getElementById("addKeybindContainer");
+
+function updateAddingKeybind() {
+    let text = "";
+    for (let i in controls) {
+        if (!controls[i]) {
+            continue;
+        }
+        if (i != "Shift" && i != "Meta" && i != "Alt" && i != "Control") {
+            if (text != "") {
+                text += " + ";
+            }
+            text += i;
+        }
+    }
+    if (controls["Shift"] != false) {
+        text = "Shift + " + text;
+    }
+    if (controls["Meta"] != false) {
+        text = "Meta + " + text;
+    }
+    if (controls["Alt"] != false) {
+        text = "Alt + " + text;
+    }
+    if (controls["Control"] != false) {
+        text = "Ctrl + " + text;
+    }
+    if (text != "") {
+        addKeybindContainer.innerText = text;
+    }
+    else {
+        addKeybindContainer.innerText = "Press any key"
+    }
+};
+function endAddingKeybind() {
+    let keybind = {
+        keys: [],
+        shift: controls["Shift"] != false,
+        ctrl: controls["Control"] != false,
+        alt: controls["Alt"] != false,
+        meta: controls["Meta"] != false,
+    };
+    for (let i in controls) {
+        if (!controls[i]) {
+            continue;
+        }
+        if (i != "Shift" && i != "Meta" && i != "Alt" && i != "Control") {
+            keybind.keys.push(i);
+        }
+    }
+    keybinds[addingKeybind].push(keybind);
+    
+    let text = "";
+    for (let i in keybinds[addingKeybind]) {
+        if (i != 0) {
+            text += ", ";
+        }
+        text += getKeybindText(keybinds[addingKeybind][i]);
+    }
+    keybindButtons[addingKeybind].innerText = text;
+
+    addingKeybind = null;
+    addKeybindContainer.close();
+};
+
+let keybindButtons = {};
+let keybindsSubgroupDivs = {};
+
+let group = document.createElement("div");
+group.classList.add("settingsGroupTitle");
+group.innerText = "Keybinds";
+settingsGrid.appendChild(group);
+
+for (let i in keybindsData) {
+    if (keybindsSubgroupDivs[keybindsData[i].subgroup] == null) {
+        let subgroup = document.createElement("div");
+        subgroup.classList.add("settingsSubgroupTitle");
+        subgroup.innerText = keybindsData[i].subgroup;
+        settingsGrid.appendChild(subgroup);
+        keybindsSubgroupDivs[keybindsData[i].subgroup] = subgroup;
+    }
+    let label = document.createElement("label");
+    label.classList.add("settingsKeybindLabel");
+    label.innerText = keybindsData[i].name + ":";
+    settingsGrid.appendChild(label);
+    let buttons = document.createElement("div");
+    buttons.classList.add("settingsKeybindButtons");
+    let button = document.createElement("button");
+    button.classList.add("settingsKeybindButton");
+    let text = "";
+    for (let j in keybinds[i]) {
+        if (j != 0) {
+            text += ", ";
+        }
+        text += getKeybindText(keybinds[i][j]);
+    }
+    button.innerText = text;
+    button.onclick = function() {
+        addKeybindContainer.showModal();
+        addingKeybind = i;
+        updateAddingKeybind();
+    };
+    keybindButtons[i] = button;
+    buttons.appendChild(button);
+    let resetButton = document.createElement("button");
+    resetButton.classList.add("settingsKeybindResetButton");
+    resetButton.innerText = "Reset";
+    resetButton.onclick = function() {
+        keybinds[i] = [];
+        keybindButtons[i].innerText = "Not Bound";
+    };
+    buttons.appendChild(resetButton);
+    settingsGrid.appendChild(buttons);
+}
+let resetToDefaultsButton = document.createElement("button");
+resetToDefaultsButton.id = "settingsKeybindResetToDefaultsButton";
+resetToDefaultsButton.innerText = "Reset All Keybinds to Defaults";
+resetToDefaultsButton.onclick = function() {
+    for (let i in keybinds) {
+        keybinds[i] = structuredClone(keybindsData[i].default);
+        let text = "";
+        for (let j in keybinds[i]) {
+            if (j != 0) {
+                text += ", ";
+            }
+            text += getKeybindText(keybinds[i][j]);
+        }
+        keybindButtons[i].innerText = text;
+    }
+};
+settingsGrid.appendChild(resetToDefaultsButton);
 
 for (let i in keybinds) {
     for (let j in keybinds[i]) {
-        controls[keybinds[i][j].key] = false;
+        for (let k in keybinds[i][j].keys) {
+            controls[keybinds[i][j].keys[k]] = false;
+        }
     }
 }
 
 function isKeybindPressed(keybind) {
-    for (let i in keybinds[keybind]) {
-        if (controls[keybinds[keybind][i].key] == false) {
+    if (addingKeybind) {
+        return false;
+    }
+    search: for (let i in keybinds[keybind]) {
+        let max = 0;
+        for (let j in keybinds[keybind][i].keys) {
+            if (controls[keybinds[keybind][i].keys[j]] == false) {
+                continue search;
+            }
+            max = Math.max(max, controls[keybinds[keybind][i].keys[j]]);
+        }
+        if (((controls["Shift"] != false) && (controls["Shift"] <= max)) != keybinds[keybind][i].shift) {
             continue;
         }
-        if (keybinds[keybind][i].key != "LMB" && keybinds[keybind][i].key != "RMB") {
-            if (keybinds[keybind][i].ctrl != null && ((controls["Control"] != false) && (controls["Control"] <= controls[keybinds[keybind][i].key])) != keybinds[keybind][i].ctrl) {
-                continue;
-            }
-            if (keybinds[keybind][i].alt != null && ((controls["Alt"] != false) && (controls["Alt"] <= controls[keybinds[keybind][i].key])) != keybinds[keybind][i].alt) {
-                continue;
-            }
-            if (keybinds[keybind][i].meta != null && ((controls["Meta"] != false) && (controls["Meta"] <= controls[keybinds[keybind][i].key])) != keybinds[keybind][i].meta) {
-                continue;
-            }
+        if (((controls["Control"] != false) && (controls["Control"] <= max)) != keybinds[keybind][i].ctrl) {
+            continue;
+        }
+        if (((controls["Alt"] != false) && (controls["Alt"] <= max)) != keybinds[keybind][i].alt) {
+            continue;
+        }
+        if (((controls["Meta"] != false) && (controls["Meta"] <= max)) != keybinds[keybind][i].meta) {
+            continue;
         }
         return true;
     }
     return false;
 };
 function isKeybindJustPressed(keybind) {
+    if (addingKeybind) {
+        return false;
+    }
     // spaghetti but it seems to work
-    for (let i in keybinds[keybind]) {
-        if (controls[keybinds[keybind][i].key] == false || controls[keybinds[keybind][i].key] < lastFrame) {
+    search: for (let i in keybinds[keybind]) {
+        let max = 0;
+        for (let j in keybinds[keybind][i].keys) {
+            if (controls[keybinds[keybind][i].keys[j]] == false || controls[keybinds[keybind][i].keys[j]] < lastFrame) {
+                continue search;
+            }
+            max = Math.max(max, controls[keybinds[keybind][i].keys[j]]);
+        }
+        if (((controls["Shift"] != false) && (controls["Shift"] <= max)) != keybinds[keybind][i].shift) {
             continue;
         }
-        if (keybinds[keybind][i].key != "LMB" && keybinds[keybind][i].key != "MMB" && keybinds[keybind][i].key != "RMB") {
-            if (((controls["Control"] != false) && (controls["Control"] <= controls[keybinds[keybind][i].key])) != keybinds[keybind][i].ctrl) {
-                continue;
-            }
-            if (((controls["Alt"] != false) && (controls["Alt"] <= controls[keybinds[keybind][i].key])) != keybinds[keybind][i].alt) {
-                continue;
-            }
-            if (((controls["Meta"] != false) && (controls["Meta"] <= controls[keybinds[keybind][i].key])) != keybinds[keybind][i].meta) {
-                continue;
-            }
+        if (((controls["Control"] != false) && (controls["Control"] <= max)) != keybinds[keybind][i].ctrl) {
+            continue;
+        }
+        if (((controls["Alt"] != false) && (controls["Alt"] <= max)) != keybinds[keybind][i].alt) {
+            continue;
+        }
+        if (((controls["Meta"] != false) && (controls["Meta"] <= max)) != keybinds[keybind][i].meta) {
+            continue;
         }
         return true;
     }
     return false;
+};
+
+function updateKeybinds(key) {
+    if (selectionState == BRUSH) {
+        for (let i in keybinds["incrementBrushSize"]) {
+            for (let j in keybinds["incrementBrushSize"][i].keys) {
+                if (key == keybinds["incrementBrushSize"][i].keys[j]) {
+                    if (isKeybindPressed("incrementBrushSize")) {
+                        brushSize = Math.min(brushSize + 1, Math.ceil((Math.max(gridWidth, gridHeight) + 1) / 2));
+                    }
+                }
+            }
+        }
+        for (let i in keybinds["decrementBrushSize"]) {
+            for (let j in keybinds["decrementBrushSize"][i].keys) {
+                if (key == keybinds["decrementBrushSize"][i].keys[j]) {
+                    if (isKeybindPressed("decrementBrushSize")) {
+                        brushSize = Math.max(brushSize - 1, 1);
+                    }
+                }
+            }
+        }
+    }
+    search: for (let i in keybinds["play"]) {
+        for (let j in keybinds["play"][i].keys) {
+            if (key == keybinds["play"][i].keys[j]) {
+                if (isKeybindPressed("play")) {
+                    // e.preventDefault();
+                    let button = null;
+                    switch (runState) {
+                        case "paused":
+                        case "playing":
+                            button = playButton;
+                            playButton.focus();
+                            // playButton.click();
+                            break;
+                        case "simulating":
+                            button = simulateButton;
+                            // simulateButton.click();
+                            break;
+                        case "slowmode":
+                            button = slowmodeButton;
+                            // slowmodeButton.click();
+                            break;
+                    }
+                    if (document.activeElement != button) {
+                        e.preventDefault();
+                        button.focus();
+                        button.click();
+                    }
+                    break search;
+                }
+            }
+        }
+    }
+    if (runState == "paused") {
+        for (let i in keybinds["step"]) {
+            for (let j in keybinds["step"][i].keys) {
+                if (key == keybinds["step"][i].keys[j]) {
+                    if (isKeybindPressed("step")) {
+                        updateGrid();
+                    }
+                }
+            }
+        }
+    }
+    for (let i in keybinds["debug"]) {
+        for (let j in keybinds["debug"][i].keys) {
+            if (key == keybinds["debug"][i].keys[j]) {
+                if (isKeybindJustPressed("debug")) {
+                    settings.debug = !settings.debug;
+                }
+            }
+        }
+    }
+    for (let i in keybinds["drawUpdatingChunks"]) {
+        for (let j in keybinds["drawUpdatingChunks"][i].keys) {
+            if (key == keybinds["drawUpdatingChunks"][i].keys[j]) {
+                if (isKeybindJustPressed("drawUpdatingChunks")) {
+                    settings.drawUpdatingChunks = !settings.drawUpdatingChunks;
+                }
+            }
+        }
+    }
 };
 
 let mouseX = 0;
@@ -1173,13 +1626,13 @@ function updateMouse() {
     let brushX = Math.floor(cameraX + mouseX / cameraScale);
     let brushY = Math.floor(cameraY + mouseY / cameraScale);
     // this is a lot of spaghetti
-    if (isKeybindJustPressed("End Selection") || isKeybindJustPressed("Secondary Action")) {
+    if (isKeybindJustPressed("endSelection") || isKeybindJustPressed("secondaryAction")) {
         if (selectionState == SELECTING || selectionState == SELECTED || selectionState == PASTING) {
             selectionState = BRUSH;
             controls["RMB"] = false;
         }
     }
-    else if (isKeybindPressed("Begin Selection") && isKeybindJustPressed("Main Action")) {
+    else if (isKeybindPressed("beginSelection") && isKeybindJustPressed("mainAction")) {
         if (selectionState == BRUSH) {
             selectionState = SELECTING;
             selectionX = brushX;
@@ -1187,14 +1640,14 @@ function updateMouse() {
         }
     }
     else {
-        if (isKeybindJustPressed("Paste Selection")) {
+        if (isKeybindJustPressed("pasteSelection")) {
             if (selectionGrid != null) {
                 selectionState = PASTING;
                 selectionWidth = selectionGridWidth;
                 selectionHeight = selectionGridHeight;
             }
         }
-        if (selectionState == SELECTING && !isKeybindPressed("Main Action")) {
+        if (selectionState == SELECTING && !isKeybindPressed("mainAction")) {
             selectionState = SELECTED;
             let minX = Math.min(selectionX, brushX);
             let maxX = Math.max(selectionX, brushX);
@@ -1209,7 +1662,7 @@ function updateMouse() {
     }
     if (multiplayerId != null) {
         if (selectionState == BRUSH) {
-            if (isKeybindPressed("Secondary Action")) {
+            if (isKeybindPressed("secondaryAction")) {
                 socket.emit("brush", {
                     type: 0,
                     remove: true,
@@ -1224,7 +1677,7 @@ function updateMouse() {
                 lastBrushY = brushY;
                 return;
             }
-            else if (isKeybindPressed("Main Action")) {
+            else if (isKeybindPressed("mainAction")) {
                 socket.emit("brush", {
                     type: 0,
                     remove: false,
@@ -1243,7 +1696,7 @@ function updateMouse() {
         else if (selectionState == PASTING) {
             let startX = Math.floor(cameraX + mouseX / cameraScale - (selectionWidth - 1) / 2);
             let startY = Math.floor(cameraY + mouseY / cameraScale - (selectionHeight - 1) / 2);
-            if (isKeybindPressed("Main Action")) {
+            if (isKeybindPressed("mainAction")) {
                 socket.emit("brush", {
                     type: 1,
                     x: startX,
@@ -1297,7 +1750,7 @@ function updateMouse() {
                 let maxX = Math.max(x1, x2);
                 let start = Math.max(1 - size, minX);
                 if (slope < 0) {
-                    start = Math.max(start, Math.ceil((gridWidth - 2 + size + 0.5 - startY) / slope) + minX);
+                    start = Math.max(start, Math.ceil((gridHeight - 2 + size + 0.5 - startY) / slope) + minX);
                 }
                 else {
                     start = Math.max(start, Math.ceil((1 - size - 0.5 - startY) / slope) + minX);
@@ -1307,7 +1760,7 @@ function updateMouse() {
                     end = Math.min(end, maxX - Math.ceil((endY - (1 - size - 0.5)) / slope));
                 }
                 else {
-                    end = Math.min(end, maxX - Math.ceil((endY - (gridWidth - 2 + size) - 0.5) / slope));
+                    end = Math.min(end, maxX - Math.ceil((endY - (gridHeight - 2 + size) - 0.5) / slope));
                 }
                 let lastY = 0;
                 for (let x = start; x <= end; x++) {
@@ -1338,7 +1791,7 @@ function updateMouse() {
                 let maxY = Math.max(y1, y2);
                 let start = Math.max(1 - size, minY);
                 if (slope < 0) {
-                    start = Math.max(start, Math.ceil((gridHeight - 2 + size + 0.5 - startX) / slope) + minY);
+                    start = Math.max(start, Math.ceil((gridWidth - 2 + size + 0.5 - startX) / slope) + minY);
                 }
                 else {
                     start = Math.max(start, Math.ceil((1 - size - 0.5 - startX) / slope) + minY);
@@ -1348,7 +1801,7 @@ function updateMouse() {
                     end = Math.min(end, maxY - Math.ceil((endX - (1 - size - 0.5)) / slope));
                 }
                 else {
-                    end = Math.min(end, maxY - Math.ceil((endX - (gridHeight - 2 + size) - 0.5) / slope));
+                    end = Math.min(end, maxY - Math.ceil((endX - (gridWidth - 2 + size) - 0.5) / slope));
                 }
                 let lastX = 0;
                 for (let y = start; y <= end; y++) {
@@ -1372,7 +1825,7 @@ function updateMouse() {
                 }
             }
         }
-        if (isKeybindPressed("Secondary Action")) {
+        if (isKeybindPressed("secondaryAction")) {
             if (pixels[brushPixel].id == "fire") {
                 if (currentPuzzle == null) {
                     raytrace(lastBrushX, lastBrushY, brushX, brushY, brushSize, (x1, y1, x2, y2) => {
@@ -1537,7 +1990,7 @@ function updateMouse() {
             }
             gridUpdated = true;
         }
-        else if (isKeybindPressed("Main Action")) {
+        else if (isKeybindPressed("mainAction")) {
             if (pixels[brushPixel].id == "fire") {
                 if (currentPuzzle == null) {
                     raytrace(lastBrushX, lastBrushY, brushX, brushY, brushSize, (x1, y1, x2, y2) => {
@@ -1707,24 +2160,24 @@ function updateMouse() {
             }
             gridUpdated = true;
         }
-        if (isKeybindJustPressed("Pick Brush Pixel")) {
+        if (isKeybindJustPressed("pickBrushPixel")) {
             if (brushX >= 0 && brushX < gridWidth && brushY >= 0 && brushY < gridHeight) {
                 setBrushPixel(grid[(brushX + brushY * gridWidth) * gridStride + ID]);
             }
         }
-        if (isKeybindJustPressed("Rotate Selection Clockwise")) {
+        if (isKeybindJustPressed("rotateSelectionClockwise")) {
             if (pixels[brushPixel].rotations != null) {
                 let pixel = pixels[brushPixel];
                 setBrushPixel(pixel.rotations[(pixel.rotation + 1) % pixel.rotations.length]);
             }
         }
-        if (isKeybindJustPressed("Rotate Selection Counterclockwise")) {
+        if (isKeybindJustPressed("rotateSelectionCounterClockwise")) {
             if (pixels[brushPixel].rotations != null) {
                 let pixel = pixels[brushPixel];
                 setBrushPixel(pixel.rotations[(pixel.rotation + pixel.rotations.length - 1) % pixel.rotations.length]);
             }
         }
-        if (isKeybindJustPressed("Flip Selection Horizontally")) {
+        if (isKeybindJustPressed("flipSelectionHorizontally")) {
             if (pixels[brushPixel].rotations != null) {
                 let pixel = pixels[brushPixel];
                 switch (pixel.rotations.length) {
@@ -1741,7 +2194,7 @@ function updateMouse() {
                 }
             }
         }
-        if (isKeybindJustPressed("Flip Selection Vertically")) {
+        if (isKeybindJustPressed("flipSelectionVertically")) {
             if (pixels[brushPixel].rotations != null) {
                 let pixel = pixels[brushPixel];
                 switch (pixel.rotations.length) {
@@ -1762,7 +2215,7 @@ function updateMouse() {
     else if (selectionState == SELECTING) {
     }
     else if (selectionState == SELECTED) {
-        if (isKeybindJustPressed("Copy Selection")) {
+        if (isKeybindJustPressed("copySelection")) {
             let array = [];
             for (let y = Math.max(selectionY, 0); y < Math.min(selectionY + selectionHeight, gridHeight); y++) {
                 for (let x = Math.max(selectionX, 0); x < Math.min(selectionX + selectionWidth, gridWidth); x++) {
@@ -1780,7 +2233,7 @@ function updateMouse() {
             selectionGridWidth = Math.min(selectionX + selectionWidth, gridWidth) - Math.max(selectionX, 0);
             selectionGridHeight = Math.min(selectionY + selectionHeight, gridHeight) - Math.max(selectionY, 0);
         }
-        else if (isKeybindJustPressed("Cut Selection")) {
+        else if (isKeybindJustPressed("cutSelection")) {
             let array = [];
             for (let y = Math.max(selectionY, 0); y < Math.min(selectionY + selectionHeight, gridHeight); y++) {
                 for (let x = Math.max(selectionX, 0); x < Math.min(selectionX + selectionWidth, gridWidth); x++) {
@@ -1833,7 +2286,7 @@ function updateMouse() {
             selectionWidth = selectionGridWidth;
             selectionHeight = selectionGridHeight;
         }
-        else if (isKeybindJustPressed("Delete Selection")) {
+        else if (isKeybindJustPressed("deleteSelection")) {
             if (currentPuzzle == null) {
                 for (let y = Math.max(selectionY, 0); y < Math.min(selectionY + selectionHeight, gridHeight); y++) {
                     for (let x = Math.max(selectionX, 0); x < Math.min(selectionX + selectionWidth, gridWidth); x++) {
@@ -1871,7 +2324,7 @@ function updateMouse() {
     else if (selectionState == PASTING) {
         let startX = Math.floor(cameraX + mouseX / cameraScale - (selectionWidth - 1) / 2);
         let startY = Math.floor(cameraY + mouseY / cameraScale - (selectionHeight - 1) / 2);
-        if (isKeybindPressed("Main Action")) {
+        if (isKeybindPressed("mainAction")) {
             // pasting settings
             if (currentPuzzle == null) {
                 for (let y = Math.max(startY, 0); y < Math.min(startY + selectionHeight, gridHeight); y++) {
@@ -1928,7 +2381,7 @@ function updateMouse() {
             }
             gridUpdated = true;
         }
-        if (isKeybindJustPressed("Rotate Selection Clockwise")) {
+        if (isKeybindJustPressed("rotateSelectionClockwise")) {
             let array = [];
             for (let x = 0; x < selectionGridWidth; x++) {
                 for (let y = selectionGridHeight - 1; y >= 0; y--) {
@@ -1950,7 +2403,7 @@ function updateMouse() {
             selectionWidth = selectionGridWidth;
             selectionHeight = selectionGridHeight;
         }
-        if (isKeybindJustPressed("Rotate Selection Counterclockwise")) {
+        if (isKeybindJustPressed("rotateSelectionCounterClockwise")) {
             let array = [];
             for (let x = selectionGridWidth - 1; x >= 0; x--) {
                 for (let y = 0; y < selectionGridHeight; y++) {
@@ -1972,7 +2425,7 @@ function updateMouse() {
             selectionWidth = selectionGridWidth;
             selectionHeight = selectionGridHeight;
         }
-        if (isKeybindJustPressed("Flip Selection Horizontally")) {
+        if (isKeybindJustPressed("flipSelectionHorizontally")) {
             let array = [];
             for (let y = 0; y < selectionGridHeight; y++) {
                 for (let x = selectionGridWidth - 1; x >= 0; x--) {
@@ -1999,7 +2452,7 @@ function updateMouse() {
             }
             selectionGrid = new Int32Array(array);
         }
-        if (isKeybindJustPressed("Flip Selection Vertically")) {
+        if (isKeybindJustPressed("flipSelectionVertically")) {
             let array = [];
             for (let y = selectionGridHeight - 1; y >= 0; y--) {
                 for (let x = 0; x < selectionGridWidth; x++) {
@@ -2076,7 +2529,7 @@ function addBrushUpdate(data) {
                 let maxX = Math.max(x1, x2);
                 let start = Math.max(1 - size, minX);
                 if (slope < 0) {
-                    start = Math.max(start, Math.ceil((gridWidth - 2 + size + 0.5 - startY) / slope) + minX);
+                    start = Math.max(start, Math.ceil((gridHeight - 2 + size + 0.5 - startY) / slope) + minX);
                 }
                 else {
                     start = Math.max(start, Math.ceil((1 - size - 0.5 - startY) / slope) + minX);
@@ -2086,7 +2539,7 @@ function addBrushUpdate(data) {
                     end = Math.min(end, maxX - Math.ceil((endY - (1 - size - 0.5)) / slope));
                 }
                 else {
-                    end = Math.min(end, maxX - Math.ceil((endY - (gridWidth - 2 + size) - 0.5) / slope));
+                    end = Math.min(end, maxX - Math.ceil((endY - (gridHeight - 2 + size) - 0.5) / slope));
                 }
                 let lastY = 0;
                 for (let x = start; x <= end; x++) {
@@ -2117,7 +2570,7 @@ function addBrushUpdate(data) {
                 let maxY = Math.max(y1, y2);
                 let start = Math.max(1 - size, minY);
                 if (slope < 0) {
-                    start = Math.max(start, Math.ceil((gridHeight - 2 + size + 0.5 - startX) / slope) + minY);
+                    start = Math.max(start, Math.ceil((gridWidth - 2 + size + 0.5 - startX) / slope) + minY);
                 }
                 else {
                     start = Math.max(start, Math.ceil((1 - size - 0.5 - startX) / slope) + minY);
@@ -2127,7 +2580,7 @@ function addBrushUpdate(data) {
                     end = Math.min(end, maxY - Math.ceil((endX - (1 - size - 0.5)) / slope));
                 }
                 else {
-                    end = Math.min(end, maxY - Math.ceil((endX - (gridHeight - 2 + size) - 0.5) / slope));
+                    end = Math.min(end, maxY - Math.ceil((endX - (gridWidth - 2 + size) - 0.5) / slope));
                 }
                 let lastX = 0;
                 for (let y = start; y <= end; y++) {
@@ -2415,15 +2868,15 @@ function addBrushUpdate(data) {
 };
 
 socket.on("clientData", function(data) {
-    grid = new Int32Array(data.grid);
-    let chunksArray = [];
-    for (let y = 0; y < chunkYAmount; y++) {
-        for (let x = 0; x < chunkXAmount; x++) {
-            chunksArray.push(...[x * chunkWidth, Math.min(x * chunkWidth + chunkWidth - 1, gridWidth - 1), y * chunkHeight, Math.min(y * chunkHeight + chunkHeight - 1, gridHeight - 1)]);
-        }
-    }
-    gridUpdatedChunks = new Int32Array(chunksArray);
-    gridUpdated = true;
+    // grid = new Int32Array(data.grid);
+    // let chunksArray = [];
+    // for (let y = 0; y < chunkYAmount; y++) {
+    //     for (let x = 0; x < chunkXAmount; x++) {
+    //         chunksArray.push(...[x * chunkWidth, Math.min(x * chunkWidth + chunkWidth - 1, gridWidth - 1), y * chunkHeight, Math.min(y * chunkHeight + chunkHeight - 1, gridHeight - 1)]);
+    //     }
+    // }
+    // gridUpdatedChunks = new Int32Array(chunksArray);
+    // gridUpdated = true;
     // if (gridWidth != data.gridWidth || gridHeight != data.gridHeight || chunkXAmount != Math.ceil(data.gridWidth / data.chunkWidth) || chunkYAmount != Math.ceil(data.gridHeight / data.chunkHeight)) {
     //     gridWidth = data.gridWidth;
     //     gridHeight = data.gridHeight;
@@ -2442,21 +2895,21 @@ socket.on("clientData", function(data) {
     // }
     // nextChunks = new Int32Array(data.nextChunks);
     // drawChunks = new Int32Array(data.drawChunks);
-    tick = data.tick - 7;
-    for (let i in data.pixelInventory) {
-        multiplayerPixelInventory[i] = data.pixelInventory[i];
-    }
-    for (let i in data.pixelInventory[multiplayerGames[multiplayerGameId].players[multiplayerId].team]) {
-        data.pixelInventory[multiplayerGames[multiplayerGameId].players[multiplayerId].team][i];
-        pixelInventoryUpdates[i] = true;
-    }
-    // for (let i in data.pixelInventoryUpdates) {
-    //     pixelInventoryUpdates[i] = data.pixelInventoryUpdates[i];
+    // tick = data.tick - 7;
+    // for (let i in data.pixelInventory) {
+    //     multiplayerPixelInventory[i] = data.pixelInventory[i];
     // }
-    // for (let i in data.brushUpdates) {
-    //     addBrushUpdate(data.brushUpdates[i]);
+    // for (let i in data.pixelInventory[multiplayerGames[multiplayerGameId].players[multiplayerId].team]) {
+    //     data.pixelInventory[multiplayerGames[multiplayerGameId].players[multiplayerId].team][i];
+    //     pixelInventoryUpdates[i] = true;
     // }
-    // updateGrid();
+    for (let i in data.pixelInventoryUpdates) {
+        pixelInventoryUpdates[i] = data.pixelInventoryUpdates[i];
+    }
+    for (let i in data.brushUpdates) {
+        addBrushUpdate(data.brushUpdates[i]);
+    }
+    updateGrid();
 
     // if (multiplayerGames[multiplayerGameId].allowCrafting) {
     //     // color display
@@ -2500,27 +2953,18 @@ socket.on("clientData", function(data) {
 });
 socket.on("initClientData", function(data) {
     // set grid and pixel inventory
-    grid = new Int32Array(data.grid);
     gridWidth = data.gridWidth;
     gridHeight = data.gridHeight;
     chunkWidth = data.chunkWidth;
     chunkHeight = data.chunkHeight;
-    chunkXAmount = Math.ceil(gridWidth / chunkWidth);
-    chunkYAmount = Math.ceil(gridHeight / chunkHeight);
-    resizeGrid(gridWidth, gridHeight, gridStride, chunkXAmount, chunkYAmount, chunkStride);
 
-    cameraScale = Math.min(WIDTH / gridWidth, HEIGHT / gridHeight);
-    cameraScaleTarget = cameraScale;
-    cameraX = -WIDTH / cameraScale / 2 + gridWidth / 2;
-    cameraY = -HEIGHT / cameraScale / 2 + gridHeight / 2;
-    cameraSpeedX = 0;
-    cameraSpeedY = 0;
+    createGrid();
+    grid = new Int32Array(data.grid);
     nextChunks = new Int32Array(data.nextChunks);
     chunks = new Int32Array(data.chunks);
     drawChunks = new Int32Array(data.drawChunks);
-    gridUpdated = true;
 
-    tick = data.tick - 7;
+    tick = data.tick - 8;
     multiplayerPixelInventory.length = 0;
     for (let i in data.pixelInventory) {
         multiplayerPixelInventory[i] = data.pixelInventory[i];
@@ -2589,27 +3033,27 @@ let cameraLerpSpeed = 0.25;
 function updateCamera() {
     // cameraSpeedX *= 0;
     // cameraSpeedY *= 0;
-    if (isKeybindPressed("Move Left")) {
+    if (isKeybindPressed("moveLeft")) {
         cameraSpeedX -= cameraAcceleration / cameraScale;
     }
-    if (isKeybindPressed("Move Right")) {
+    if (isKeybindPressed("moveRight")) {
         cameraSpeedX += cameraAcceleration / cameraScale;
     }
-    if (isKeybindPressed("Move Up")) {
+    if (isKeybindPressed("moveUp")) {
         cameraSpeedY -= cameraAcceleration / cameraScale;
     }
-    if (isKeybindPressed("Move Down")) {
+    if (isKeybindPressed("moveDown")) {
         cameraSpeedY += cameraAcceleration / cameraScale;
     }
     cameraSpeedX *= cameraFriction;
     cameraSpeedY *= cameraFriction;
 
-    if (isKeybindPressed("Zoom In")) {
+    if (isKeybindPressed("zoomIn")) {
         cameraScaleTarget /= 1.01 ** (-10);
         cameraScaleX = mouseX;
         cameraScaleY = mouseY;
     }
-    if (isKeybindPressed("Zoom Out")) {
+    if (isKeybindPressed("zoomOut")) {
         cameraScaleTarget /= 1.01 ** (10);
         cameraScaleX = mouseX;
         cameraScaleY = mouseY;
@@ -2636,7 +3080,7 @@ document.onmousemove = (e) => {
     var rect = canvas.getBoundingClientRect();
     mouseRawX = e.clientX;
     mouseRawY = e.clientY;
-    if (isKeybindPressed("Move")) {
+    if (isKeybindPressed("move")) {
         cameraX -= (e.clientX * devicePixelRatio - mouseX) / cameraScale;
         cameraY -= (e.clientY * devicePixelRatio - mouseY) / cameraScale;
     }
@@ -2647,7 +3091,7 @@ document.ontouchmove = (e) => {
     var rect = canvas.getBoundingClientRect();
     mouseRawX = e.touches[0].clientX;
     mouseRawY = e.touches[0].clientY;
-    if (isKeybindPressed("Move")) {
+    if (isKeybindPressed("move")) {
         cameraX -= (e.touches[0].clientX * devicePixelRatio - mouseX) / cameraScale;
         cameraY -= (e.touches[0].clientY * devicePixelRatio - mouseY) / cameraScale;
     }
@@ -2655,23 +3099,29 @@ document.ontouchmove = (e) => {
     mouseY = e.touches[0].clientY * devicePixelRatio;
 };
 overlayCanvas.onmousedown = (e) => {
-    let key = "";
+    let key = null;
     if (e.button == 0) {
         key = "LMB";
-        controls[key] = performance.now();
     }
     else if (e.button == 1) {
         key = "MMB";
-        controls[key] = performance.now();
     }
     else if (e.button == 2) {
         key = "RMB";
-        controls[key] = performance.now();
     }
-    for (let i in keybinds["Move"]) {
-        if (key == keybinds["Move"][i].key) {
-            if (isKeybindJustPressed("Move")) {
-                overlayCanvas.style.cursor = "move";
+    if (key != null) {
+        controls[key] = performance.now();
+        // if (addingKeybind != null) {
+        //     updateAddingKeybind();
+        // }
+    }
+    search: for (let i in keybinds["move"]) {
+        for (let j in keybinds["move"][i].keys) {
+            if (key == keybinds["move"][i].keys[j]) {
+                if (isKeybindJustPressed("move")) {
+                    overlayCanvas.style.cursor = "move";
+                    break search;
+                }
             }
         }
     }
@@ -2680,9 +3130,12 @@ overlayCanvas.ontouchstart = (e) => {
     let key = "";
     key = "LMB";
     controls[key] = performance.now();
+    // if (addingKeybind != null) {
+    //     updateAddingKeybind();
+    // }
     mouseRawX = e.touches[0].clientX;
     mouseRawY = e.touches[0].clientY;
-    if (isKeybindPressed("Move")) {
+    if (isKeybindPressed("move")) {
         cameraX -= (e.touches[0].clientX * devicePixelRatio - mouseX) / cameraScale;
         cameraY -= (e.touches[0].clientY * devicePixelRatio - mouseY) / cameraScale;
     }
@@ -2693,24 +3146,58 @@ overlayCanvas.ontouchstart = (e) => {
     lastBrushX = brushX;
     lastBrushY = brushY;
 };
-document.onmouseup = (e) => {
-    let key = "";
+addKeybindContainer.onmousedown = (e) => {
+    let key = null;
     if (e.button == 0) {
         key = "LMB";
-        controls[key] = false;
     }
     else if (e.button == 1) {
         key = "MMB";
-        controls[key] = false;
     }
     else if (e.button == 2) {
         key = "RMB";
+    }
+    if (key != null) {
+        controls[key] = performance.now();
+        if (addingKeybind != null) {
+            updateAddingKeybind();
+        }
+    }
+    updateKeybinds();
+};
+addKeybindContainer.ontouchstart = (e) => {
+    let key = "";
+    key = "LMB";
+    controls[key] = performance.now();
+    if (addingKeybind != null) {
+        updateAddingKeybind();
+    }
+    updateKeybinds(key);
+};
+document.onmouseup = (e) => {
+    let key = null;
+    if (e.button == 0) {
+        key = "LMB";
+    }
+    else if (e.button == 1) {
+        key = "MMB";
+    }
+    else if (e.button == 2) {
+        key = "RMB";
+    }
+    if (key != null) {
+        if (addingKeybind != null) {
+            endAddingKeybind();
+        }
         controls[key] = false;
     }
-    for (let i in keybinds["Move"]) {
-        if (key == keybinds["Move"][i].key) {
-            if (!isKeybindPressed("Move")) {
-                overlayCanvas.style.cursor = "";
+    search: for (let i in keybinds["move"]) {
+        for (let j in keybinds["move"][i].keys) {
+            if (key == keybinds["move"][i].keys[j]) {
+                if (!isKeybindPressed("move")) {
+                    overlayCanvas.style.cursor = "";
+                    break search;
+                }
             }
         }
     }
@@ -2718,6 +3205,9 @@ document.onmouseup = (e) => {
 document.ontouchend = (e) => {
     let key = "";
     key = "LMB";
+    if (addingKeybind != null) {
+        endAddingKeybind();
+    }
     controls[key] = false;
 };
 document.oncontextmenu = (e) => {
@@ -2729,80 +3219,59 @@ document.onkeydown = (e) => {
     if (modalContainer.open || !congratulationsContainer.classList.contains("hidden")) {
         return;
     }
-    var key = e.key;
-    if (key == " ") {
-        key = "Space";
+    let key = keyboardLayoutMap.get(e.code);
+    if (key == null) {
+        if (e.code.startsWith("Shift")) {
+            key = "Shift";
+        }
+        else if (e.code.startsWith("Control")) {
+            key = "Control";
+        }
+        else if (e.code.startsWith("Alt")) {
+            key = "Alt";
+        }
+        else if (e.code.startsWith("Meta")) {
+            key = "Meta";
+        }
+        else {
+            key = e.code;
+        }
+    }
+    if (key.length == 1) {
+        key = key.toUpperCase();
     }
     // if (controls[key] == false) {
         controls[key] = performance.now();
     // }
-    if (selectionState == BRUSH) {
-        for (let i in keybinds["Increment Brush Size"]) {
-            if (key == keybinds["Increment Brush Size"][i].key) {
-                if (isKeybindPressed("Increment Brush Size")) {
-                    brushSize = Math.min(brushSize + 1, Math.ceil((Math.max(gridWidth, gridHeight) + 1) / 2));
-                }
-            }
-        }
-        for (let i in keybinds["Decrement Brush Size"]) {
-            if (key == keybinds["Decrement Brush Size"][i].key) {
-                if (isKeybindPressed("Decrement Brush Size")) {
-                    brushSize = Math.max(brushSize - 1, 1);
-                }
-            }
-        }
+    if (addingKeybind != null) {
+        updateAddingKeybind();
     }
-    for (let i in keybinds["Play"]) {
-        if (key == keybinds["Play"][i].key) {
-            if (isKeybindPressed("Play")) {
-                // e.preventDefault();
-                let button = null;
-                switch (runState) {
-                    case "paused":
-                    case "playing":
-                        button = playButton;
-                        playButton.focus();
-                        // playButton.click();
-                        break;
-                    case "simulating":
-                        button = simulateButton;
-                        // simulateButton.click();
-                        break;
-                    case "slowmode":
-                        button = slowmodeButton;
-                        // slowmodeButton.click();
-                        break;
-                }
-                if (document.activeElement != button) {
-                    e.preventDefault();
-                    button.focus();
-                    button.click();
-                }
-                break;
-            }
-        }
-    }
-    if (runState == "paused") {
-        for (let i in keybinds["Step"]) {
-            if (key == keybinds["Step"][i].key) {
-                if (isKeybindPressed("Step")) {
-                    updateGrid();
-                }
-            }
-        }
-    }
-    for (let i in keybinds["Draw Updating Chunks"]) {
-        if (key == keybinds["Draw Updating Chunks"][i].key) {
-            if (isKeybindJustPressed("Draw Updating Chunks")) {
-                drawUpdatingChunks = !drawUpdatingChunks;
-            }
-        }
-    }
+    updateKeybinds(key);
 };
 document.onkeyup = (e) => {
-    var key = e.key;
-    if (key == " ") {
-        key = "Space";
+    let key = keyboardLayoutMap.get(e.code);
+    if (key == null) {
+        if (e.code.startsWith("Shift")) {
+            key = "Shift";
+        }
+        else if (e.code.startsWith("Control")) {
+            key = "Control";
+        }
+        else if (e.code.startsWith("Alt")) {
+            key = "Alt";
+        }
+        else if (e.code.startsWith("Meta")) {
+            key = "Meta";
+        }
+        else {
+            key = e.code;
+        }
+    }
+    if (key.length == 1) {
+        key = key.toUpperCase();
+    }
+    if (addingKeybind != null) {
+        endAddingKeybind();
     }
     controls[key] = false;
 };
@@ -2880,6 +3349,7 @@ window.onbeforeunload = () => {
     }
     localStorage.setItem("blueprints", JSON.stringify(blueprints));
     localStorage.setItem("settings", JSON.stringify(settings));
+    localStorage.setItem("keybinds", JSON.stringify(keybinds));
 };
 
 function createGrid() {
@@ -2910,6 +3380,7 @@ function createGrid() {
     nextChunks = new Int32Array(chunksArray);
     drawChunks = new Int32Array(chunksArray);
     gridUpdatedChunks = new Int32Array(chunksArray);
+    gridUpdated = true;
     resetPushPixels();
     resizeGrid(gridWidth, gridHeight, gridStride, chunkXAmount, chunkYAmount, chunkStride);
 
@@ -3018,7 +3489,7 @@ function drawGrid(ctx) {
             ctx.fillRect(x * cameraScale - size, y * cameraScale - size, cameraScale + size * 2, cameraScale + size * 2);
         }
     }
-    if (debug && drawUpdatingChunks) {
+    if (settings.debug && settings.drawUpdatingChunks) {
         ctx.strokeStyle = "rgba(0, 0, 0)";
         ctx.lineWidth = cameraScale / 10;
         ctx.setLineDash([cameraScale, 3 * cameraScale]);
@@ -3129,6 +3600,39 @@ function updateGrid() {
                             randomSeed(x, y);
                             pixels[FIRE].update(x, y);
                         }
+                    }
+                }
+            }
+        }
+    }
+    tick += 1;
+    for (let chunkY = 0; chunkY < chunkYAmount; chunkY++) {
+        let updatingChunks = [];
+        for (let chunkX = 0; chunkX < chunkXAmount; chunkX++) {
+            if (chunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth) {
+                updatingChunks.push(chunkX);
+            }
+        }
+        if (updatingChunks.length == 0) {
+            continue;
+        }
+        for (let y = chunkY * chunkHeight; y < chunkY * chunkHeight + chunkHeight; y++) {
+            for (let chunkX of updatingChunks) {
+                let minY = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2];
+                let maxY = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3];
+                if (y >= minY && y <= maxY) {
+                    let minX = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride];
+                    let maxX = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1];
+                    for (let x = minX; x <= maxX; x++) {
+                        let index = (x + y * gridWidth) * gridStride;
+                        if (grid[index + UPDATED] == tick) {
+                            continue;
+                        }
+                        if (pixels[grid[index + ID]].update6 == null) {
+                            continue;
+                        }
+                        randomSeed(x, y);
+                        pixels[grid[index + ID]].update6(x, y);
                     }
                 }
             }
@@ -3460,9 +3964,6 @@ function updateGrid() {
     gridUpdated = true;
 };
 
-let debug = true;
-let drawUpdatingChunks = false;
-
 let fpsTimes = [];
 let fpsHistory = [];
 // let tpsTimes = [];
@@ -3567,7 +4068,7 @@ function updateGame() {
             }
         }
         if (selectionState == BRUSH) {
-            if (isKeybindPressed("Secondary Action")) {
+            if (isKeybindPressed("secondaryAction")) {
                 render(cameraArray, drawPlacementRestriction, tick, grid, gridUpdated, gridUpdatedChunks, nextChunks, new Float32Array([brushX, brushY, brushSize, 0, 1, 0, 0, 1, 0, 0, 0, 0]), new Int32Array([-1]));
             }
             else {
@@ -3618,7 +4119,7 @@ function updateGame() {
     lastFrame = performance.now();
     frame += 1;
 
-    if (debug && (runState != "simulating" || frame % 10 == 1)) {
+    if (settings.debug && (runState != "simulating" || frame % 10 == 1)) {
         function drawText(text, x, y) {
             overlayCtx.fillStyle = "#ffffff55";
             overlayCtx.fillRect(x - 2, y - 1, overlayCtx.measureText(text).width + 4, 16);
@@ -3708,7 +4209,7 @@ function updateGame() {
         overlayCtx.fillText("30 FPS", graphX + 3, graphY + graphHeight - 1 - 1000 / 30 * 2 - 21);
         overlayCtx.setLineDash([]);
 
-        drawText("Tick: " + (tick - 1) / 7, 3, graphY + graphHeight + 3);
+        drawText("Tick: " + (tick - 1) / 8, 3, graphY + graphHeight + 3);
 
         let brushX = Math.floor(cameraX + mouseX / cameraScale);
         let brushY = Math.floor(cameraY + mouseY / cameraScale);

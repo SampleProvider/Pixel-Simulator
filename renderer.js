@@ -123,7 +123,7 @@ if (device == null) {
                 let textureLayer = Math.floor(time * 0.002 + 5) % 6;
                 ctx.drawImage(imageBitmap, pixel.texture[textureLayer][0], pixel.texture[textureLayer][1], pixel.texture[textureLayer][2], pixel.texture[textureLayer][3], (x - camera[0]) * camera[2], (y - camera[1]) * camera[3], camera[2], camera[3]);
                 ctx.globalAlpha = alpha * time * 0.002 - Math.floor(time * 0.002);
-                ctx.drawImage(imageBitmap, pixel.texture[textureLayer + 1][0], pixel.texture[textureLayer + 1][1], pixel.texture[textureLayer + 1][2], pixel.texture[textureLayer + 1][3], (x - camera[0]) * camera[2], (y - camera[1]) * camera[3], camera[2], camera[3]);
+                ctx.drawImage(imageBitmap, pixel.texture[(textureLayer + 1) % 6][0], pixel.texture[(textureLayer + 1) % 6][1], pixel.texture[(textureLayer + 1) % 6][2], pixel.texture[(textureLayer + 1) % 6][3], (x - camera[0]) * camera[2], (y - camera[1]) * camera[3], camera[2], camera[3]);
                 ctx.globalAlpha = alpha;
             }
             // else if (Array.isArray(pixel.texture)) {
@@ -311,7 +311,7 @@ else {
         usage: GPUBufferUsage.FRAGMENT | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
     let brushBuffer = device.createBuffer({
-        size: 4 * 120,
+        size: 4 * 12,
         usage: GPUBufferUsage.FRAGMENT | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
     let selectionGridBuffer = device.createBuffer({
@@ -319,11 +319,11 @@ else {
         usage: GPUBufferUsage.FRAGMENT | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
     let colorsBuffer = device.createBuffer({
-        size: 4 * 1600,
+        size: 8 * 4 * pixels.length,
         usage: GPUBufferUsage.FRAGMENT | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
     let texturesBuffer = device.createBuffer({
-        size: 1600,
+        size: 4 * pixels.length,
         usage: GPUBufferUsage.FRAGMENT | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
 

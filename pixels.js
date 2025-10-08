@@ -1,10 +1,10 @@
-import { grid, gridWidth, gridHeight, gridStride, chunks, nextChunks, drawChunks, chunkWidth, chunkHeight, chunkXAmount, chunkYAmount, chunkStride, gridUpdatedChunks, tick, modal, brushPixel, setBrushPixel, showTooltip, hideTooltip, moveTooltip, setRunState } from "./game.js";
+import { grid, gridWidth, gridHeight, gridStride, chunks, nextChunks, drawChunks, chunkWidth, chunkHeight, chunkXAmount, chunkYAmount, chunkStride, gridUpdatedChunks, tick, modal, parseSaveCode, brushPixel, setBrushPixel, showTooltip, hideTooltip, moveTooltip, setRunState } from "./game.js";
 // import { imageBitmap } from "./renderer.js";
 import { random, randomSeed } from "./random.js";
 import { currentPuzzle } from "./puzzles.js";
 import { multiplayerId, multiplayerGameId, multiplayerGames, multiplayerPixelInventory } from "./multiplayer.js";
 
-const pixelTexture = await createImageBitmap(await (await fetch("img/pixels.png")).blob());
+const pixelTexture = await createImageBitmap(await (await fetch("./img/pixels.png")).blob());
 const ID = 0;
 const PIXEL_DATA = 1;
 const PUZZLE_DATA = 2;
@@ -196,6 +196,16 @@ function isInRange(x, y, radiusSquared, array) {
         }
     }
     return false;
+};
+function forInRange(x, y, radiusSquared, action) {
+    let radius = Math.floor(Math.sqrt(radiusSquared));
+    for (let i = Math.max(y - radius, 0); i <= Math.min(y + radius, gridHeight - 1); i++) {
+        for (let j = Math.max(x - radius, 0); j <= Math.min(x + radius, gridWidth - 1); j++) {
+            if (Math.pow(x - j, 2) + Math.pow(y - i, 2) <= radiusSquared) {
+                action(j, i);
+            }
+        }
+    }
 };
 
 function addPixel(x, y, id) {
@@ -1324,7 +1334,7 @@ function raycast2(x, y, dx, dy, isPassable) {
 function explode(x, y, radiusSquared, rays, power) {
     let changed = [];
     addPixel(x, y, AIR);
-    addFire(x, y, true);
+    addFire(x, y, 1);
     addTeam(x, y, -1);
     // let size = 150;
     // let rays = 15;
@@ -1347,7 +1357,7 @@ function explode(x, y, radiusSquared, rays, power) {
                 if (!changed[x1 + y1 * gridWidth]) {
                     changed[x1 + y1 * gridWidth] = true;
                     if (random() > blastResistance / rayPower + 0.5) {
-                        addFire(x1, y1, true);
+                        addFire(x1, y1, 1);
                     }
                     if (id == AIR) {
 
@@ -2905,6 +2915,12 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 100,
+        cost: {
+            color_gray: 1,
+            sand: 2,
+            gravel: 2,
+            clay: 1,
+        },
         update: function(x, y) {
             let changed = false;
             forTouching(x, y, (x1, y1) => {
@@ -2932,6 +2948,9 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 1000,
+        cost: {
+            concrete_powder: 1,
+        },
     },
     water: {
         name: "Water",
@@ -3056,7 +3075,7 @@ let pixelData = {
                     return;
                 }
                 if (random() < pixels[grid[index1 + ID]].flammability / 20) {
-                    addFire(x1, y1, true);
+                    addFire(x1, y1, 1);
                     changed = true;
                 }
                 else if ((grid[index1 + ID] == ICE || grid[index1 + ID] == SNOW) && random() < 0.1) {
@@ -3367,7 +3386,7 @@ let pixelData = {
     },
     water_pump: {
         name: "Water Pump",
-        description: "Hard rectangular clay",
+        description: "Violates the laws of thermodynamics to create water",
         group: "General",
         subgroup: "Water Pump",
         texture: new Float32Array([0, 2, 3, 3]),
@@ -3377,7 +3396,7 @@ let pixelData = {
         update: function(x, y) {
             if (isTouching(x, y, [LAVA])) {
                 addPixel(x, y, WATER);
-                // explode
+                explode(x, y, 5 * 5, 5 * 8, 800);
                 return;
             }
             forTouching(x, y, function(x1, y1) {
@@ -3396,7 +3415,7 @@ let pixelData = {
     },
     lava_heater: {
         name: "Lava Heater",
-        description: "Hard rectangular clay",
+        description: "Violates the laws of thermodynamics to create lava",
         group: "General",
         subgroup: "Water Pump",
         texture: new Float32Array([3, 2, 3, 3]),
@@ -3406,12 +3425,12 @@ let pixelData = {
         update: function(x, y) {
             if (isTouching(x, y, [WATER])) {
                 addPixel(x, y, LAVA);
-                // explode
+                explode(x, y, 5 * 5, 5 * 8, 800);
                 return;
             }
             if (isTouching(x, y, [ICE, SNOW])) {
                 addPixel(x, y, LAVA);
-                // explode
+                explode(x, y, 7 * 7, 7 * 8, 800);
                 return;
             }
             forTouching(x, y, function(x1, y1) {
@@ -3461,7 +3480,7 @@ let pixelData = {
     },
     ice_freezer: {
         name: "Ice Freezer",
-        description: "Hard rectangular clay",
+        description: "Violates the laws of thermodynamics to freeze water",
         group: "General",
         subgroup: "Water Pump",
         texture: new Float32Array([6, 2, 3, 3]),
@@ -3470,8 +3489,8 @@ let pixelData = {
         blastResistance: 100,
         update: function(x, y) {
             if (isTouching(x, y, [LAVA])) {
-                // addPixel(x, y, ICE);
-                // explode
+                addPixel(x, y, ICE);
+                explode(x, y, 7 * 7, 7 * 8, 800);
                 return;
             }
             for (let i = 0; i < 3; i++) {
@@ -3510,6 +3529,10 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 140,
+        cost: {
+            color_red: 1,
+            color_brown: 2,
+        },
         update: function(x, y) {
             flow(x, y, 1, 2, isPassableSolid, isMoveableSolid);
         },
@@ -3523,6 +3546,9 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 600,
+        cost: {
+            clay: 1,
+        },
         update: function(x, y) {
             if (isMoveableSolid(x, y + 1)) {
                 let stable = false;
@@ -3568,6 +3594,9 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 400,
+        cost: {
+            color_gray: 4,
+        },
     },
     basalt: {
         name: "Basalt",
@@ -3578,6 +3607,10 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 750,
+        cost: {
+            color_gray: 6,
+            color_black: 2,
+        },
     },
     iron: {
         name: "Raw Iron",
@@ -3589,6 +3622,10 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 500,
+        cost: {
+            color_yellow: 3,
+            color_gray: 4,
+        },
     },
     steel: {
         name: "Steel",
@@ -3609,18 +3646,22 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 180,
+        pushable: false,
     },
     glass: {
         name: "Glass",
-        description: "Unrealistically flows and may or may not be wet",
+        description: "Somehow you can see it",
         group: "General",
         subgroup: "Glass",
-        texture: new Float32Array([204, 40, 25, 25]),
+        texture: new Float32Array([120, 55, 25, 25]),
         amountColor: "black",
         state: SOLID,
         flammability: 0,
         blastResistance: 20,
         stickable: false,
+        cost: {
+            sand: 1,
+        },
     },
     wood: {
         name: "Wood",
@@ -3631,6 +3672,9 @@ let pixelData = {
         state: SOLID,
         flammability: 10,
         blastResistance: 250,
+        cost: {
+            color_brown: 2,
+        },
     },
     leaves: {
         name: "Leaves",
@@ -3641,6 +3685,9 @@ let pixelData = {
         state: SOLID,
         flammability: 15,
         blastResistance: 20,
+        cost: {
+            color_lime: 1,
+        },
         randomUpdate: function(x, y) {
             if (isTouching(x, y, [WOOD])) {
                 return;
@@ -3668,6 +3715,10 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 60,
+        cost: {
+            color_lime: 8,
+            color_brown: 8,
+        },
         update: function(x, y) {
             fall(x, y, isMoveableSolid);
         },
@@ -3765,6 +3816,9 @@ let pixelData = {
         state: SOLID,
         flammability: 15,
         blastResistance: 50,
+        cost: {
+            color_lime: 24,
+        },
         update: function(x, y) {
             let valid = false;
             if (isTouching(x, y, [LAVA])) {
@@ -3820,6 +3874,10 @@ let pixelData = {
         state: SOLID,
         flammability: 15,
         blastResistance: 60,
+        cost: {
+            color_lime: 8,
+            color_green: 8,
+        },
         update: function(x, y) {
             if (!isTouching(x, y, [STONE])) {
                 flow(x, y, 1, 1, isPassableSolid, isMoveableSolid);
@@ -3845,6 +3903,11 @@ let pixelData = {
         state: SOLID,
         flammability: 15,
         blastResistance: 60,
+        cost: {
+            color_orange: 12,
+            color_yellow: 12,
+            color_lime: 12,
+        },
         update: function(x, y) {
             if (!isTouching(x, y, [BASALT])) {
                 flow(x, y, 1, 1, isPassableSolid, isMoveableSolid);
@@ -3870,6 +3933,10 @@ let pixelData = {
         state: SOLID,
         flammability: 15,
         blastResistance: 50,
+        cost: {
+            color_yellow: 16,
+            color_lime: 4,
+        },
         update: function(x, y) {
             let changed = false;
             forTouching(x, y, (x1, y1) => {
@@ -3971,6 +4038,9 @@ let pixelData = {
         state: SOLID,
         flammability: 10,
         blastResistance: 175,
+        cost: {
+            color_brown: 3,
+        },
         update: function(x, y) {
             let isMoveableUp = (x1, y1) => {
                 return isOnGrid(x1, y1) && grid[(x1 + y1 * gridWidth) * gridStride + UPDATED] != tick && (pixels[grid[(x1 + y1 * gridWidth) * gridStride + ID]].state == LIQUID);
@@ -4011,6 +4081,10 @@ let pixelData = {
         blastResistance: 200,
         rotatable: true,
         rotations: ["piston_left", "piston_up", "piston_right", "piston_down"],
+        cost: {
+            color_cyan: 5,
+            color_blue: 1,
+        },
         update1: function(x, y) {
             if (isDeactivated(x, y)) {
                 return;
@@ -4030,6 +4104,9 @@ let pixelData = {
         blastResistance: 200,
         rotatable: true,
         rotations: ["piston_left", "piston_up", "piston_right", "piston_down"],
+        cost: {
+            piston_left: 1,
+        },
         update3: function(x, y) {
             if (isDeactivated(x, y)) {
                 return;
@@ -4049,6 +4126,9 @@ let pixelData = {
         blastResistance: 200,
         rotatable: true,
         rotations: ["piston_left", "piston_up", "piston_right", "piston_down"],
+        cost: {
+            piston_left: 1,
+        },
         update2: function(x, y) {
             if (isDeactivated(x, y)) {
                 return;
@@ -4068,6 +4148,9 @@ let pixelData = {
         blastResistance: 200,
         rotatable: true,
         rotations: ["piston_left", "piston_up", "piston_right", "piston_down"],
+        cost: {
+            piston_left: 1,
+        },
         update4: function(x, y) {
             if (isDeactivated(x, y)) {
                 return;
@@ -4088,6 +4171,11 @@ let pixelData = {
         stickableLeft: false,
         rotatable: true,
         rotations: ["pusher_left", "pusher_up", "pusher_right", "pusher_down"],
+        cost: {
+            color_cyan: 2,
+            color_blue: 1,
+            color_gray: 3,
+        },
         update1: function(x, y) {
             if (x == 0) {
                 return;
@@ -4111,6 +4199,9 @@ let pixelData = {
         stickableUp: false,
         rotatable: true,
         rotations: ["pusher_left", "pusher_up", "pusher_right", "pusher_down"],
+        cost: {
+            pusher_left: 1,
+        },
         update3: function(x, y) {
             if (y == 0) {
                 return;
@@ -4134,6 +4225,9 @@ let pixelData = {
         stickableRight: false,
         rotatable: true,
         rotations: ["pusher_left", "pusher_up", "pusher_right", "pusher_down"],
+        cost: {
+            pusher_left: 1,
+        },
         update2: function(x, y) {
             if (x == gridWidth - 1) {
                 return;
@@ -4157,6 +4251,9 @@ let pixelData = {
         stickableDown: false,
         rotatable: true,
         rotations: ["pusher_left", "pusher_up", "pusher_right", "pusher_down"],
+        cost: {
+            pusher_left: 1,
+        },
         update4: function(x, y) {
             if (y == gridHeight - 1) {
                 return;
@@ -4180,6 +4277,11 @@ let pixelData = {
         stickableLeft: false,
         rotatable: true,
         rotations: ["fan_left", "fan_up", "fan_right", "fan_down"],
+        cost: {
+            color_cyan: 1,
+            color_blue: 1,
+            color_gray: 3,
+        },
         update1: function(x, y) {
             if (x == 0) {
                 return;
@@ -4203,6 +4305,9 @@ let pixelData = {
         stickableUp: false,
         rotatable: true,
         rotations: ["fan_left", "fan_up", "fan_right", "fan_down"],
+        cost: {
+            fan_left: 1,
+        },
         update3: function(x, y) {
             if (y == 0) {
                 return;
@@ -4226,6 +4331,9 @@ let pixelData = {
         stickableRight: false,
         rotatable: true,
         rotations: ["fan_left", "fan_up", "fan_right", "fan_down"],
+        cost: {
+            fan_left: 1,
+        },
         update2: function(x, y) {
             if (x == gridWidth - 1) {
                 return;
@@ -4249,6 +4357,9 @@ let pixelData = {
         stickableDown: false,
         rotatable: true,
         rotations: ["fan_left", "fan_up", "fan_right", "fan_down"],
+        cost: {
+            fan_left: 1,
+        },
         update4: function(x, y) {
             if (y == gridHeight - 1) {
                 return;
@@ -4272,6 +4383,10 @@ let pixelData = {
         rotatable: true,
         rotations: ["sticky_piston_left", "sticky_piston_up", "sticky_piston_right", "sticky_piston_down"],
         sticky: 1,
+        cost: {
+            piston_left: 1,
+            slime: 1,
+        },
         update1: function(x, y) {
             if (isDeactivated(x, y)) {
                 return;
@@ -4292,6 +4407,10 @@ let pixelData = {
         rotatable: true,
         rotations: ["sticky_piston_left", "sticky_piston_up", "sticky_piston_right", "sticky_piston_down"],
         sticky: 1,
+        cost: {
+            piston_left: 1,
+            slime: 1,
+        },
         update3: function(x, y) {
             pushUp(x, y, -1, -1, 2);
             addUpdatedChunk(x, y);
@@ -4309,6 +4428,10 @@ let pixelData = {
         rotatable: true,
         rotations: ["sticky_piston_left", "sticky_piston_up", "sticky_piston_right", "sticky_piston_down"],
         sticky: 1,
+        cost: {
+            piston_left: 1,
+            slime: 1,
+        },
         update2: function(x, y) {
             pushRight(x, y, -1, -1, 2);
             addUpdatedChunk(x, y);
@@ -4326,6 +4449,10 @@ let pixelData = {
         rotatable: true,
         rotations: ["sticky_piston_left", "sticky_piston_up", "sticky_piston_right", "sticky_piston_down"],
         sticky: 1,
+        cost: {
+            piston_left: 1,
+            slime: 1,
+        },
         update4: function(x, y) {
             pushDown(x, y, -1, -1, 2);
             addUpdatedChunk(x, y);
@@ -4342,6 +4469,11 @@ let pixelData = {
         blastResistance: 300,
         rotatable: true,
         rotations: ["copier_left", "copier_up", "copier_right", "copier_down"],
+        cost: {
+            color_lime: 1,
+            color_blue: 1,
+            concrete: 4,
+        },
         update1: function(x, y) {
             if (x == 0 || x == gridWidth - 1) {
                 return;
@@ -4351,6 +4483,36 @@ let pixelData = {
             }
             let index = (x + 1 + y * gridWidth) * gridStride;
             if (pixels[grid[index + ID]].cloneable && grid[index + UPDATED] != tick) {
+                if (multiplayerId != null) {
+                    if (pixels[grid[index + ID]].cost == null) {
+                        return;
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) == 0 && (grid[index + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            return;
+                        }
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            for (let j in pixels[grid[index + ID]].cost) {
+                                if (multiplayerPixelInventory[i][j] < pixels[grid[index + ID]].cost[j]) {
+                                    addUpdatedChunk(x, y);
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            for (let j in pixels[grid[index + ID]].cost) {
+                                multiplayerPixelInventory[i][j] -= pixels[grid[index + ID]].cost[j];
+                                if (i == multiplayerGames[multiplayerGameId].players[multiplayerId].team) {
+                                    pixelInventoryUpdates[j] = true;
+                                }
+                            }
+                        }
+                    }
+                }
                 let index1 = (x - 1 + y * gridWidth) * gridStride;
                 if (grid[index1 + ID] != AIR) {
                     return;
@@ -4372,6 +4534,9 @@ let pixelData = {
         blastResistance: 300,
         rotatable: true,
         rotations: ["copier_left", "copier_up", "copier_right", "copier_down"],
+        cost: {
+            copier_left: 1,
+        },
         update3: function(x, y) {
             if (y == 0 || y == gridHeight - 1) {
                 return;
@@ -4381,6 +4546,36 @@ let pixelData = {
             }
             let index = (x + (y + 1) * gridWidth) * gridStride;
             if (pixels[grid[index + ID]].cloneable && grid[index + UPDATED] != tick) {
+                if (multiplayerId != null) {
+                    if (pixels[grid[index + ID]].cost == null) {
+                        return;
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) == 0 && (grid[index + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            return;
+                        }
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            for (let j in pixels[grid[index + ID]].cost) {
+                                if (multiplayerPixelInventory[i][j] < pixels[grid[index + ID]].cost[j]) {
+                                    addUpdatedChunk(x, y);
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            for (let j in pixels[grid[index + ID]].cost) {
+                                multiplayerPixelInventory[i][j] -= pixels[grid[index + ID]].cost[j];
+                                if (i == multiplayerGames[multiplayerGameId].players[multiplayerId].team) {
+                                    pixelInventoryUpdates[j] = true;
+                                }
+                            }
+                        }
+                    }
+                }
                 let index1 = (x + (y - 1) * gridWidth) * gridStride;
                 if (grid[index1 + ID] != AIR) {
                     return;
@@ -4402,6 +4597,9 @@ let pixelData = {
         blastResistance: 300,
         rotatable: true,
         rotations: ["copier_left", "copier_up", "copier_right", "copier_down"],
+        cost: {
+            copier_left: 1,
+        },
         update2: function(x, y) {
             if (x == 0 || x == gridWidth - 1) {
                 return;
@@ -4411,6 +4609,36 @@ let pixelData = {
             }
             let index = (x - 1 + y * gridWidth) * gridStride;
             if (pixels[grid[index + ID]].cloneable && grid[index + UPDATED] != tick) {
+                if (multiplayerId != null) {
+                    if (pixels[grid[index + ID]].cost == null) {
+                        return;
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) == 0 && (grid[index + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            return;
+                        }
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            for (let j in pixels[grid[index + ID]].cost) {
+                                if (multiplayerPixelInventory[i][j] < pixels[grid[index + ID]].cost[j]) {
+                                    addUpdatedChunk(x, y);
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            for (let j in pixels[grid[index + ID]].cost) {
+                                multiplayerPixelInventory[i][j] -= pixels[grid[index + ID]].cost[j];
+                                if (i == multiplayerGames[multiplayerGameId].players[multiplayerId].team) {
+                                    pixelInventoryUpdates[j] = true;
+                                }
+                            }
+                        }
+                    }
+                }
                 let index1 = (x + 1 + y * gridWidth) * gridStride;
                 if (grid[index1 + ID] != AIR) {
                     return;
@@ -4432,6 +4660,9 @@ let pixelData = {
         blastResistance: 300,
         rotatable: true,
         rotations: ["copier_left", "copier_up", "copier_right", "copier_down"],
+        cost: {
+            copier_left: 1,
+        },
         update4: function(x, y) {
             if (y == 0 || y == gridHeight - 1) {
                 return;
@@ -4441,6 +4672,36 @@ let pixelData = {
             }
             let index = (x + (y - 1) * gridWidth) * gridStride;
             if (pixels[grid[index + ID]].cloneable && grid[index + UPDATED] != tick) {
+                if (multiplayerId != null) {
+                    if (pixels[grid[index + ID]].cost == null) {
+                        return;
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) == 0 && (grid[index + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            return;
+                        }
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            for (let j in pixels[grid[index + ID]].cost) {
+                                if (multiplayerPixelInventory[i][j] < pixels[grid[index + ID]].cost[j]) {
+                                    addUpdatedChunk(x, y);
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            for (let j in pixels[grid[index + ID]].cost) {
+                                multiplayerPixelInventory[i][j] -= pixels[grid[index + ID]].cost[j];
+                                if (i == multiplayerGames[multiplayerGameId].players[multiplayerId].team) {
+                                    pixelInventoryUpdates[j] = true;
+                                }
+                            }
+                        }
+                    }
+                }
                 let index1 = (x + (y + 1) * gridWidth) * gridStride;
                 if (grid[index1 + ID] != AIR) {
                     return;
@@ -4463,6 +4724,12 @@ let pixelData = {
         blastResistance: 250,
         rotatable: true,
         rotations: ["cloner_left", "cloner_up", "cloner_right", "cloner_down"],
+        cost: {
+            color_yellow: 1,
+            color_lime: 1,
+            color_blue: 1,
+            concrete: 4,
+        },
         update1: function(x, y) {
             if (x == 0 || x == gridWidth - 1) {
                 return;
@@ -4476,6 +4743,36 @@ let pixelData = {
                 return;
             }
             if (grid[index + UPDATED] != tick) {
+                if (multiplayerId != null) {
+                    if (pixels[grid[index + ID]].cost == null) {
+                        return;
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) == 0 && (grid[index + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            return;
+                        }
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            for (let j in pixels[grid[index + ID]].cost) {
+                                if (multiplayerPixelInventory[i][j] < pixels[grid[index + ID]].cost[j]) {
+                                    addUpdatedChunk(x, y);
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            for (let j in pixels[grid[index + ID]].cost) {
+                                multiplayerPixelInventory[i][j] -= pixels[grid[index + ID]].cost[j];
+                                if (i == multiplayerGames[multiplayerGameId].players[multiplayerId].team) {
+                                    pixelInventoryUpdates[j] = true;
+                                }
+                            }
+                        }
+                    }
+                }
                 let index1 = (x - 1 + y * gridWidth) * gridStride;
                 if (grid[index1 + ID] != AIR) {
                     if (!pushLeft(x - 1, y, x, y, 2)) {
@@ -4502,6 +4799,9 @@ let pixelData = {
         blastResistance: 250,
         rotatable: true,
         rotations: ["cloner_left", "cloner_up", "cloner_right", "cloner_down"],
+        cost: {
+            cloner_left: 1,
+        },
         update3: function(x, y) {
             if (y == 0 || y == gridHeight - 1) {
                 return;
@@ -4515,6 +4815,36 @@ let pixelData = {
                 return;
             }
             if (grid[index + UPDATED] != tick) {
+                if (multiplayerId != null) {
+                    if (pixels[grid[index + ID]].cost == null) {
+                        return;
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) == 0 && (grid[index + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            return;
+                        }
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            for (let j in pixels[grid[index + ID]].cost) {
+                                if (multiplayerPixelInventory[i][j] < pixels[grid[index + ID]].cost[j]) {
+                                    addUpdatedChunk(x, y);
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            for (let j in pixels[grid[index + ID]].cost) {
+                                multiplayerPixelInventory[i][j] -= pixels[grid[index + ID]].cost[j];
+                                if (i == multiplayerGames[multiplayerGameId].players[multiplayerId].team) {
+                                    pixelInventoryUpdates[j] = true;
+                                }
+                            }
+                        }
+                    }
+                }
                 let index1 = (x + (y - 1) * gridWidth) * gridStride;
                 if (grid[index1 + ID] != AIR) {
                     if (!pushUp(x, y - 1, x, y, 2)) {
@@ -4541,6 +4871,9 @@ let pixelData = {
         blastResistance: 250,
         rotatable: true,
         rotations: ["cloner_left", "cloner_up", "cloner_right", "cloner_down"],
+        cost: {
+            cloner_left: 1,
+        },
         update2: function(x, y) {
             if (x == 0 || x == gridWidth - 1) {
                 return;
@@ -4554,6 +4887,36 @@ let pixelData = {
                 return;
             }
             if (grid[index + UPDATED] != tick) {
+                if (multiplayerId != null) {
+                    if (pixels[grid[index + ID]].cost == null) {
+                        return;
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) == 0 && (grid[index + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            return;
+                        }
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            for (let j in pixels[grid[index + ID]].cost) {
+                                if (multiplayerPixelInventory[i][j] < pixels[grid[index + ID]].cost[j]) {
+                                    addUpdatedChunk(x, y);
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            for (let j in pixels[grid[index + ID]].cost) {
+                                multiplayerPixelInventory[i][j] -= pixels[grid[index + ID]].cost[j];
+                                if (i == multiplayerGames[multiplayerGameId].players[multiplayerId].team) {
+                                    pixelInventoryUpdates[j] = true;
+                                }
+                            }
+                        }
+                    }
+                }
                 let index1 = (x + 1 + y * gridWidth) * gridStride;
                 if (grid[index1 + ID] != AIR) {
                     if (!pushRight(x + 1, y, x, y, 2)) {
@@ -4580,6 +4943,9 @@ let pixelData = {
         blastResistance: 250,
         rotatable: true,
         rotations: ["cloner_left", "cloner_up", "cloner_right", "cloner_down"],
+        cost: {
+            cloner_left: 1,
+        },
         update4: function(x, y) {
             if (y == 0 || y == gridHeight - 1) {
                 return;
@@ -4593,6 +4959,36 @@ let pixelData = {
                 return;
             }
             if (grid[index + UPDATED] != tick) {
+                if (multiplayerId != null) {
+                    if (pixels[grid[index + ID]].cost == null) {
+                        return;
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) == 0 && (grid[index + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            return;
+                        }
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            for (let j in pixels[grid[index + ID]].cost) {
+                                if (multiplayerPixelInventory[i][j] < pixels[grid[index + ID]].cost[j]) {
+                                    addUpdatedChunk(x, y);
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[(x + y * gridWidth) * gridStride + PIXEL_DATA] & (1 << (i + 1))) != 0) {
+                            for (let j in pixels[grid[index + ID]].cost) {
+                                multiplayerPixelInventory[i][j] -= pixels[grid[index + ID]].cost[j];
+                                if (i == multiplayerGames[multiplayerGameId].players[multiplayerId].team) {
+                                    pixelInventoryUpdates[j] = true;
+                                }
+                            }
+                        }
+                    }
+                }
                 let index1 = (x + (y + 1) * gridWidth) * gridStride;
                 if (grid[index1 + ID] != AIR) {
                     if (!pushDown(x, y + 1, x, y, 2)) {
@@ -4618,6 +5014,10 @@ let pixelData = {
         flammability: 10,
         blastResistance: 250,
         rotations: ["rotator_left", "rotator_up", "rotator_right", "rotator_down"],
+        cost: {
+            color_cyan: 1,
+            color_gray: 5,
+        },
         update: function(x, y) {
             let updated = false;
             forTouching(x, y, (x1, y1) => {
@@ -4641,6 +5041,9 @@ let pixelData = {
         flammability: 10,
         blastResistance: 250,
         rotations: ["rotator_left", "rotator_up", "rotator_right", "rotator_down"],
+        cost: {
+            rotator_left: 1,
+        },
         update: function(x, y) {
             let updated = false;
             forTouching(x, y, (x1, y1) => {
@@ -4664,6 +5067,9 @@ let pixelData = {
         flammability: 10,
         blastResistance: 250,
         rotations: ["rotator_left", "rotator_up", "rotator_right", "rotator_down"],
+        cost: {
+            rotator_left: 1,
+        },
         update: function(x, y) {
             let updated = false;
             forTouching(x, y, (x1, y1) => {
@@ -4687,6 +5093,9 @@ let pixelData = {
         flammability: 10,
         blastResistance: 250,
         rotations: ["rotator_left", "rotator_up", "rotator_right", "rotator_down"],
+        cost: {
+            rotator_left: 1,
+        },
         update: function(x, y) {
             let updated = false;
             forTouching(x, y, (x1, y1) => {
@@ -4709,6 +5118,9 @@ let pixelData = {
         state: SOLID,
         flammability: 10,
         blastResistance: 250,
+        cost: {
+            rotator_left: 1,
+        },
         update: function(x, y) {
             let updated = false;
             forTouching(x, y, (x1, y1) => {
@@ -4731,6 +5143,9 @@ let pixelData = {
         state: SOLID,
         flammability: 10,
         blastResistance: 250,
+        cost: {
+            rotator_left: 1,
+        },
         update: function(x, y) {
             let updated = false;
             forTouching(x, y, (x1, y1) => {
@@ -4757,6 +5172,10 @@ let pixelData = {
         rotations: ["slider_horizontal", "slider_vertical"],
         pushableUp: false,
         pushableDown: false,
+        cost: {
+            color_orange: 8,
+            color_yellow: 8,
+        },
     },
     slider_vertical: {
         name: "Slider (Vertical)",
@@ -4771,6 +5190,9 @@ let pixelData = {
         rotations: ["slider_horizontal", "slider_vertical"],
         pushableLeft: false,
         pushableRight: false,
+        cost: {
+            slider_horizontal: 1,
+        },
     },
     collapsable: {
         name: "Collapsable Box",
@@ -4781,6 +5203,10 @@ let pixelData = {
         state: SOLID,
         flammability: 12,
         blastResistance: 20,
+        cost: {
+            color_orange: 1,
+            color_yellow: 1,
+        },
     },
     slime: {
         name: "Slime",
@@ -4793,6 +5219,9 @@ let pixelData = {
         flammability: 4,
         blastResistance: 50,
         sticky: 2,
+        cost: {
+            color_lime: 2,
+        },
     },
     deactivator: {
         name: "Deactivator",
@@ -4803,6 +5232,11 @@ let pixelData = {
         state: SOLID,
         flammability: 6,
         blastResistance: 220,
+        cost: {
+            color_yellow: 2,
+            color_purple: 2,
+            color_gray: 2,
+        },
     },
     // glue: {
     //     name: "Glue",
@@ -4828,6 +5262,12 @@ let pixelData = {
         blastResistance: 180,
         rotatable: true,
         rotations: ["observer_left_off", "observer_up_off", "observer_right_off", "observer_down_off"],
+        cost: {
+            color_red: 1,
+            color_yellow: 1,
+            color_purple: 1,
+            color_gray: 4,
+        },
         update5: function(x, y) {
             // tick = last off
             // tick - 1 = last on
@@ -4848,7 +5288,7 @@ let pixelData = {
             //     return;
             // }
             let index = (x + 1 + y * gridWidth) * gridStride;
-            if (grid[index + UPDATED] > tick - 7 && grid[index + UPDATED] < tick) {
+            if (grid[index + UPDATED] > tick - 8 && grid[index + UPDATED] < tick) {
                 addPixel(x, y, OBSERVER_LEFT_ON);
                 // setObserverUpdated(x, y, updated, false);
             }
@@ -4870,6 +5310,9 @@ let pixelData = {
         blastResistance: 180,
         rotatable: true,
         rotations: ["observer_left_on", "observer_up_on", "observer_right_on", "observer_down_on"],
+        cost: {
+            observer_left_off: 1,
+        },
         update5: function(x, y) {
             let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] >= tick - 14;
             if (x == gridWidth - 1) {
@@ -4883,7 +5326,7 @@ let pixelData = {
             //     return;
             // }
             let index = (x + 1 + y * gridWidth) * gridStride;
-            if (grid[index + UPDATED] > tick - 7 && grid[index + UPDATED] < tick) {
+            if (grid[index + UPDATED] > tick - 8 && grid[index + UPDATED] < tick) {
                 addUpdatedChunk(x, y);
                 // setObserverUpdated(x, y, updated, true);
                 return;
@@ -4908,8 +5351,11 @@ let pixelData = {
         blastResistance: 180,
         rotatable: true,
         rotations: ["observer_left_off", "observer_up_off", "observer_right_off", "observer_down_off"],
+        cost: {
+            observer_left_off: 1,
+        },
         update5: function(x, y) {
-            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] >= tick - 14;
+            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] >= tick - 16;
             if (x == 0) {
                 // setObserverUpdated(x, y, updated, false);
                 return;
@@ -4919,7 +5365,7 @@ let pixelData = {
             //     return;
             // }
             let index = (x - 1 + y * gridWidth) * gridStride;
-            if (grid[index + UPDATED] > tick - 7 && grid[index + UPDATED] < tick) {
+            if (grid[index + UPDATED] > tick - 8 && grid[index + UPDATED] < tick) {
                 addPixel(x, y, OBSERVER_RIGHT_ON);
                 // setObserverUpdated(x, y, updated, false);
             }
@@ -4944,6 +5390,9 @@ let pixelData = {
         blastResistance: 180,
         rotatable: true,
         rotations: ["observer_left_on", "observer_up_on", "observer_right_on", "observer_down_on"],
+        cost: {
+            observer_left_off: 1,
+        },
         update5: function(x, y) {
             let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] >= tick - 14;
             if (x == 0) {
@@ -4959,7 +5408,7 @@ let pixelData = {
             let index = (x - 1 + y * gridWidth) * gridStride;
             // if (grid[index + UPDATED] >= tick - 14 && grid[index + UPDATED] <= tick - 2) {
             // }
-            if (grid[index + UPDATED] > tick - 7 && grid[index + UPDATED] < tick) {
+            if (grid[index + UPDATED] > tick - 8 && grid[index + UPDATED] < tick) {
                 addUpdatedChunk(x, y);
                 // setObserverUpdated(x, y, updated, false);
                 return;
@@ -4989,6 +5438,9 @@ let pixelData = {
         blastResistance: 180,
         rotatable: true,
         rotations: ["observer_left_off", "observer_up_off", "observer_right_off", "observer_down_off"],
+        cost: {
+            observer_left_off: 1,
+        },
         update5: function(x, y) {
             let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] >= tick - 14;
             if (y == gridHeight - 1) {
@@ -5000,7 +5452,7 @@ let pixelData = {
             //     return;
             // }
             let index = (x + (y + 1) * gridWidth) * gridStride;
-            if (grid[index + UPDATED] > tick - 7 && grid[index + UPDATED] < tick) {
+            if (grid[index + UPDATED] > tick - 8 && grid[index + UPDATED] < tick) {
                 addPixel(x, y, OBSERVER_UP_ON);
                 // setObserverUpdated(x, y, updated, false);
             }
@@ -5021,6 +5473,9 @@ let pixelData = {
         blastResistance: 180,
         rotatable: true,
         rotations: ["observer_left_on", "observer_up_on", "observer_right_on", "observer_down_on"],
+        cost: {
+            observer_left_off: 1,
+        },
         update5: function(x, y) {
             let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] >= tick - 14;
             if (y == gridHeight - 1) {
@@ -5034,7 +5489,7 @@ let pixelData = {
             //     return;
             // }
             let index = (x + (y + 1) * gridWidth) * gridStride;
-            if (grid[index + UPDATED] > tick - 7 && grid[index + UPDATED] < tick) {
+            if (grid[index + UPDATED] > tick - 8 && grid[index + UPDATED] < tick) {
                 addUpdatedChunk(x, y);
                 // setObserverUpdated(x, y, updated, true);
                 return;
@@ -5058,6 +5513,9 @@ let pixelData = {
         blastResistance: 180,
         rotatable: true,
         rotations: ["observer_left_off", "observer_up_off", "observer_right_off", "observer_down_off"],
+        cost: {
+            observer_left_off: 1,
+        },
         update5: function(x, y) {
             let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] >= tick - 14;
             if (y == 0) {
@@ -5069,7 +5527,7 @@ let pixelData = {
             //     return;
             // }
             let index = (x + (y - 1) * gridWidth) * gridStride;
-            if (grid[index + UPDATED] > tick - 7 && grid[index + UPDATED] < tick) {
+            if (grid[index + UPDATED] > tick - 8 && grid[index + UPDATED] < tick) {
                 addPixel(x, y, OBSERVER_DOWN_ON);
                 // setObserverUpdated(x, y, updated, false);
             }
@@ -5094,6 +5552,9 @@ let pixelData = {
         blastResistance: 180,
         rotatable: true,
         rotations: ["observer_left_on", "observer_up_on", "observer_right_on", "observer_down_on"],
+        cost: {
+            observer_left_off: 1,
+        },
         update5: function(x, y) {
             let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] >= tick - 14;
             if (y == 0) {
@@ -5112,7 +5573,7 @@ let pixelData = {
             //     // setObserverUpdated(x, y, updated, true);
             //     return;
             // }
-            if (grid[index + UPDATED] > tick - 7 && grid[index + UPDATED] < tick) {
+            if (grid[index + UPDATED] > tick - 8 && grid[index + UPDATED] < tick) {
                 addUpdatedChunk(x, y);
                 // setObserverUpdated(x, y, updated, true);
                 return;
@@ -5142,6 +5603,12 @@ let pixelData = {
         blastResistance: 180,
         rotatable: true,
         rotations: ["comparator_left_off", "comparator_up_off", "comparator_right_off", "comparator_down_off"],
+        cost: {
+            color_red: 1,
+            color_yellow: 1,
+            color_purple: 2,
+            color_gray: 2,
+        },
         update5: function(x, y) {
             let pixel = AIR;
             let pixels = 0;
@@ -5208,6 +5675,9 @@ let pixelData = {
         blastResistance: 180,
         rotatable: true,
         rotations: ["comparator_left_on", "comparator_up_on", "comparator_right_on", "comparator_down_on"],
+        cost: {
+            comparator_left_off: 1,
+        },
         update5: function(x, y) {
             let pixel = AIR;
             let pixels = 0;
@@ -5277,6 +5747,9 @@ let pixelData = {
         blastResistance: 180,
         rotatable: true,
         rotations: ["comparator_left_off", "comparator_up_off", "comparator_right_off", "comparator_down_off"],
+        cost: {
+            comparator_left_off: 1,
+        },
         update5: function(x, y) {
             let pixel = AIR;
             let pixels = 0;
@@ -5343,6 +5816,9 @@ let pixelData = {
         blastResistance: 180,
         rotatable: true,
         rotations: ["comparator_left_on", "comparator_up_on", "comparator_right_on", "comparator_down_on"],
+        cost: {
+            comparator_left_off: 1,
+        },
         update5: function(x, y) {
             let pixel = AIR;
             let pixels = 0;
@@ -5412,6 +5888,9 @@ let pixelData = {
         blastResistance: 180,
         rotatable: true,
         rotations: ["comparator_left_off", "comparator_up_off", "comparator_right_off", "comparator_down_off"],
+        cost: {
+            comparator_left_off: 1,
+        },
         update5: function(x, y) {
             let pixel = AIR;
             let pixels = 0;
@@ -5486,6 +5965,9 @@ let pixelData = {
         blastResistance: 180,
         rotatable: true,
         rotations: ["comparator_left_on", "comparator_up_on", "comparator_right_on", "comparator_down_on"],
+        cost: {
+            comparator_left_off: 1,
+        },
         update5: function(x, y) {
             let pixel = AIR;
             let pixels = 0;
@@ -5563,6 +6045,9 @@ let pixelData = {
         blastResistance: 180,
         rotatable: true,
         rotations: ["comparator_left_off", "comparator_up_off", "comparator_right_off", "comparator_down_off"],
+        cost: {
+            comparator_left_off: 1,
+        },
         update5: function(x, y) {
             let pixel = AIR;
             let pixels = 0;
@@ -5637,6 +6122,9 @@ let pixelData = {
         blastResistance: 180,
         rotatable: true,
         rotations: ["comparator_left_on", "comparator_up_on", "comparator_right_on", "comparator_down_on"],
+        cost: {
+            comparator_left_off: 1,
+        },
         update5: function(x, y) {
             let pixel = AIR;
             let pixels = 0;
@@ -5747,6 +6235,11 @@ let pixelData = {
         state: SOLID,
         flammability: 20,
         blastResistance: 20,
+        cost: {
+            color_lime: 8,
+            color_brown: 8,
+            color_black: 2,
+        },
         update: function(x, y) {
             let exploding = false;
             let index = (x + y * gridWidth) * gridStride;
@@ -5771,6 +6264,9 @@ let pixelData = {
         state: SOLID,
         flammability: 20,
         blastResistance: 20,
+        cost: {
+            gunpowder: 1,
+        },
         update: function(x, y) {
             explode(x, y, 5 * 5, 5 * 8, 800);
         },
@@ -5785,6 +6281,11 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 20,
+        cost: {
+            water: 1,
+            plant: 16,
+            sponge: 1,
+        },
     },
     activated_c4: {
         name: "C-4 (Activated)",
@@ -5796,6 +6297,9 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 20,
+        cost: {
+            c4: 1,
+        },
         update: function(x, y) {
             explode(x, y, 15 * 15, 15 * 8, 1200);
         },
@@ -5809,6 +6313,11 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 20,
+        cost: {
+            color_red: 2,
+            color_gray: 6,
+            gunpowder: 1,
+        },
         update: function(x, y) {
             if (isTouching(x, y, [GUNPOWDER, ACTIVATED_GUNPOWDER, C4, ACTIVATED_C4])) {
                 explode(x, y, 3 * 3, 3 * 8, 300);
@@ -5836,7 +6345,7 @@ let pixelData = {
                     }
                     let index1 = (x1 + y1 * gridWidth) * gridStride;
                     if ((grid[index1 + PIXEL_DATA] & 1) == 0) {
-                        addFire(x1, y1, true);
+                        addFire(x1, y1, 1);
                         return false;
                     }
                     if (grid[index1 + ID] != AIR) {
@@ -5868,7 +6377,7 @@ let pixelData = {
                     }
                     let index1 = (x1 + y1 * gridWidth) * gridStride;
                     if ((grid[index1 + PIXEL_DATA] & 1) == 0) {
-                        addFire(x1, y1, true);
+                        addFire(x1, y1, 1);
                         return false;
                     }
                     if (grid[index1 + ID] != AIR) {
@@ -5900,7 +6409,7 @@ let pixelData = {
                     }
                     let index1 = (x1 + y1 * gridWidth) * gridStride;
                     if ((grid[index1 + PIXEL_DATA] & 1) == 0) {
-                        addFire(x1, y1, true);
+                        addFire(x1, y1, 1);
                         return false;
                     }
                     if (grid[index1 + ID] != AIR) {
@@ -5932,7 +6441,7 @@ let pixelData = {
                     }
                     let index1 = (x1 + y1 * gridWidth) * gridStride;
                     if ((grid[index1 + PIXEL_DATA] & 1) == 0) {
-                        addFire(x1, y1, true);
+                        addFire(x1, y1, 1);
                         return false;
                     }
                     if (grid[index1 + ID] != AIR) {
@@ -5952,6 +6461,13 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 20,
+        cost: {
+            water: 1,
+            plant: 96,
+            sponge: 1,
+            c4: 4,
+            detonator: 1,
+        },
         update: function(x, y) {
             let exploding = false;
             if (!isTouching(x, y, [NUKE_DEFUSER])) {
@@ -5988,6 +6504,9 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 20,
+        cost: {
+            nuke: 1,
+        },
         update: function(x, y) {
             // explode(x, y, 30 * 30, 15, 4000);
             explode(x, y, 30 * 30, 30 * 8, 2000);
@@ -5998,10 +6517,13 @@ let pixelData = {
         description: "Unrealistically flows and may or may not be wet",
         group: "Destruction",
         subgroup: "Nuke",
-        texture: new Float32Array([33, 2, 3, 3]),
+        texture: new Float32Array([21, 2, 3, 3]),
         state: SOLID,
         flammability: 0,
         blastResistance: 700,
+        cost: {
+            slider_horizontal: 2,
+        },
     },
     deleter: {
         name: "Deleter",
@@ -6466,19 +6988,6 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 0,
-        cost: {
-            color_red: 1,
-            color_orange: 1,
-            color_yellow: 1,
-            color_lime: 1,
-            color_green: 1,
-            color_cyan: 1,
-            color_blue: 1,
-            color_purple: 1,
-            color_brown: 1,
-            color_gray: 1,
-            color_black: 1,
-        },
         update: function(x, y) {
             let functions = [addPixel, addFire, addTeam, addUpdatedChunk, move, fillEllipse, pushLeft, pushRight, pushUp, pushDown];
             for (let i in pixelData) {
@@ -6593,6 +7102,355 @@ let pixelData = {
         //     let drawX = random();
         //     ctx.drawImage(ctx.canvas, drawX * ctx.canvas.width, 0, 5, ctx.canvas.height, drawX * ctx.canvas.width, random() * 50, 5, ctx.canvas.height);
         // },
+    },
+    mimic: {
+        name: "Mimic",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Destruction",
+        subgroup: "Mimic",
+        texture: new Float32Array([180, 40, 16, 16]),
+        state: SOLID,
+        flammability: 5,
+        blastResistance: 100,
+        update: function(x, y) {
+            // let id = Math.floor(Math.random() * pixels.length);
+            let id = grid[Math.floor(Math.random() * gridWidth * gridHeight) * 4 + ID];
+            if (pixels[id].update != null) {
+                pixels[id].update(x, y);
+            }
+            else if (pixels[id].update1 != null) {
+                pixels[id].update1(x, y);
+            }
+            else if (pixels[id].update2 != null) {
+                pixels[id].update2(x, y);
+            }
+            else if (pixels[id].update3 != null) {
+                pixels[id].update3(x, y);
+            }
+            else if (pixels[id].update4 != null) {
+                pixels[id].update4(x, y);
+            }
+            else if (pixels[id].update5 != null) {
+                pixels[id].update5(x, y);
+            }
+            else if (pixels[id].update6 != null) {
+                pixels[id].update6(x, y);
+            }
+            addUpdatedChunk(x, y);
+        },
+    },
+    lucky_pixel: {
+        name: "Lucky Pixel",
+        description: "Unrealistically flows and may or may not be wet",
+        group: "Destruction",
+        subgroup: "Lucky Pixel",
+        texture: new Float32Array([196, 40, 16, 16]),
+        state: SOLID,
+        flammability: 5,
+        blastResistance: 100,
+        update: function(x, y) {
+            let activated = false;
+            forTouching(x, y, (x1, y1) => {
+                let index = (x1 + y1 * gridWidth) * gridStride;
+                if (grid[index + ID] != AIR && grid[index + ID] != LUCKY_PIXEL) {
+                    activated = true;
+                }
+            });
+            if (activated) {
+                function addStructure(x, y, saveCode) {
+                    let parsed = parseSaveCode(saveCode);
+                    for (let y1 = Math.max(0, -y); y1 < Math.min(parsed.gridHeight, gridHeight - y); y1++) {
+                        for (let x1 = Math.max(0, -x); x1 < Math.min(parsed.gridWidth, gridWidth - x); x1++) {
+                            addPixel(x + x1, y + y1, parsed.grid[(x1 + y1 * parsed.gridWidth) * gridStride + ID]);
+                        }
+                    }
+                };
+                let functions = [{
+                    weight: 0.5,
+                    run: function() {
+                        addPixel(x, y, MONSTER);
+                    },
+                }, {
+                    weight: 1,
+                    run: function() {
+                        addPixel(x, y, WATER_PUMP);
+                    },
+                }, {
+                    weight: 0.5,
+                    run: function() {
+                        addPixel(x, y, LAVA_HEATER);
+                    },
+                }, {
+                    weight: 0.2,
+                    run: function() {
+                        addPixel(x, y, ICE_FREEZER);
+                    },
+                }, {
+                    weight: 0.1,
+                    run: function() {
+                        addPixel(x, y, WOOD_CRATE);
+                    },
+                }, {
+                    weight: 0.05,
+                    run: function() {
+                        addPixel(x, y, STEEL_CRATE);
+                    },
+                }, {
+                    weight: 0.05,
+                    run: function() {
+                        addPixel(x, y, SAND);
+                    },
+                }, {
+                    weight: 0.05,
+                    run: function() {
+                        addPixel(x, y, PINK_SAND);
+                    },
+                }, {
+                    weight: 1,
+                    run: function() {
+                        addStructure(x - 2, y - 2, "V3;1;5-5;air-2:wood:air-2:wood-5:air:wood:air:wood:air-2:stone:water:stone:air-2:stone-3:air;0-25;0-25;");
+                    },
+                }, {
+                    weight: 1,
+                    run: function() {
+                        addStructure(x - 2, y - 2, "V3;1;5-5;air-2:wood:air-2:wood-5:air:wood:air:wood:air-2:stone:water:stone:air-2:stone-3:air;0-25;0-25;");
+                        forInRange(x, y, 8 * 8, function(x1, y1) {
+                            let index = (x1 + y1 * gridWidth) * gridStride;
+                            if (grid[index + ID] != AIR) {
+                                return;
+                            }
+                            if (random() < 0.1) {
+                                addPixel(x1, y1, WATER);
+                            }
+                        });
+                    },
+                }, {
+                    weight: 0.5,
+                    run: function() {
+                        addStructure(x - 2, y - 2, "V3;1;5-5;air-2:wood:air-2:wood-5:air:wood:air:wood:air-2:stone:water:stone:air-2:stone-3:air;0-25;0-25;");
+                        forInRange(x, y, 8 * 8, function(x1, y1) {
+                            let index = (x1 + y1 * gridWidth) * gridStride;
+                            if (grid[index + ID] != AIR) {
+                                return;
+                            }
+                            if (random() < 0.1) {
+                                addPixel(x1, y1, LAVA);
+                            }
+                        });
+                    },
+                }, {
+                    weight: 0.2,
+                    run: function() {
+                        addStructure(x - 2, y - 2, "V3;1;5-5;air-2:wood:air-2:wood-5:air:wood:air:wood:air-2:stone:water:stone:air-2:stone-3:air;0-25;0-25;");
+                        forInRange(x, y, 8 * 8, function(x1, y1) {
+                            let index = (x1 + y1 * gridWidth) * gridStride;
+                            if (grid[index + ID] != AIR) {
+                                return;
+                            }
+                            if (random() < 0.1) {
+                                addPixel(x1, y1, SAND);
+                            }
+                        });
+                    },
+                }, {
+                    weight: 0.1,
+                    run: function() {
+                        addStructure(x - 2, y - 2, "V3;1;5-5;air-2:wood:air-2:wood-5:air:wood:air:wood:air-2:stone:water:stone:air-2:stone-3:air;0-25;0-25;");
+                        forInRange(x, y, 8 * 8, function(x1, y1) {
+                            let index = (x1 + y1 * gridWidth) * gridStride;
+                            if (grid[index + ID] != AIR) {
+                                return;
+                            }
+                            if (random() < 0.1) {
+                                addPixel(x1, y1, MONSTER);
+                            }
+                        });
+                    },
+                }, {
+                    weight: 0.1,
+                    run: function() {
+                        addStructure(x - 2, y - 2, "V3;1;5-5;air-2:wood:air-2:wood-5:air:wood:air:wood:air-2:stone:water:stone:air-2:stone-3:air;0-25;0-25;");
+                        forInRange(x, y, 8 * 8, function(x1, y1) {
+                            let index = (x1 + y1 * gridWidth) * gridStride;
+                            if (grid[index + ID] != AIR) {
+                                return;
+                            }
+                            if (random() < 0.1) {
+                                addPixel(x1, y1, GUNPOWDER);
+                            }
+                        });
+                    },
+                }, {
+                    weight: 0.1,
+                    run: function() {
+                        addStructure(x - 2, y - 2, "V3;1;5-5;air-2:wood:air-2:wood-5:air:wood:air:wood:air-2:stone:water:stone:air-2:stone-3:air;0-25;0-25;");
+                        forInRange(x, y, 8 * 8, function(x1, y1) {
+                            let index = (x1 + y1 * gridWidth) * gridStride;
+                            if (grid[index + ID] != AIR) {
+                                return;
+                            }
+                            if (random() < 0.1) {
+                                addPixel(x1, y1, WOOD_CRATE);
+                            }
+                        });
+                    },
+                }, {
+                    weight: 0.05,
+                    run: function() {
+                        addStructure(x - 2, y - 2, "V3;1;5-5;air-2:wood:air-2:wood-5:air:wood:air:wood:air-2:stone:water:stone:air-2:stone-3:air;0-25;0-25;");
+                        forInRange(x, y, 8 * 8, function(x1, y1) {
+                            let index = (x1 + y1 * gridWidth) * gridStride;
+                            if (grid[index + ID] != AIR) {
+                                return;
+                            }
+                            if (random() < 0.1) {
+                                addPixel(x1, y1, NUKE);
+                            }
+                        });
+                    },
+                }, {
+                    weight: 0.05,
+                    run: function() {
+                        addStructure(x - 2, y - 2, "V3;1;5-5;air-2:wood:air-2:wood-5:air:wood:air:wood:air-2:stone:water:stone:air-2:stone-3:air;0-25;0-25;");
+                        forInRange(x, y, 8 * 8, function(x1, y1) {
+                            let index = (x1 + y1 * gridWidth) * gridStride;
+                            if (grid[index + ID] != AIR) {
+                                return;
+                            }
+                            if (random() < 0.1) {
+                                addPixel(x1, y1, LUCKY_PIXEL);
+                            }
+                        });
+                    },
+                }, {
+                    weight: 0.025,
+                    run: function() {
+                        addStructure(x - 2, y - 2, "V3;1;5-5;air-2:wood:air-2:wood-5:air:wood:air:wood:air-2:stone:water:stone:air-2:stone-3:air;0-25;0-25;");
+                        forInRange(x, y, 8 * 8, function(x1, y1) {
+                            let index = (x1 + y1 * gridWidth) * gridStride;
+                            if (grid[index + ID] != AIR) {
+                                return;
+                            }
+                            if (random() < 0.1) {
+                                addPixel(x1, y1, STEEL_CRATE);
+                            }
+                        });
+                    },
+                }, {
+                    weight: 0.25,
+                    run: function() {
+                        addStructure(x - 1, y - 1, "V3;1;3-3;air:laser_up:air:laser_left:laser_scatterer:laser_right:air:laser_down:air;0-9;0-9;");
+                    },
+                }, {
+                    weight: 0.25,
+                    run: function() {
+                        addStructure(x - 1, y - 1, "V3;1;3-3;air:flamethrower_up:air:flamethrower_left:detonator:flamethrower_right:air:flamethrower_down:air;0-9;0-9;");
+                    },
+                }, {
+                    weight: 0.15,
+                    run: function() {
+                        addStructure(x - 1, y - 1, "V3;1;3-3;lava_heater:air:lava_heater:air:water_pump:air:lava_heater:air:lava_heater;0-9;0-9;");
+                    },
+                }, {
+                    weight: 0.1,
+                    run: function() {
+                        addStructure(x - 1, y - 1, "V3;1;3-3;air:cloner_down:air:cloner_right:slime:cloner_left:air:cloner_up:air;0-9;0-9;");
+                    },
+                }, {
+                    weight: 0.1,
+                    run: function() {
+                        addStructure(x - 1, y - 1, "V3;1;3-3;piston_right:piston_down:air:piston_right:rotator_clockwise:piston_left:air:piston_up:piston_left;0-9;0-9;");
+                    },
+                }, {
+                    weight: 0.1,
+                    run: function() {
+                        addStructure(x - 1, y - 1, "V3;1;3-3;air:piston_down:piston_left:piston_right:rotator_counterclockwise:piston_left:piston_right:piston_up:air;0-9;0-9;");
+                    },
+                }, {
+                    weight: 0.05,
+                    run: function() {
+                        addStructure(x - 1, y - 1, "V3;1;3-3;air:nuke_defuser:air:nuke_defuser:nuke:nuke_defuser:air:nuke_defuser:air;0-9;0-9;");
+                    },
+                }, {
+                    weight: 0.05,
+                    run: function() {
+                        addStructure(x - 1, y - 1, "V3;1;3-3;lucky_pixel:air:lucky_pixel:air:lucky_pixel:air:lucky_pixel:air:lucky_pixel;0-9;0-9;");
+                    },
+                }, {
+                    weight: 0.1,
+                    run: function() {
+                        addStructure(x - 3, y - 3, "V3;1;7-7;slime:air:slime:air:slime:air:slime-4:air:slime-4:air:slime:air:slime:air:slime-2:air:slime:collapsable:slime:air:slime-15:air:slime-5:air;0-49;0-49;");
+                    },
+                }, {
+                    weight: 0.2,
+                    run: function() {
+                        explode(x, y, 5 * 5, 5 * 8, 800);
+                    },
+                }, {
+                    weight: 0.01,
+                    run: function() {
+                        explode(x, y, 25 * 25, 25 * 8, 800);
+                    },
+                }, {
+                    weight: 0.1,
+                    run: function() {
+                        addStructure(x - 7, y - 7, "V3;1;16-16;lucky_pixel:air:color_orange-12:air:lucky_pixel:air-2:color_orange-12:air-2:color_orange-2:color_yellow-12:color_orange-4:color_yellow-3:air-6:color_yellow-3:color_orange-4:color_yellow-3:air-6:color_yellow-3:color_orange-4:color_yellow-3:air-2:color_yellow-2:air-2:color_yellow-3:color_orange-4:color_yellow-7:air-2:color_yellow-3:color_orange-4:color_yellow-5:air-4:color_yellow-3:color_orange-4:color_yellow-5:air-4:color_yellow-3:color_orange-4:color_yellow-5:air-2:color_yellow-5:color_orange-4:color_yellow-12:color_orange-4:color_yellow-5:air-2:color_yellow-5:color_orange-4:color_yellow-5:air-2:color_yellow-5:color_orange-4:color_yellow-12:color_orange-2:air-2:color_orange-12:air-2:lucky_pixel:air:color_orange-12:air:lucky_pixel;0-256;0-256;");
+                        // let x1 = Math.max(x - 7, 0);
+                        // let y1 = Math.max(y - 7, 0);
+                        // for (let y2 = 0; y2 < 16; y2++) {
+                        //     if (y1 + y2 == gridHeight) {
+                        //         break;
+                        //     }
+                        //     for (let x2 = 0; x2 < 16; x2++) {
+                        //         if (x1 + x2 == gridWidth) {
+                        //             break;
+                        //         }
+                        //         let id = COLOR_YELLOW;
+                        //         if ((x2 == 0 || x2 == 15) && (y2 == 0 || y2 == 15)) {
+                        //             id = LUCKY_PIXEL;
+                        //         }
+                        //         if ((x2 < 2 || x2 >= 14) && (y2 < 2 || y2 >= 14)) {
+                        //             id = AIR;
+                        //         }
+                        //         else if (x2 >= 2 && x2 < 14 && (y2 < 2 || y2 >= 14)) {
+                        //             id = COLOR_ORANGE;
+                        //         }
+                        //         else if (y2 >= 2 && y2 < 14 && (x2 < 2 || x2 >= 14)) {
+                        //             id = COLOR_ORANGE;
+                        //         }
+                        //         else if (x2 >= 5 && x2 < 11 && y2 >= 3 && y2 < 5) {
+                        //             id = AIR;
+                        //         }
+                        //         else if (x2 >= 5 && x2 < 7 && y2 == 5) {
+                        //             id = AIR;
+                        //         }
+                        //         else if (x2 >= 9 && x2 < 11 && y2 >= 5 && y2 < 9) {
+                        //             id = AIR;
+                        //         }
+                        //         else if (x2 >= 7 && x2 < 9 && y2 >= 7 && y2 < 10) {
+                        //             id = AIR;
+                        //         }
+                        //         else if (x2 >= 7 && x2 < 9 && y2 >= 11 && y2 < 13) {
+                        //             id = AIR;
+                        //         }
+                        //     }
+                        // }
+                    },
+                }];
+                let totalWeight = 0;
+                for (let i in functions) {
+                    totalWeight += functions[i].weight;
+                }
+                let randomWeight = random() * totalWeight;
+                for (let i in functions) {
+                    randomWeight -= functions[i].weight;
+                    if (randomWeight < 0) {
+                        functions[i].run();
+                        break;
+                    }
+                }
+            }
+        },
     },
     life: {
         name: "Conway's Game of Life",
@@ -6940,6 +7798,11 @@ let pixelData = {
         blastResistance: 0,
         rotatable: true,
         rotations: ["laser_left", "laser_up", "laser_right", "laser_down"],
+        cost: {
+            color_red: 5,
+            color_blue: 5,
+            color_purple: 50,
+        },
         update: function(x, y) {
             let path = getLaserPath(x, y, 0);
             let x1 = path[path.length - 1][0];
@@ -6948,11 +7811,12 @@ let pixelData = {
                 let index1 = (x1 + y1 * gridWidth) * gridStride;
                 if (grid[index1 + ID] == LASER_SCATTERER) {
                     addPixel(x1, y1, ACTIVATED_LASER_SCATTERER);
+                    addDrawingChunk(x1, y1);
                 }
                 else if (grid[index1 + ID] != ACTIVATED_LASER_SCATTERER) {
                     // if (random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
                     if (random() < pixels[grid[index1 + ID]].flammability / 100) {
-                        addFire(x1, y1, true);
+                        addFire(x1, y1, 1);
                     }
                     if (random() < 10 / pixels[grid[index1 + ID]].blastResistance) {
                         if (grid[index1 + ID] == LASER_LEFT || grid[index1 + ID] == LASER_UP || grid[index1 + ID] == LASER_RIGHT || grid[index1 + ID] == LASER_DOWN) {
@@ -6984,6 +7848,9 @@ let pixelData = {
         blastResistance: 0,
         rotatable: true,
         rotations: ["laser_left", "laser_up", "laser_right", "laser_down"],
+        cost: {
+            laser_left: 1,
+        },
         update: function(x, y) {
             let path = getLaserPath(x, y, 1);
             let x1 = path[path.length - 1][0];
@@ -6992,11 +7859,12 @@ let pixelData = {
                 let index1 = (x1 + y1 * gridWidth) * gridStride;
                 if (grid[index1 + ID] == LASER_SCATTERER) {
                     addPixel(x1, y1, ACTIVATED_LASER_SCATTERER);
+                    addDrawingChunk(x1, y1);
                 }
                 else if (grid[index1 + ID] != ACTIVATED_LASER_SCATTERER) {
                     // if (random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
                     if (random() < pixels[grid[index1 + ID]].flammability / 100) {
-                        addFire(x1, y1, true);
+                        addFire(x1, y1, 1);
                     }
                     if (random() < 10 / pixels[grid[index1 + ID]].blastResistance) {
                         if (grid[index1 + ID] == LASER_LEFT || grid[index1 + ID] == LASER_UP || grid[index1 + ID] == LASER_RIGHT || grid[index1 + ID] == LASER_DOWN) {
@@ -7028,6 +7896,9 @@ let pixelData = {
         blastResistance: 0,
         rotatable: true,
         rotations: ["laser_left", "laser_up", "laser_right", "laser_down"],
+        cost: {
+            laser_left: 1,
+        },
         update: function(x, y) {
             let path = getLaserPath(x, y, 2);
             let x1 = path[path.length - 1][0];
@@ -7036,11 +7907,12 @@ let pixelData = {
                 let index1 = (x1 + y1 * gridWidth) * gridStride;
                 if (grid[index1 + ID] == LASER_SCATTERER) {
                     addPixel(x1, y1, ACTIVATED_LASER_SCATTERER);
+                    addDrawingChunk(x1, y1);
                 }
                 else if (grid[index1 + ID] != ACTIVATED_LASER_SCATTERER) {
                     // if (random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
                     if (random() < pixels[grid[index1 + ID]].flammability / 100) {
-                        addFire(x1, y1, true);
+                        addFire(x1, y1, 1);
                     }
                     if (random() < 10 / pixels[grid[index1 + ID]].blastResistance) {
                         if (grid[index1 + ID] == LASER_LEFT || grid[index1 + ID] == LASER_UP || grid[index1 + ID] == LASER_RIGHT || grid[index1 + ID] == LASER_DOWN) {
@@ -7072,6 +7944,9 @@ let pixelData = {
         blastResistance: 0,
         rotatable: true,
         rotations: ["laser_left", "laser_up", "laser_right", "laser_down"],
+        cost: {
+            laser_left: 1,
+        },
         update: function(x, y) {
             let path = getLaserPath(x, y, 3);
             let x1 = path[path.length - 1][0];
@@ -7080,14 +7955,12 @@ let pixelData = {
                 let index1 = (x1 + y1 * gridWidth) * gridStride;
                 if (grid[index1 + ID] == LASER_SCATTERER) {
                     addPixel(x1, y1, ACTIVATED_LASER_SCATTERER);
-                }
-                else if (grid[index1 + ID] == ACTIVATED_LASER_SCATTERER) {
-                    addPixel(x1, y1, ACTIVATED_ACTIVATED_LASER_SCATTERER);
+                    addDrawingChunk(x1, y1);
                 }
                 else if (grid[index1 + ID] != ACTIVATED_LASER_SCATTERER) {
                     // if (random() < (pixels[grid[index1 + ID]].flammability + (20 - pixel.blastResistance)) / 100) {
                     if (random() < pixels[grid[index1 + ID]].flammability / 100) {
-                        addFire(x1, y1, true);
+                        addFire(x1, y1, 1);
                     }
                     if (random() < 10 / pixels[grid[index1 + ID]].blastResistance) {
                         if (grid[index1 + ID] == LASER_LEFT || grid[index1 + ID] == LASER_UP || grid[index1 + ID] == LASER_RIGHT || grid[index1 + ID] == LASER_DOWN) {
@@ -7117,6 +7990,9 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 0,
+        cost: {
+            glass: 3,
+        },
     },
     activated_laser_scatterer: {
         name: "Laser Scatterer (Activated)",
@@ -7127,32 +8003,12 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 0,
-        update: function(x, y) {
+        update6: function(x, y) {
             addPixel(x, y, LASER_SCATTERER);
-            addDrawingChunk(x, y);
         },
         draw: function(ctx, cameraScale, x, y) {
             let size = (Math.sin(performance.now() / 1000 * Math.PI / 2) + 1) / 4 * cameraScale;
-            ctx.strokeStyle = "rgb(70, 215, 160, 0.2)";
-            ctx.fillRect(x * cameraScale - size, y * cameraScale - size, cameraScale + size * 2, cameraScale + size * 2);
-        },
-    },
-    activated_activated_laser_scatterer: {
-        name: "Laser Scatterer (Activated x2)",
-        description: "Unrealistically flows and may or may not be wet",
-        group: "Lasers",
-        subgroup: "Laser Scatterer",
-        texture: new Float32Array([16, 5, 4, 4]),
-        state: SOLID,
-        flammability: 0,
-        blastResistance: 0,
-        update: function(x, y) {
-            addPixel(x, y, ACTIVATED_LASER_SCATTERER);
-            addDrawingChunk(x, y);
-        },
-        draw: function(ctx, cameraScale, x, y) {
-            let size = (Math.sin(performance.now() / 1000 * Math.PI / 2) + 1) / 4 * cameraScale;
-            ctx.strokeStyle = "rgb(70, 215, 160, 0.2)";
+            ctx.fillStyle = "rgb(70, 215, 160, 0.2)";
             ctx.fillRect(x * cameraScale - size, y * cameraScale - size, cameraScale + size * 2, cameraScale + size * 2);
         },
     },
@@ -7167,6 +8023,10 @@ let pixelData = {
         blastResistance: 0,
         rotatable: true,
         rotations: ["mirror_1", "mirror_2"],
+        cost: {
+            glass: 2,
+            color_gray: 1,
+        },
     },
     mirror_2: {
         name: "Mirror",
@@ -7179,6 +8039,10 @@ let pixelData = {
         blastResistance: 0,
         rotatable: true,
         rotations: ["mirror_1", "mirror_2"],
+        cost: {
+            glass: 2,
+            color_gray: 1,
+        },
     },
     monster: {
         name: "Monster",
@@ -7195,7 +8059,6 @@ let pixelData = {
                 return isOnGrid(x, y) && grid[(x + y * gridWidth) * gridStride + UPDATED] != tick && pixels[grid[(x + y * gridWidth) * gridStride + ID]].state != SOLID && grid[(x + y * gridWidth) * gridStride + ID] != MONSTER;
             };
             fall(x, y, isMoveable);
-            addUpdatedChunk(x, y);
         },
     },
     placement_restriction: {
@@ -7203,7 +8066,7 @@ let pixelData = {
         description: "Unrealistically flows and may or may not be wet",
         group: "Puzzles",
         subgroup: "Placement Restriction",
-        texture: new Float32Array([240, 140, 50, 50]),
+        texture: [new Float32Array([240, 140, 50, 50]), new Float32Array([0, 380, 60, 60])],
         amountColor: "black",
         state: GAS,
         flammability: 0,
@@ -7251,7 +8114,7 @@ let pixelData = {
         description: "Unrealistically flows and may or may not be wet",
         group: "Multiplayer",
         subgroup: "Team Placement Restriction",
-        texture: new Float32Array([240, 190, 50, 50]),
+        texture: [new Float32Array([240, 190, 50, 50]), new Float32Array([60, 380, 60, 60])],
         amountColor: "black",
         state: GAS,
         flammability: 0,
@@ -7262,7 +8125,7 @@ let pixelData = {
         description: "Unrealistically flows and may or may not be wet",
         group: "Multiplayer",
         subgroup: "Team Placement Restriction",
-        texture: new Float32Array([240, 240, 50, 50]),
+        texture: [new Float32Array([240, 240, 50, 50]), new Float32Array([120, 380, 60, 60])],
         amountColor: "black",
         state: GAS,
         flammability: 0,
@@ -7310,6 +8173,10 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 20,
+        alwaysCollectable: true,
+        cost: {
+            color_red: 1,
+        },
     },
     color_orange: {
         name: "Orange Color",
@@ -7320,6 +8187,10 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 20,
+        alwaysCollectable: true,
+        cost: {
+            color_orange: 1,
+        },
     },
     color_yellow: {
         name: "Yellow Color",
@@ -7331,6 +8202,10 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 20,
+        alwaysCollectable: true,
+        cost: {
+            color_yellow: 1,
+        },
     },
     color_lime: {
         name: "Lime Color",
@@ -7342,6 +8217,10 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 20,
+        alwaysCollectable: true,
+        cost: {
+            color_lime: 1,
+        },
     },
     color_green: {
         name: "Green Color",
@@ -7352,6 +8231,10 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 20,
+        alwaysCollectable: true,
+        cost: {
+            color_green: 1,
+        },
     },
     color_cyan: {
         name: "Cyan Color",
@@ -7363,6 +8246,10 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 20,
+        alwaysCollectable: true,
+        cost: {
+            color_cyan: 1,
+        },
     },
     color_blue: {
         name: "Blue Color",
@@ -7373,6 +8260,10 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 20,
+        alwaysCollectable: true,
+        cost: {
+            color_blue: 1,
+        },
     },
     color_purple: {
         name: "Purple Color",
@@ -7383,6 +8274,10 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 20,
+        alwaysCollectable: true,
+        cost: {
+            color_purple: 1,
+        },
     },
     color_brown: {
         name: "Brown Color",
@@ -7393,6 +8288,10 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 20,
+        alwaysCollectable: true,
+        cost: {
+            color_brown: 1,
+        },
     },
     color_gray: {
         name: "Gray Color",
@@ -7403,6 +8302,10 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 20,
+        alwaysCollectable: true,
+        cost: {
+            color_gray: 1,
+        },
     },
     color_black: {
         name: "Black Color",
@@ -7413,6 +8316,10 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 20,
+        alwaysCollectable: true,
+        cost: {
+            color_black: 1,
+        },
     },
     color_well: {
         name: "Color Well",
@@ -7455,6 +8362,19 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 100,
+        cost: {
+            color_red: 10,
+            color_orange: 10,
+            color_yellow: 10,
+            color_lime: 10,
+            color_green: 10,
+            color_cyan: 10,
+            color_blue: 10,
+            color_purple: 10,
+            color_brown: 10,
+            color_gray: 10,
+            color_black: 10,
+        },
         update: function(x, y) {
             let colors = [COLOR_RED, COLOR_ORANGE, COLOR_YELLOW, COLOR_LIME, COLOR_GREEN, COLOR_CYAN, COLOR_BLUE, COLOR_PURPLE, COLOR_BROWN, COLOR_GRAY, COLOR_BLACK];
             let filterColors = [];
@@ -7500,6 +8420,19 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 250,
+        cost: {
+            color_red: 25,
+            color_orange: 25,
+            color_yellow: 25,
+            color_lime: 25,
+            color_green: 25,
+            color_cyan: 25,
+            color_blue: 25,
+            color_purple: 25,
+            color_brown: 25,
+            color_gray: 25,
+            color_black: 25,
+        },
         update: function(x, y) {
             let colors = [COLOR_RED, COLOR_ORANGE, COLOR_YELLOW, COLOR_LIME, COLOR_GREEN, COLOR_CYAN, COLOR_BLUE, COLOR_PURPLE, COLOR_BROWN, COLOR_GRAY, COLOR_BLACK];
             let filterColors = [];
@@ -7545,6 +8478,19 @@ let pixelData = {
         state: SOLID,
         flammability: 0,
         blastResistance: 20,
+        cost: {
+            color_red: 1,
+            color_orange: 1,
+            color_yellow: 1,
+            color_lime: 1,
+            color_green: 1,
+            color_cyan: 1,
+            color_blue: 1,
+            color_purple: 1,
+            color_brown: 1,
+            color_gray: 1,
+            color_black: 1,
+        },
         update: function(x, y) {
             addDrawingChunk(x, y);
             addUpdatedChunk(x, y);
@@ -7582,7 +8528,20 @@ let pixelData = {
         flammability: 0,
         blastResistance: 200,
         collectable: false,
-        update: function(x, y) {
+        cost: {
+            color_red: 1,
+            color_orange: 1,
+            color_yellow: 1,
+            color_lime: 1,
+            color_green: 1,
+            color_cyan: 1,
+            color_blue: 1,
+            color_purple: 1,
+            color_brown: 1,
+            color_gray: 1,
+            color_black: 10,
+        },
+        update6: function(x, y) {
             if (isDeactivated(x, y)) {
                 return;
             }
@@ -7592,17 +8551,21 @@ let pixelData = {
                 if (!pixels[grid[index1 + ID]].collectable) {
                     return;
                 }
-                for (let i = 0; i < 2; i++) {
-                    if ((grid[index + PIXEL_DATA] & (1 << (i + 1))) != 0 && (grid[index1 + PIXEL_DATA] & (1 << (i + 1))) == 0) {
-                        return;
+                if (!pixels[grid[index1 + ID]].alwaysCollectable) {
+                    for (let i = 0; i < 2; i++) {
+                        if ((grid[index + PIXEL_DATA] & (1 << (i + 1))) != 0 && (grid[index1 + PIXEL_DATA] & (1 << (i + 1))) == 0) {
+                            return;
+                        }
                     }
                 }
                 if (multiplayerId != null) {
                     for (let i = 0; i < 2; i++) {
                         if ((grid[index + PIXEL_DATA] & (1 << (i + 1))) != 0) {
-                            multiplayerPixelInventory[i][grid[index1 + ID]] += 1;
-                            if (i == multiplayerGames[multiplayerGameId].players[multiplayerId].team) {
-                                pixelInventoryUpdates[grid[index1 + ID]] = true;
+                            for (let j in pixels[grid[index1 + ID]].cost) {
+                                multiplayerPixelInventory[i][j] += pixels[grid[index1 + ID]].cost[j];
+                                if (i == multiplayerGames[multiplayerGameId].players[multiplayerId].team) {
+                                    pixelInventoryUpdates[j] = true;
+                                }
                             }
                         }
                     }
@@ -7718,6 +8681,37 @@ for (let i = 0; i < pixels.length; i++) {
             }
         }
         pixels[i].cost = cost;
+    }
+}
+function updateCost(id) {
+    let cost = {};
+    for (let i in pixels[id].cost) {
+        if (i != id && pixels[i].cost != null) {
+            for (let j in pixels[i].cost) {
+                if (pixels[j].cost != null) {
+                    updateCost(i);
+                    break;
+                }
+            }
+            for (let j in pixels[i].cost) {
+                if (cost[j] == null) {
+                    cost[j] = 0;
+                }
+                cost[j] += pixels[i].cost[j] * pixels[id].cost[i];
+            }
+        }
+        else {
+            if (cost[i] == null) {
+                cost[i] = 0;
+            }
+            cost[i] += pixels[id].cost[i];
+        }
+    }
+    pixels[id].cost = cost;
+};
+for (let i in pixels) {
+    if (pixels[i].cost != null) {
+        updateCost(i);
     }
 }
 

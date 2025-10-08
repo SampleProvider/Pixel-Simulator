@@ -35,7 +35,36 @@ function resizeMenuCanvases(WIDTH, HEIGHT) {
 };
 resizeMenuCanvases(WIDTH, HEIGHT);
 
-const titleImage = await createImageBitmap(await (await fetch(Math.random() < 0.001 ? "img/easterEggTitle.png" : "img/title.png")).blob());
+let titleImage;
+
+let titleRandom = Math.random();
+if (titleRandom < 0.0005) {
+    titleImage = await createImageBitmap(await (await fetch("img/pickleTitle.png")).blob());
+}
+else if (titleRandom < 0.0005) {
+    titleImage = await createImageBitmap(await (await fetch("img/rightToLeftTitle.png")).blob());
+    setTimeout(function() {
+        let elements = document.getElementsByTagName("*");
+        for (let i in elements) {
+            if (elements[i].childNodes == null) {
+                continue;
+            }
+            for (let j = 0; j < elements[i].childNodes.length; j++) {
+                if (elements[i].childNodes[j].textContent == null || elements[i].childNodes[j].textContent.length == 0) {
+                    continue;
+                }
+                if (elements[i].childNodes[j].hasChildNodes()) {
+                    continue;
+                }
+                elements[i].childNodes[j].textContent = elements[i].childNodes[j].textContent.split("").reverse().join("");
+            }
+        }
+    }, 1000);
+}
+else {
+    titleImage = await createImageBitmap(await (await fetch("img/title.png")).blob());
+}
+
 let canvas = document.createElement("canvas");
 let ctx = canvas.getContext("2d");
 canvas.width = titleImage.width;
@@ -63,7 +92,7 @@ for (let i = 3; i < imageData.data.length; i += 4) {
             color: "rgb(" + imageData.data[i - 3] + ", " + imageData.data[i - 2] + ", " + imageData.data[i - 1] + ")",
             pastLocations: [],
             getSize: function() {
-                return Math.round(menuCanvas.height * 0.014);
+                return Math.min(Math.round(menuCanvas.height * 0.014), Math.round(menuCanvas.width * 0.8 / titleImage.width));
             },
             getTargetPos: function() {
                 let size = this.getSize();
@@ -101,8 +130,8 @@ function transitionIn() {
     transitionTop.style.transform = "";
     transitionBottom.style.transform = "";
     transitionContainer.innerText;
-    transitionTop.style.transform = "translateX(0px)";
-    transitionBottom.style.transform = "translateX(0px)";
+    transitionTop.style.transform = "translateX(0vw)";
+    transitionBottom.style.transform = "translateX(0vw)";
 
     return new Promise((resolve, reject) => {
         transitionTop.ontransitionend = () => {
@@ -112,8 +141,8 @@ function transitionIn() {
 };
 function transitionOut() {
     transitionContainer.style.pointerEvents = "none";
-    transitionTop.style.transform = "translateX(0px)";
-    transitionBottom.style.transform = "translateX(0px)";
+    transitionTop.style.transform = "translateX(0vw)";
+    transitionBottom.style.transform = "translateX(0vw)";
     transitionContainer.innerText;
     transitionTop.style.transform = "translateX(-100vw)";
     transitionBottom.style.transform = "translateX(100vw)";
@@ -296,6 +325,40 @@ multiplayerCloseButton.onclick = () => {
         return;
     }
     slideOutMultiplayer();
+};
+
+let menuTooltip = document.getElementById("menuTooltip");
+let menuTooltipName = document.getElementById("menuTooltipName");
+let menuTooltipDescription = document.getElementById("menuTooltipDescription");
+
+function showMenuTooltip(name, description) {
+    menuTooltip.style.opacity = "1";
+    menuTooltipName.innerHTML = name;
+    menuTooltipDescription.innerHTML = description;
+    // some text transition later
+};
+function hideMenuTooltip() {
+    menuTooltip.style.opacity = "0";
+};
+function moveMenuTooltip() {
+    menuTooltip.style.left = mouseX / devicePixelRatio + "px";
+    menuTooltip.style.right = "unset";
+    menuTooltip.style.bottom = window.innerHeight - mouseY / devicePixelRatio + "px";
+    // menuTooltip.style.left = rawMouseX + "px";
+    // menuTooltip.style.right = "unset";
+    // menuTooltip.style.top = rawMouseY + "px";
+    // menuTooltip.style.bottom = "unset";
+    var rect = menuTooltip.getBoundingClientRect();
+    if (rect.right > window.innerWidth) {
+        menuTooltip.style.right = window.innerWidth - mouseX / devicePixelRatio + "px";
+        menuTooltip.style.left = "unset";
+    }
+    // rect = menuTooltip.getBoundingClientRect();
+    // if (rect.bottom > window.innerHeight) {
+    //     menuTooltip.style.bottom = (window.innerHeight - rawMouseY) + "px";
+    //     menuTooltip.style.top = "unset";
+    // }
+    // add the switch sides thing
 };
 
 let mouseDown = false;
@@ -699,4 +762,4 @@ function updateMenu() {
     menuStateTime++;
 };
 
-export { resizeMenuCanvases, transitionIn, transitionOut, slideInTitle, slideOutTitle, slideInPuzzles, slideOutPuzzles, updateMenu }
+export { resizeMenuCanvases, transitionIn, transitionOut, slideInTitle, slideOutTitle, slideInPuzzles, slideOutPuzzles, showMenuTooltip, hideMenuTooltip, moveMenuTooltip, updateMenu }
