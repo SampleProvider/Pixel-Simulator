@@ -1399,24 +1399,24 @@ function loadPuzzle(id) {
             case "ticks":
                 if (objective.target != null) {
                     addObjective("=" + objective.target + " Ticks", function() {
-                        return [(tick - 1) / 8, objective.target, (tick - 1) / 8 == objective.target];
+                        return [(tick - 1) / 9, objective.target, (tick - 1) / 9 == objective.target];
                     });
                 }
                 else if (objective.max != null) {
                     if (objective.min != null) {
                         addObjective(objective.min + "-" + objective.max + " Ticks", function() {
-                            return [(tick - 1) / 8, objective.max, (tick - 1) / 8 <= objective.max && (tick - 1) / 8 >= objective.min];
+                            return [(tick - 1) / 9, objective.max, (tick - 1) / 9 <= objective.max && (tick - 1) / 9 >= objective.min];
                         });
                     }
                     else {
                         addObjective("<=" + objective.max + " Ticks", function() {
-                            return [(tick - 1) / 8, objective.max, (tick - 1) / 8 <= objective.max];
+                            return [(tick - 1) / 9, objective.max, (tick - 1) / 9 <= objective.max];
                         });
                     }
                 }
                 else if (objective.min != null) {
                     addObjective(">=" + objective.min + " Ticks", function() {
-                        return [(tick - 1) / 8, objective.min, (tick - 1) / 8 >= objective.min];
+                        return [(tick - 1) / 9, objective.min, (tick - 1) / 9 >= objective.min];
                     });
                 }
                 break;
@@ -1518,14 +1518,14 @@ function updateObjectives() {
         }
         puzzleProgress[currentPuzzle].completed = true;
         if (puzzleProgress[currentPuzzle].ticks == -1) {
-            puzzleProgress[currentPuzzle].ticks = (tick - 1) / 8;
+            puzzleProgress[currentPuzzle].ticks = (tick - 1) / 9;
         }
         else {
-            puzzleProgress[currentPuzzle].ticks = Math.min((tick - 1) / 8, puzzleProgress[currentPuzzle].ticks);
+            puzzleProgress[currentPuzzle].ticks = Math.min((tick - 1) / 9, puzzleProgress[currentPuzzle].ticks);
         }
         // store min pixels used as well?
         congratulationsContainer.classList.remove("hidden");
-        congratulationsSubtitle.innerHTML = (tick - 1) / 8 + " ticks";
+        congratulationsSubtitle.innerHTML = (tick - 1) / 9 + " ticks";
         setRunState("paused");
     }
 };

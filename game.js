@@ -1119,7 +1119,7 @@ let keybindsData = {
     beginSelection: {
         name: "Begin Selection",
         subgroup: "Selection",
-        default: [{ keys: ["Control"], shift: false, ctrl: true, alt: false, meta: false }],
+        default: [{ keys: ["LMB"], shift: false, ctrl: true, alt: false, meta: false }],
     },
     endSelection: {
         name: "End Selection",
@@ -1406,23 +1406,23 @@ function isKeybindPressed(keybind) {
         return false;
     }
     search: for (let i in keybinds[keybind]) {
-        let max = 0;
+        let min = Number.MAX_VALUE;
         for (let j in keybinds[keybind][i].keys) {
             if (controls[keybinds[keybind][i].keys[j]] == false) {
                 continue search;
             }
-            max = Math.max(max, controls[keybinds[keybind][i].keys[j]]);
+            min = Math.min(min, controls[keybinds[keybind][i].keys[j]]);
         }
-        if (((controls["Shift"] != false) && (controls["Shift"] <= max)) != keybinds[keybind][i].shift) {
+        if (((controls["Shift"] != false) && (controls["Shift"] <= min)) != keybinds[keybind][i].shift) {
             continue;
         }
-        if (((controls["Control"] != false) && (controls["Control"] <= max)) != keybinds[keybind][i].ctrl) {
+        if (((controls["Control"] != false) && (controls["Control"] <= min)) != keybinds[keybind][i].ctrl) {
             continue;
         }
-        if (((controls["Alt"] != false) && (controls["Alt"] <= max)) != keybinds[keybind][i].alt) {
+        if (((controls["Alt"] != false) && (controls["Alt"] <= min)) != keybinds[keybind][i].alt) {
             continue;
         }
-        if (((controls["Meta"] != false) && (controls["Meta"] <= max)) != keybinds[keybind][i].meta) {
+        if (((controls["Meta"] != false) && (controls["Meta"] <= min)) != keybinds[keybind][i].meta) {
             continue;
         }
         return true;
@@ -1435,23 +1435,23 @@ function isKeybindJustPressed(keybind) {
     }
     // spaghetti but it seems to work
     search: for (let i in keybinds[keybind]) {
-        let max = 0;
+        let min = Number.MAX_VALUE;
         for (let j in keybinds[keybind][i].keys) {
             if (controls[keybinds[keybind][i].keys[j]] == false || controls[keybinds[keybind][i].keys[j]] < lastFrame) {
                 continue search;
             }
-            max = Math.max(max, controls[keybinds[keybind][i].keys[j]]);
+            min = Math.min(min, controls[keybinds[keybind][i].keys[j]]);
         }
-        if (((controls["Shift"] != false) && (controls["Shift"] <= max)) != keybinds[keybind][i].shift) {
+        if (((controls["Shift"] != false) && (controls["Shift"] <= min)) != keybinds[keybind][i].shift) {
             continue;
         }
-        if (((controls["Control"] != false) && (controls["Control"] <= max)) != keybinds[keybind][i].ctrl) {
+        if (((controls["Control"] != false) && (controls["Control"] <= min)) != keybinds[keybind][i].ctrl) {
             continue;
         }
-        if (((controls["Alt"] != false) && (controls["Alt"] <= max)) != keybinds[keybind][i].alt) {
+        if (((controls["Alt"] != false) && (controls["Alt"] <= min)) != keybinds[keybind][i].alt) {
             continue;
         }
-        if (((controls["Meta"] != false) && (controls["Meta"] <= max)) != keybinds[keybind][i].meta) {
+        if (((controls["Meta"] != false) && (controls["Meta"] <= min)) != keybinds[keybind][i].meta) {
             continue;
         }
         return true;
@@ -1632,7 +1632,7 @@ function updateMouse() {
             controls["RMB"] = false;
         }
     }
-    else if (isKeybindPressed("beginSelection") && isKeybindJustPressed("mainAction")) {
+    else if (isKeybindJustPressed("beginSelection")) {
         if (selectionState == BRUSH) {
             selectionState = SELECTING;
             selectionX = brushX;
@@ -1647,7 +1647,7 @@ function updateMouse() {
                 selectionHeight = selectionGridHeight;
             }
         }
-        if (selectionState == SELECTING && !isKeybindPressed("mainAction")) {
+        if (selectionState == SELECTING && !isKeybindPressed("beginSelection")) {
             selectionState = SELECTED;
             let minX = Math.min(selectionX, brushX);
             let maxX = Math.max(selectionX, brushX);
@@ -3240,9 +3240,9 @@ document.onkeydown = (e) => {
     if (key.length == 1) {
         key = key.toUpperCase();
     }
-    // if (controls[key] == false) {
+    if (controls[key] == false || (key != "Shift" && key != "Control" && key != "Alt" && key != "Meta")) {
         controls[key] = performance.now();
-    // }
+    }
     if (addingKeybind != null) {
         updateAddingKeybind();
     }
@@ -3609,7 +3609,7 @@ function updateGrid() {
     for (let chunkY = 0; chunkY < chunkYAmount; chunkY++) {
         let updatingChunks = [];
         for (let chunkX = 0; chunkX < chunkXAmount; chunkX++) {
-            if (chunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth) {
+            if (chunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth || nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth) {
                 updatingChunks.push(chunkX);
             }
         }
@@ -3618,11 +3618,11 @@ function updateGrid() {
         }
         for (let y = chunkY * chunkHeight; y < chunkY * chunkHeight + chunkHeight; y++) {
             for (let chunkX of updatingChunks) {
-                let minY = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2];
-                let maxY = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3];
+                let minY = Math.min(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2]);
+                let maxY = Math.max(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3]);
                 if (y >= minY && y <= maxY) {
-                    let minX = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride];
-                    let maxX = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1];
+                    let minX = Math.min(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride]);
+                    let maxX = Math.max(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1]);
                     for (let x = minX; x <= maxX; x++) {
                         let index = (x + y * gridWidth) * gridStride;
                         if (grid[index + UPDATED] == tick) {
@@ -3644,7 +3644,7 @@ function updateGrid() {
     for (let chunkY = 0; chunkY < chunkYAmount; chunkY++) {
         let updatingChunks = [];
         for (let chunkX = chunkXAmount - 1; chunkX >= 0; chunkX--) {
-            if (chunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth) {
+            if (chunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth || nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth) {
                 updatingChunks.push(chunkX);
             }
         }
@@ -3655,13 +3655,13 @@ function updateGrid() {
             for (let chunkX of updatingChunks) {
                 // let minY = Math.max(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2] - buffer, chunkY * chunkHeight);
                 // let maxY = Math.min(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3] + buffer, chunkY * chunkHeight + chunkHeight - 1);
-                let minY = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2];
-                let maxY = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3];
+                let minY = Math.min(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2]);
+                let maxY = Math.max(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3]);
                 if (y >= minY && y <= maxY) {
                     // let minX = Math.max(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride] - buffer, chunkX * chunkWidth);
                     // let maxX = Math.min(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1] + buffer, chunkX * chunkWidth + chunkWidth - 1);
-                    let minX = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride];
-                    let maxX = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1];
+                    let minX = Math.min(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride]);
+                    let maxX = Math.max(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1]);
                     for (let x = maxX; x >= minX; x--) {
                         let index = (x + y * gridWidth) * gridStride;
                         if (grid[index + UPDATED] == tick) {
@@ -3683,7 +3683,7 @@ function updateGrid() {
     for (let chunkY = 0; chunkY < chunkYAmount; chunkY++) {
         let updatingChunks = [];
         for (let chunkX = 0; chunkX < chunkXAmount; chunkX++) {
-            if (chunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth) {
+            if (chunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth || nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth) {
                 updatingChunks.push(chunkX);
             }
         }
@@ -3692,11 +3692,11 @@ function updateGrid() {
         }
         for (let y = chunkY * chunkHeight; y < chunkY * chunkHeight + chunkHeight; y++) {
             for (let chunkX of updatingChunks) {
-                let minY = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2];
-                let maxY = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3];
+                let minY = Math.min(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2]);
+                let maxY = Math.max(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3]);
                 if (y >= minY && y <= maxY) {
-                    let minX = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride];
-                    let maxX = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1];
+                    let minX = Math.min(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride]);
+                    let maxX = Math.max(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1]);
                     for (let x = minX; x <= maxX; x++) {
                         let index = (x + y * gridWidth) * gridStride;
                         if (grid[index + UPDATED] == tick) {
@@ -3718,7 +3718,7 @@ function updateGrid() {
     for (let chunkX = 0; chunkX < chunkXAmount; chunkX++) {
         let updatingChunks = [];
         for (let chunkY = chunkYAmount - 1; chunkY >= 0; chunkY--) {
-            if (chunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth) {
+            if (chunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth || nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth) {
                 updatingChunks.push(chunkY);
             }
         }
@@ -3727,11 +3727,11 @@ function updateGrid() {
         }
         for (let x = chunkX * chunkWidth; x < chunkX * chunkWidth + chunkWidth; x++) {
             for (let chunkY of updatingChunks) {
-                let minX = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride];
-                let maxX = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1];
+                let minX = Math.min(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride]);
+                let maxX = Math.max(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1]);
                 if (x >= minX && x <= maxX) {
-                    let minY = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2];
-                    let maxY = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3];
+                    let minY = Math.min(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2]);
+                    let maxY = Math.max(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3]);
                     for (let y = maxY; y >= minY; y--) {
                         let index = (x + y * gridWidth) * gridStride;
                         if (grid[index + UPDATED] == tick) {
@@ -3753,7 +3753,7 @@ function updateGrid() {
     for (let chunkX = 0; chunkX < chunkXAmount; chunkX++) {
         let updatingChunks = [];
         for (let chunkY = 0; chunkY < chunkYAmount; chunkY++) {
-            if (chunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth) {
+            if (chunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth || nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth) {
                 updatingChunks.push(chunkY);
             }
         }
@@ -3762,11 +3762,11 @@ function updateGrid() {
         }
         for (let x = chunkX * chunkWidth; x < chunkX * chunkWidth + chunkWidth; x++) {
             for (let chunkY of updatingChunks) {
-                let minX = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride];
-                let maxX = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1];
+                let minX = Math.min(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride]);
+                let maxX = Math.max(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1]);
                 if (x >= minX && x <= maxX) {
-                    let minY = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2];
-                    let maxY = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3];
+                    let minY = Math.min(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2]);
+                    let maxY = Math.max(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3]);
                     for (let y = minY; y <= maxY; y++) {
                         let index = (x + y * gridWidth) * gridStride;
                         if (grid[index + UPDATED] == tick) {
@@ -3789,25 +3789,20 @@ function updateGrid() {
         for (let chunkY = 0; chunkY < chunkYAmount; chunkY++) {
             let updatingChunks = [];
             for (let chunkX = 0; chunkX < chunkXAmount; chunkX++) {
-                if (chunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth) {
+                if (chunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth || nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth) {
                     updatingChunks.push(chunkX);
                 }
             }
             if (updatingChunks.length == 0) {
                 continue;
             }
-            // for (let y = chunkY * chunkHeight + chunkHeight - 1; y >= chunkY * chunkHeight; y--) {
             for (let y = chunkY * chunkHeight; y < chunkY * chunkHeight + chunkHeight; y++) {
-                // for (let chunkX = 0; chunkX < chunkXAmount; chunkX++) {
-                //     if (chunks[(chunkX + chunkY * chunkXAmount) * chunkStride] == chunkX * chunkWidth + chunkWidth + 1) {
-                //         continue;
-                //     }
                 for (let chunkX of updatingChunks) {
-                    let minY = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2];
-                    let maxY = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3];
+                    let minY = Math.min(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2]);
+                    let maxY = Math.max(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3]);
                     if (y >= minY && y <= maxY) {
-                        let minX = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride];
-                        let maxX = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1];
+                        let minX = Math.min(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride]);
+                        let maxX = Math.max(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1]);
                         for (let x = minX; x <= maxX; x++) {
                             let index = (x + y * gridWidth) * gridStride;
                             if (grid[index + UPDATED] == tick) {
@@ -3831,7 +3826,7 @@ function updateGrid() {
             // for (let chunkY = chunkYAmount - 1; chunkY >= 0; chunkY--) {
             let updatingChunks = [];
             for (let chunkX = chunkXAmount - 1; chunkX >= 0; chunkX--) {
-                if (chunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth) {
+                if (chunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth || nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth) {
                     updatingChunks.push(chunkX);
                 }
             }
@@ -3850,11 +3845,11 @@ function updateGrid() {
                     //         if (chunks[(chunkX + chunkY * chunkXAmount) * chunkStride] == chunkX * chunkWidth + chunkWidth + 1) {
                     //             continue;
                     //         }
-                    let minY = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2];
-                    let maxY = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3];
+                    let minY = Math.min(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2]);
+                    let maxY = Math.max(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3]);
                     if (y >= minY && y <= maxY) {
-                        let minX = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride];
-                        let maxX = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1];
+                        let minX = Math.min(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride]);
+                        let maxX = Math.max(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1]);
                         for (let x = maxX; x >= minX; x--) {
                             let index = (x + y * gridWidth) * gridStride;
                             if (grid[index + UPDATED] == tick) {
@@ -3889,10 +3884,11 @@ function updateGrid() {
         }
     }
     tick += 1;
+    tick += 1;
     for (let chunkY = 0; chunkY < chunkYAmount; chunkY++) {
         let updatingChunks = [];
         for (let chunkX = 0; chunkX < chunkXAmount; chunkX++) {
-            if (chunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth) {
+            if (chunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth || nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride] != chunkX * chunkWidth + chunkWidth) {
                 updatingChunks.push(chunkX);
             }
         }
@@ -3901,11 +3897,11 @@ function updateGrid() {
         }
         for (let y = chunkY * chunkHeight; y < chunkY * chunkHeight + chunkHeight; y++) {
             for (let chunkX of updatingChunks) {
-                let minY = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2];
-                let maxY = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3];
+                let minY = Math.min(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 2]);
+                let maxY = Math.max(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 3]);
                 if (y >= minY && y <= maxY) {
-                    let minX = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride];
-                    let maxX = chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1];
+                    let minX = Math.min(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride]);
+                    let maxX = Math.max(chunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1], nextChunks[(chunkX + chunkY * chunkXAmount) * chunkStride + 1]);
                     for (let x = minX; x <= maxX; x++) {
                         let index = (x + y * gridWidth) * gridStride;
                         if (grid[index + UPDATED] == tick) {
@@ -4209,7 +4205,7 @@ function updateGame() {
         overlayCtx.fillText("30 FPS", graphX + 3, graphY + graphHeight - 1 - 1000 / 30 * 2 - 21);
         overlayCtx.setLineDash([]);
 
-        drawText("Tick: " + (tick - 1) / 8, 3, graphY + graphHeight + 3);
+        drawText("Tick: " + (tick - 1) / 9, 3, graphY + graphHeight + 3);
 
         let brushX = Math.floor(cameraX + mouseX / cameraScale);
         let brushY = Math.floor(cameraY + mouseY / cameraScale);

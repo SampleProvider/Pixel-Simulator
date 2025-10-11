@@ -2961,6 +2961,7 @@ let pixelData = {
         state: LIQUID,
         flammability: 0,
         blastResistance: 650,
+        stickable: false,
         cost: {
             color_cyan: 1,
             color_blue: 1,
@@ -3063,6 +3064,7 @@ let pixelData = {
         state: GAS,
         flammability: 0,
         blastResistance: 0,
+        stickable: false,
         cost: {
             color_cyan: 1,
             color_blue: 1,
@@ -3117,6 +3119,7 @@ let pixelData = {
         state: LIQUID,
         flammability: 0,
         blastResistance: 750,
+        stickable: false,
         cost: {
             color_red: 1,
             color_orange: 1,
@@ -5269,34 +5272,23 @@ let pixelData = {
             color_gray: 4,
         },
         update5: function(x, y) {
-            // tick = last off
-            // tick - 1 = last on
-
-            // we will turn on if: pixel in front has had an update
-            // observer in front is on
-
-
-            // right and down: last update is easy, just >= -14
-            // left and up: 
-            // let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] >= tick - 14;
             if (x == gridWidth - 1) {
-                // setObserverUpdated(x, y, updated, false);
                 return;
             }
-            // if (isDeactivatedObserver(x, y)) {
-            //     // setObserverUpdated(x, y, updated, false);
-            //     return;
-            // }
+            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] > tick - 9 && grid[(x + y * gridWidth) * gridStride + UPDATED] < tick;
             let index = (x + 1 + y * gridWidth) * gridStride;
-            if (grid[index + UPDATED] > tick - 8 && grid[index + UPDATED] < tick) {
+            if (grid[index + UPDATED] > tick - 9 && grid[index + UPDATED] < tick) {
                 addPixel(x, y, OBSERVER_LEFT_ON);
-                // setObserverUpdated(x, y, updated, false);
+                if (updated) {
+                    grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                }
             }
             else if (grid[index + UPDATED] != tick && (grid[index + ID] == OBSERVER_LEFT_ON || grid[index + ID] == OBSERVER_UP_ON || grid[index + ID] == OBSERVER_RIGHT_ON || grid[index + ID] == OBSERVER_DOWN_ON || grid[index + ID] == COMPARATOR_LEFT_ON)) {
                 addPixel(x, y, OBSERVER_LEFT_ON);
+                if (updated) {
+                    grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                }
             }
-            // addUpdatedChunk(x, y);
-            // setObserverUpdated(x, y, updated, false);
         },
     },
     observer_left_on: {
@@ -5314,30 +5306,24 @@ let pixelData = {
             observer_left_off: 1,
         },
         update5: function(x, y) {
-            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] >= tick - 14;
             if (x == gridWidth - 1) {
                 addPixel(x, y, OBSERVER_LEFT_OFF);
-                // setObserverUpdated(x, y, updated, true);
                 return;
             }
-            // if (isDeactivatedObserver(x, y)) {
-            //     addPixel(x, y, OBSERVER_LEFT_OFF);
-            //     setObserverUpdated(x, y, updated, true);
-            //     return;
-            // }
+            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] > tick - 9 && grid[(x + y * gridWidth) * gridStride + UPDATED] < tick;
             let index = (x + 1 + y * gridWidth) * gridStride;
-            if (grid[index + UPDATED] > tick - 8 && grid[index + UPDATED] < tick) {
+            if (grid[index + UPDATED] > tick - 9 && grid[index + UPDATED] < tick) {
                 addUpdatedChunk(x, y);
-                // setObserverUpdated(x, y, updated, true);
                 return;
             }
             else if (grid[index + UPDATED] != tick && (grid[index + ID] == OBSERVER_LEFT_ON || grid[index + ID] == OBSERVER_UP_ON || grid[index + ID] == OBSERVER_RIGHT_ON || grid[index + ID] == OBSERVER_DOWN_ON || grid[index + ID] == COMPARATOR_LEFT_ON)) {
-                // addPixel(x, y, OBSERVER_LEFT_ON);
                 addUpdatedChunk(x, y);
                 return;
             }
             addPixel(x, y, OBSERVER_LEFT_OFF);
-            // setObserverUpdated(x, y, updated, true);
+            if (updated) {
+                grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+            }
         },
     },
     observer_right_off: {
@@ -5355,28 +5341,29 @@ let pixelData = {
             observer_left_off: 1,
         },
         update5: function(x, y) {
-            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] >= tick - 16;
             if (x == 0) {
-                // setObserverUpdated(x, y, updated, false);
                 return;
             }
-            // if (isDeactivatedObserver(x, y)) {
-            //     // setObserverUpdated(x, y, updated, false);
-            //     return;
-            // }
+            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] > tick - 9 && grid[(x + y * gridWidth) * gridStride + UPDATED] < tick;
             let index = (x - 1 + y * gridWidth) * gridStride;
-            if (grid[index + UPDATED] > tick - 8 && grid[index + UPDATED] < tick) {
+            if (grid[index + UPDATED] > tick - 9 && grid[index + UPDATED] < tick) {
                 addPixel(x, y, OBSERVER_RIGHT_ON);
-                // setObserverUpdated(x, y, updated, false);
+                if (updated) {
+                    grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                }
             }
             else if (grid[index + UPDATED] == tick && (grid[index + ID] == OBSERVER_LEFT_OFF || grid[index + ID] == OBSERVER_UP_OFF || grid[index + ID] == OBSERVER_RIGHT_OFF || grid[index + ID] == OBSERVER_DOWN_OFF || grid[index + ID] == COMPARATOR_RIGHT_OFF)) {
                 addPixel(x, y, OBSERVER_RIGHT_ON);
+                if (updated) {
+                    grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                }
             }
             else if (grid[index + UPDATED] != tick && (grid[index + ID] == OBSERVER_LEFT_ON || grid[index + ID] == OBSERVER_UP_ON || grid[index + ID] == OBSERVER_RIGHT_ON || grid[index + ID] == OBSERVER_DOWN_ON || grid[index + ID] == COMPARATOR_RIGHT_ON)) {
                 addPixel(x, y, OBSERVER_RIGHT_ON);
+                if (updated) {
+                    grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                }
             }
-            // addUpdatedChunk(x, y);
-            // setObserverUpdated(x, y, updated, false);
         },
     },
     observer_right_on: {
@@ -5394,37 +5381,28 @@ let pixelData = {
             observer_left_off: 1,
         },
         update5: function(x, y) {
-            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] >= tick - 14;
             if (x == 0) {
                 addPixel(x, y, OBSERVER_RIGHT_OFF);
-                // setObserverUpdated(x, y, updated, false);
                 return;
             }
-            // if (isDeactivatedObserver(x, y)) {
-            //     addPixel(x, y, OBSERVER_RIGHT_OFF);
-            //     setObserverUpdated(x, y, updated, false);
-            //     return;
-            // }
+            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] > tick - 9 && grid[(x + y * gridWidth) * gridStride + UPDATED] < tick;
             let index = (x - 1 + y * gridWidth) * gridStride;
-            // if (grid[index + UPDATED] >= tick - 14 && grid[index + UPDATED] <= tick - 2) {
-            // }
             if (grid[index + UPDATED] > tick - 8 && grid[index + UPDATED] < tick) {
                 addUpdatedChunk(x, y);
-                // setObserverUpdated(x, y, updated, false);
                 return;
             }
             else if (grid[index + UPDATED] == tick && (grid[index + ID] == OBSERVER_LEFT_OFF || grid[index + ID] == OBSERVER_UP_OFF || grid[index + ID] == OBSERVER_RIGHT_OFF || grid[index + ID] == OBSERVER_DOWN_OFF || grid[index + ID] == COMPARATOR_RIGHT_OFF)) {
                 addUpdatedChunk(x, y);
-                // setObserverUpdated(x, y, updated, false);
                 return;
             }
             else if (grid[index + UPDATED] != tick && (grid[index + ID] == OBSERVER_LEFT_ON || grid[index + ID] == OBSERVER_UP_ON || grid[index + ID] == OBSERVER_RIGHT_ON || grid[index + ID] == OBSERVER_DOWN_ON || grid[index + ID] == COMPARATOR_RIGHT_ON)) {
                 addUpdatedChunk(x, y);
-                // setObserverUpdated(x, y, updated, false);
                 return;
             }
             addPixel(x, y, OBSERVER_RIGHT_OFF);
-            // setObserverUpdated(x, y, updated, false);
+            if (updated) {
+                grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+            }
         },
     },
     observer_up_off: {
@@ -5442,24 +5420,23 @@ let pixelData = {
             observer_left_off: 1,
         },
         update5: function(x, y) {
-            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] >= tick - 14;
             if (y == gridHeight - 1) {
-                // setObserverUpdated(x, y, updated, false);
                 return;
             }
-            // if (isDeactivatedObserver(x, y)) {
-            //     // setObserverUpdated(x, y, updated, false);
-            //     return;
-            // }
+            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] > tick - 9 && grid[(x + y * gridWidth) * gridStride + UPDATED] < tick;
             let index = (x + (y + 1) * gridWidth) * gridStride;
             if (grid[index + UPDATED] > tick - 8 && grid[index + UPDATED] < tick) {
                 addPixel(x, y, OBSERVER_UP_ON);
-                // setObserverUpdated(x, y, updated, false);
+                if (updated) {
+                    grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                }
             }
             else if (grid[index + UPDATED] != tick && (grid[index + ID] == OBSERVER_LEFT_ON || grid[index + ID] == OBSERVER_UP_ON || grid[index + ID] == OBSERVER_RIGHT_ON || grid[index + ID] == OBSERVER_DOWN_ON || grid[index + ID] == COMPARATOR_UP_ON)) {
                 addPixel(x, y, OBSERVER_UP_ON);
+                if (updated) {
+                    grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                }
             }
-            // setObserverUpdated(x, y, updated, false);
         },
     },
     observer_up_on: {
@@ -5477,21 +5454,14 @@ let pixelData = {
             observer_left_off: 1,
         },
         update5: function(x, y) {
-            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] >= tick - 14;
             if (y == gridHeight - 1) {
                 addPixel(x, y, OBSERVER_UP_OFF);
-                // setObserverUpdated(x, y, updated, true);
                 return;
             }
-            // if (isDeactivatedObserver(x, y)) {
-            //     addPixel(x, y, OBSERVER_UP_OFF);
-            //     setObserverUpdated(x, y, updated, true);
-            //     return;
-            // }
+            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] > tick - 9 && grid[(x + y * gridWidth) * gridStride + UPDATED] < tick;
             let index = (x + (y + 1) * gridWidth) * gridStride;
             if (grid[index + UPDATED] > tick - 8 && grid[index + UPDATED] < tick) {
                 addUpdatedChunk(x, y);
-                // setObserverUpdated(x, y, updated, true);
                 return;
             }
             else if (grid[index + UPDATED] != tick && (grid[index + ID] == OBSERVER_LEFT_ON || grid[index + ID] == OBSERVER_UP_ON || grid[index + ID] == OBSERVER_RIGHT_ON || grid[index + ID] == OBSERVER_DOWN_ON || grid[index + ID] == COMPARATOR_UP_ON)) {
@@ -5499,7 +5469,9 @@ let pixelData = {
                 return;
             }
             addPixel(x, y, OBSERVER_UP_OFF);
-            // setObserverUpdated(x, y, updated, true);
+            if (updated) {
+                grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+            }
         },
     },
     observer_down_off: {
@@ -5517,28 +5489,29 @@ let pixelData = {
             observer_left_off: 1,
         },
         update5: function(x, y) {
-            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] >= tick - 14;
             if (y == 0) {
-                // setObserverUpdated(x, y, updated, false);
                 return;
             }
-            // if (isDeactivatedObserver(x, y)) {
-            //     // setObserverUpdated(x, y, updated, false);
-            //     return;
-            // }
+            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] > tick - 9 && grid[(x + y * gridWidth) * gridStride + UPDATED] < tick;
             let index = (x + (y - 1) * gridWidth) * gridStride;
             if (grid[index + UPDATED] > tick - 8 && grid[index + UPDATED] < tick) {
                 addPixel(x, y, OBSERVER_DOWN_ON);
-                // setObserverUpdated(x, y, updated, false);
+                if (updated) {
+                    grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                }
             }
             else if (grid[index + UPDATED] == tick && (grid[index + ID] == OBSERVER_LEFT_OFF || grid[index + ID] == OBSERVER_UP_OFF || grid[index + ID] == OBSERVER_RIGHT_OFF || grid[index + ID] == OBSERVER_DOWN_OFF || grid[index + ID] == COMPARATOR_DOWN_OFF)) {
                 addPixel(x, y, OBSERVER_DOWN_ON);
+                if (updated) {
+                    grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                }
             }
             else if (grid[index + UPDATED] != tick && (grid[index + ID] == OBSERVER_LEFT_ON || grid[index + ID] == OBSERVER_UP_ON || grid[index + ID] == OBSERVER_RIGHT_ON || grid[index + ID] == OBSERVER_DOWN_ON || grid[index + ID] == COMPARATOR_DOWN_ON)) {
                 addPixel(x, y, OBSERVER_DOWN_ON);
+                if (updated) {
+                    grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                }
             }
-            // addUpdatedChunk(x, y);
-            // setObserverUpdated(x, y, updated, false);
         },
     },
     observer_down_on: {
@@ -5556,40 +5529,29 @@ let pixelData = {
             observer_left_off: 1,
         },
         update5: function(x, y) {
-            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] >= tick - 14;
             if (y == 0) {
                 addPixel(x, y, OBSERVER_DOWN_OFF);
                 setObserverUpdated(x, y, updated, true);
                 return;
             }
-            // if (isDeactivatedObserver(x, y)) {
-            //     addPixel(x, y, OBSERVER_DOWN_OFF);
-            //     setObserverUpdated(x, y, updated, true);
-            //     return;
-            // }
+            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] > tick - 9 && grid[(x + y * gridWidth) * gridStride + UPDATED] < tick;
             let index = (x + (y - 1) * gridWidth) * gridStride;
-            // if (grid[index + UPDATED] >= tick - 14 && grid[index + UPDATED] <= tick - 2) {
-            //     addUpdatedChunk(x, y);
-            //     // setObserverUpdated(x, y, updated, true);
-            //     return;
-            // }
             if (grid[index + UPDATED] > tick - 8 && grid[index + UPDATED] < tick) {
                 addUpdatedChunk(x, y);
-                // setObserverUpdated(x, y, updated, true);
                 return;
             }
             else if (grid[index + UPDATED] == tick && (grid[index + ID] == OBSERVER_LEFT_OFF || grid[index + ID] == OBSERVER_UP_OFF || grid[index + ID] == OBSERVER_RIGHT_OFF || grid[index + ID] == OBSERVER_DOWN_OFF || grid[index + ID] == COMPARATOR_DOWN_OFF)) {
                 addUpdatedChunk(x, y);
-                // setObserverUpdated(x, y, updated, true);
                 return;
             }
             else if (grid[index + UPDATED] != tick && (grid[index + ID] == OBSERVER_LEFT_ON || grid[index + ID] == OBSERVER_UP_ON || grid[index + ID] == OBSERVER_RIGHT_ON || grid[index + ID] == OBSERVER_DOWN_ON || grid[index + ID] == COMPARATOR_DOWN_ON)) {
                 addUpdatedChunk(x, y);
-                // setObserverUpdated(x, y, updated, true);
                 return;
             }
             addPixel(x, y, OBSERVER_DOWN_OFF);
-            // setObserverUpdated(x, y, updated, true);
+            if (updated) {
+                grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+            }
         },
     },
     comparator_left_off: {
@@ -5610,6 +5572,7 @@ let pixelData = {
             color_gray: 2,
         },
         update5: function(x, y) {
+            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] > tick - 9 && grid[(x + y * gridWidth) * gridStride + UPDATED] < tick;
             let pixel = AIR;
             let pixels = 0;
             if (x != gridWidth - 1) {
@@ -5661,6 +5624,9 @@ let pixelData = {
             }
             if (pixels >= 2) {
                 addPixel(x, y, COMPARATOR_LEFT_ON);
+                if (updated) {
+                    grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                }
             }
         },
     },
@@ -5679,6 +5645,7 @@ let pixelData = {
             comparator_left_off: 1,
         },
         update5: function(x, y) {
+            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] > tick - 9 && grid[(x + y * gridWidth) * gridStride + UPDATED] < tick;
             let pixel = AIR;
             let pixels = 0;
             if (x != gridWidth - 1) {
@@ -5690,6 +5657,9 @@ let pixelData = {
                     }
                     else if (pixel != id) {
                         addPixel(x, y, COMPARATOR_LEFT_OFF);
+                        if (updated) {
+                            grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                        }
                         return;
                     }
                     pixels += 1;
@@ -5712,6 +5682,9 @@ let pixelData = {
                     }
                     else if (pixel != id) {
                         addPixel(x, y, COMPARATOR_LEFT_OFF);
+                        if (updated) {
+                            grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                        }
                         return;
                     }
                     pixels += 1;
@@ -5726,6 +5699,9 @@ let pixelData = {
                     }
                     else if (pixel != id) {
                         addPixel(x, y, COMPARATOR_LEFT_OFF);
+                        if (updated) {
+                            grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                        }
                         return;
                     }
                     pixels += 1;
@@ -5733,6 +5709,9 @@ let pixelData = {
             }
             if (pixels < 2) {
                 addPixel(x, y, COMPARATOR_LEFT_OFF);
+                if (updated) {
+                    grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                }
             }
         },
     },
@@ -5751,6 +5730,7 @@ let pixelData = {
             comparator_left_off: 1,
         },
         update5: function(x, y) {
+            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] > tick - 9 && grid[(x + y * gridWidth) * gridStride + UPDATED] < tick;
             let pixel = AIR;
             let pixels = 0;
             if (x != 0) {
@@ -5802,6 +5782,9 @@ let pixelData = {
             }
             if (pixels >= 2) {
                 addPixel(x, y, COMPARATOR_UP_ON);
+                if (updated) {
+                    grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                }
             }
         },
     },
@@ -5820,6 +5803,7 @@ let pixelData = {
             comparator_left_off: 1,
         },
         update5: function(x, y) {
+            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] > tick - 9 && grid[(x + y * gridWidth) * gridStride + UPDATED] < tick;
             let pixel = AIR;
             let pixels = 0;
             if (x != 0) {
@@ -5839,6 +5823,9 @@ let pixelData = {
                     }
                     else if (pixel != id) {
                         addPixel(x, y, COMPARATOR_UP_OFF);
+                        if (updated) {
+                            grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                        }
                         return;
                     }
                     pixels += 1;
@@ -5853,6 +5840,9 @@ let pixelData = {
                     }
                     else if (pixel != id) {
                         addPixel(x, y, COMPARATOR_UP_OFF);
+                        if (updated) {
+                            grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                        }
                         return;
                     }
                     pixels += 1;
@@ -5867,6 +5857,9 @@ let pixelData = {
                     }
                     else if (pixel != id) {
                         addPixel(x, y, COMPARATOR_UP_OFF);
+                        if (updated) {
+                            grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                        }
                         return;
                     }
                     pixels += 1;
@@ -5874,6 +5867,9 @@ let pixelData = {
             }
             if (pixels < 2) {
                 addPixel(x, y, COMPARATOR_UP_OFF);
+                if (updated) {
+                    grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                }
             }
         },
     },
@@ -5892,6 +5888,7 @@ let pixelData = {
             comparator_left_off: 1,
         },
         update5: function(x, y) {
+            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] > tick - 9 && grid[(x + y * gridWidth) * gridStride + UPDATED] < tick;
             let pixel = AIR;
             let pixels = 0;
             if (x != 0) {
@@ -5951,6 +5948,9 @@ let pixelData = {
             }
             if (pixels >= 2) {
                 addPixel(x, y, COMPARATOR_RIGHT_ON);
+                if (updated) {
+                    grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                }
             }
         },
     },
@@ -5969,6 +5969,7 @@ let pixelData = {
             comparator_left_off: 1,
         },
         update5: function(x, y) {
+            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] > tick - 9 && grid[(x + y * gridWidth) * gridStride + UPDATED] < tick;
             let pixel = AIR;
             let pixels = 0;
             if (x != 0) {
@@ -5988,6 +5989,9 @@ let pixelData = {
                     }
                     else if (pixel != id) {
                         addPixel(x, y, COMPARATOR_RIGHT_OFF);
+                        if (updated) {
+                            grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                        }
                         return;
                     }
                     pixels += 1;
@@ -6010,6 +6014,9 @@ let pixelData = {
                     }
                     else if (pixel != id) {
                         addPixel(x, y, COMPARATOR_RIGHT_OFF);
+                        if (updated) {
+                            grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                        }
                         return;
                     }
                     pixels += 1;
@@ -6024,6 +6031,9 @@ let pixelData = {
                     }
                     else if (pixel != id) {
                         addPixel(x, y, COMPARATOR_RIGHT_OFF);
+                        if (updated) {
+                            grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                        }
                         return;
                     }
                     pixels += 1;
@@ -6031,6 +6041,9 @@ let pixelData = {
             }
             if (pixels < 2) {
                 addPixel(x, y, COMPARATOR_RIGHT_OFF);
+                if (updated) {
+                    grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                }
             }
         },
     },
@@ -6049,6 +6062,7 @@ let pixelData = {
             comparator_left_off: 1,
         },
         update5: function(x, y) {
+            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] > tick - 9 && grid[(x + y * gridWidth) * gridStride + UPDATED] < tick;
             let pixel = AIR;
             let pixels = 0;
             if (x != 0) {
@@ -6108,6 +6122,9 @@ let pixelData = {
             }
             if (pixels >= 2) {
                 addPixel(x, y, COMPARATOR_DOWN_ON);
+                if (updated) {
+                    grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                }
             }
         },
     },
@@ -6126,6 +6143,7 @@ let pixelData = {
             comparator_left_off: 1,
         },
         update5: function(x, y) {
+            let updated = grid[(x + y * gridWidth) * gridStride + UPDATED] > tick - 9 && grid[(x + y * gridWidth) * gridStride + UPDATED] < tick;
             let pixel = AIR;
             let pixels = 0;
             if (x != 0) {
@@ -6145,6 +6163,9 @@ let pixelData = {
                     }
                     else if (pixel != id) {
                         addPixel(x, y, COMPARATOR_DOWN_OFF);
+                        if (updated) {
+                            grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                        }
                         return;
                     }
                     pixels += 1;
@@ -6159,6 +6180,9 @@ let pixelData = {
                     }
                     else if (pixel != id) {
                         addPixel(x, y, COMPARATOR_DOWN_OFF);
+                        if (updated) {
+                            grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                        }
                         return;
                     }
                     pixels += 1;
@@ -6181,6 +6205,9 @@ let pixelData = {
                     }
                     else if (pixel != id) {
                         addPixel(x, y, COMPARATOR_DOWN_OFF);
+                        if (updated) {
+                            grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                        }
                         return;
                     }
                     pixels += 1;
@@ -6188,6 +6215,9 @@ let pixelData = {
             }
             if (pixels < 2) {
                 addPixel(x, y, COMPARATOR_DOWN_OFF);
+                if (updated) {
+                    grid[(x + y * gridWidth) * gridStride + UPDATED] = tick - 1;
+                }
             }
         },
     },
