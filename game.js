@@ -3546,18 +3546,6 @@ function resetGrid() {
 };
 
 function updateGrid() {
-    if (gridWidth % chunkWidth != 0) {
-        for (let chunkY = 0; chunkY < chunkYAmount; chunkY++) {
-            nextChunks[(chunkXAmount - 1 + chunkY * chunkXAmount) * chunkStride + 1] = Math.min(nextChunks[(chunkXAmount - 1 + chunkY * chunkXAmount) * chunkStride + 1], gridWidth - 1);
-            drawChunks[(chunkXAmount - 1 + chunkY * chunkXAmount) * chunkStride + 1] = Math.min(drawChunks[(chunkXAmount - 1 + chunkY * chunkXAmount) * chunkStride + 1], gridWidth - 1);
-        }
-    }
-    if (gridHeight % chunkHeight != 0) {
-        for (let chunkX = 0; chunkX < chunkXAmount; chunkX++) {
-            nextChunks[(chunkX + (chunkYAmount - 1) * chunkXAmount) * chunkStride + 3] = Math.min(nextChunks[(chunkX + (chunkYAmount - 1) * chunkXAmount) * chunkStride + 3], gridHeight - 1);
-            drawChunks[(chunkX + (chunkYAmount - 1) * chunkXAmount) * chunkStride + 3] = Math.min(drawChunks[(chunkX + (chunkYAmount - 1) * chunkXAmount) * chunkStride + 3], gridHeight - 1);
-        }
-    }
     let lastChunks = chunks;
     chunks = nextChunks;
     nextChunks = lastChunks;
@@ -3939,20 +3927,6 @@ function updateGrid() {
     //     }
     //     tick -= 11;
     // }
-
-    // remove dumb chunks out of grid
-    if (gridWidth % chunkWidth != 0) {
-        for (let chunkY = 0; chunkY < chunkYAmount; chunkY++) {
-            nextChunks[(chunkXAmount - 1 + chunkY * chunkXAmount) * chunkStride + 1] = Math.min(nextChunks[(chunkXAmount - 1 + chunkY * chunkXAmount) * chunkStride + 1], gridWidth - 1);
-            drawChunks[(chunkXAmount - 1 + chunkY * chunkXAmount) * chunkStride + 1] = Math.min(drawChunks[(chunkXAmount - 1 + chunkY * chunkXAmount) * chunkStride + 1], gridWidth - 1);
-        }
-    }
-    if (gridHeight % chunkHeight != 0) {
-        for (let chunkX = 0; chunkX < chunkXAmount; chunkX++) {
-            nextChunks[(chunkX + (chunkYAmount - 1) * chunkXAmount) * chunkStride + 3] = Math.min(nextChunks[(chunkX + (chunkYAmount - 1) * chunkXAmount) * chunkStride + 3], gridHeight - 1);
-            drawChunks[(chunkX + (chunkYAmount - 1) * chunkXAmount) * chunkStride + 3] = Math.min(drawChunks[(chunkX + (chunkYAmount - 1) * chunkXAmount) * chunkStride + 3], gridHeight - 1);
-        }
-    }
 
     if (currentPuzzle != null) {
         updateObjectives();
