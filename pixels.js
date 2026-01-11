@@ -8824,7 +8824,8 @@ for (let i = 0; i < pixels.length; i++) {
             }
         };
         groupImg.onmouseover = function() {
-            showTooltip(pixels[i].group, pixels[i].groupDescription);
+            // showTooltip(pixels[i].group, pixels[i].groupDescription);
+            showTooltip(pixels[i].group, "");
             moveTooltip();
         };
         groupImg.onmouseout = function() {
