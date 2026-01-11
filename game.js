@@ -1208,7 +1208,7 @@ if (localStorage.getItem("keybinds") != null) {
     }
 }
 
-let keyboardLayoutMap = await navigator.keyboard.getLayoutMap();
+let keyboardLayoutMap = await navigator?.keyboard?.getLayoutMap();
 
 // keybinds["Main Action"] = [{ key: "LMB" }];
 // keybinds["Secondary Action"] = [{ key: "RMB" }];
@@ -3219,23 +3219,29 @@ document.onkeydown = (e) => {
     if (modalContainer.open || !congratulationsContainer.classList.contains("hidden")) {
         return;
     }
-    let key = keyboardLayoutMap.get(e.code);
-    if (key == null) {
-        if (e.code.startsWith("Shift")) {
-            key = "Shift";
+    let key = null;
+    if (keyboardLayoutMap != null) {
+        key = keyboardLayoutMap.get(e.code);
+        if (key == null) {
+            if (e.code.startsWith("Shift")) {
+                key = "Shift";
+            }
+            else if (e.code.startsWith("Control")) {
+                key = "Control";
+            }
+            else if (e.code.startsWith("Alt")) {
+                key = "Alt";
+            }
+            else if (e.code.startsWith("Meta")) {
+                key = "Meta";
+            }
+            else {
+                key = e.code;
+            }
         }
-        else if (e.code.startsWith("Control")) {
-            key = "Control";
-        }
-        else if (e.code.startsWith("Alt")) {
-            key = "Alt";
-        }
-        else if (e.code.startsWith("Meta")) {
-            key = "Meta";
-        }
-        else {
-            key = e.code;
-        }
+    }
+    else {
+        key = e.key;
     }
     if (key.length == 1) {
         key = key.toUpperCase();
@@ -3249,23 +3255,29 @@ document.onkeydown = (e) => {
     updateKeybinds(key);
 };
 document.onkeyup = (e) => {
-    let key = keyboardLayoutMap.get(e.code);
-    if (key == null) {
-        if (e.code.startsWith("Shift")) {
-            key = "Shift";
+    let key = null;
+    if (keyboardLayoutMap != null) {
+        key = keyboardLayoutMap.get(e.code);
+        if (key == null) {
+            if (e.code.startsWith("Shift")) {
+                key = "Shift";
+            }
+            else if (e.code.startsWith("Control")) {
+                key = "Control";
+            }
+            else if (e.code.startsWith("Alt")) {
+                key = "Alt";
+            }
+            else if (e.code.startsWith("Meta")) {
+                key = "Meta";
+            }
+            else {
+                key = e.code;
+            }
         }
-        else if (e.code.startsWith("Control")) {
-            key = "Control";
-        }
-        else if (e.code.startsWith("Alt")) {
-            key = "Alt";
-        }
-        else if (e.code.startsWith("Meta")) {
-            key = "Meta";
-        }
-        else {
-            key = e.code;
-        }
+    }
+    else {
+        key = e.key;
     }
     if (key.length == 1) {
         key = key.toUpperCase();

@@ -320,7 +320,7 @@ function addUpdatedChunk(x, y) {
         }
     }
     addGridUpdatedChunk(x, y);
-}
+};
 function addGridUpdatedChunk(x, y) {
     let index = (Math.floor(x / chunkWidth) + Math.floor(y / chunkHeight) * chunkXAmount) * chunkStride;
     gridUpdatedChunks[index] = Math.min(gridUpdatedChunks[index], x);
