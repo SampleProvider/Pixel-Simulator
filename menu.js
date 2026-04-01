@@ -41,7 +41,7 @@ let titleRandom = Math.random();
 if (titleRandom < 0.0005) {
     titleImage = await createImageBitmap(await (await fetch("img/pickleTitle.png")).blob());
 }
-else if (titleRandom < 0.0005) {
+else if (titleRandom < 0.001) {
     titleImage = await createImageBitmap(await (await fetch("img/rightToLeftTitle.png")).blob());
     setTimeout(function() {
         let elements = document.getElementsByTagName("*");
@@ -61,8 +61,12 @@ else if (titleRandom < 0.0005) {
         }
     }, 1000);
 }
+else if (titleRandom < 0.1) {
+    titleImage = await createImageBitmap(await (await fetch("img/aprilFoolsTitleBad.png")).blob());
+}
 else {
-    titleImage = await createImageBitmap(await (await fetch("img/title.png")).blob());
+    // titleImage = await createImageBitmap(await (await fetch("img/title.png")).blob());
+    titleImage = await createImageBitmap(await (await fetch("img/aprilFoolsTitle.png")).blob());
 }
 
 let canvas = document.createElement("canvas");
@@ -114,7 +118,7 @@ function addBackgroundPixel(id, x, y, rotation) {
         y: y,
         rotation: rotation,
         spdX: Math.random() * 2 - 1,
-        spdY: Math.random() + 2,
+        spdY: -(Math.random() + 2),
         spdRotation: (Math.random() * 2 - 1) * 0.1,
         noise: Math.random(),
     });
@@ -561,8 +565,60 @@ function updateMenu() {
                 ASH,
                 WOOD_CRATE,
                 STEEL_CRATE,
+
+                PISTON_LEFT,
+                PUSHER_LEFT,
+                STICKY_PISTON_LEFT,
+                COPIER_LEFT,
+                CLONER_LEFT,
+                ROTATOR_LEFT,
+                ROTATOR_CLOCKWISE,
+                SLIDER_HORIZONTAL,
+                COLLAPSABLE,
+                SLIME,
+                DEACTIVATOR,
+                OBSERVER_LEFT_OFF,
+                OBSERVER_LEFT_ON,
+                COMPARATOR_LEFT_OFF,
+                COMPARATOR_LEFT_ON,
+                LAMP_ON,
+                LAMP_OFF,
+                GUNPOWDER,
+                C4,
+                DETONATOR,
+                FLAMETHROWER_LEFT,
+                NUKE,
+                NUKE_DEFUSER,
+                DELETER,
+                LAG_SPIKE_GENERATOR,
+                ACID,
+                BASE,
+                PINK_SAND,
+                RED_SAND,
+                PICKLE,
+                PICKLED_PICKLE,
+                SPONGY_RICE,
+                MIMIC,
+                LUCKY_PIXEL,
+                LASER_LEFT,
+                LASER_SCATTERER,
+                MIRROR_1,
+                MONSTER,
+                PLACEMENT_RESTRICTION,
+                GOAL,
+                TARGET,
+                TEAM_PLACEMENT_RESTRICTION_A,
+                TEAM_PLACEMENT_RESTRICTION_B,
+                TEAM_MARKER_A,
+                TEAM_MARKER_B,
+                KING_OF_THE_HILL_MARKER,
+                COLOR_WELL,
+                PASSIVE_COLOR_GENERATOR,
+                ACTIVE_COLOR_GENERATOR,
+                COLOR_GENERATOR_FILTER,
+                COLLECTOR,
             ];
-            addBackgroundPixel(validPixels[Math.floor(Math.random() * validPixels.length)], Math.random() * menuCanvas.width, -20 * Math.sqrt(2), Math.random() * Math.PI);
+            addBackgroundPixel(validPixels[Math.floor(Math.random() * validPixels.length)], Math.random() * menuCanvas.width, menuCanvas.height + 20 * Math.sqrt(2), Math.random() * Math.PI);
         }
     }   
     for (let i in backgroundPixels) {
@@ -619,8 +675,11 @@ function updateMenu() {
         backgroundPixels[i].y += backgroundPixels[i].spdY;
         backgroundPixels[i].rotation += backgroundPixels[i].spdRotation;
         backgroundPixels[i].spdX *= 0.99;
-        if (backgroundPixels[i].spdY < 2) {
-            backgroundPixels[i].spdY += (2 - backgroundPixels[i].spdY) * 0.01;
+        // if (backgroundPixels[i].spdY < 2) {
+        //     backgroundPixels[i].spdY += (2 - backgroundPixels[i].spdY) * 0.01;
+        // }
+        if (backgroundPixels[i].spdY > -2) {
+            backgroundPixels[i].spdY += (-2 - backgroundPixels[i].spdY) * 0.01;
         }
         if (backgroundPixels[i].x < -20 * Math.sqrt(2)) {
             backgroundPixels.splice(i, 1);
@@ -632,16 +691,16 @@ function updateMenu() {
             i -= 1;
             continue;
         }
-        // if (backgroundPixels[i].y < -20 * Math.sqrt(2)) {
-        //     backgroundPixels.splice(i, 1);
-        //     i -= 1;
-        //     continue;
-        // }
-        if (backgroundPixels[i].y > menuCanvas.height + 20 * Math.sqrt(2)) {
+        if (backgroundPixels[i].y < -20 * Math.sqrt(2)) {
             backgroundPixels.splice(i, 1);
             i -= 1;
             continue;
         }
+        // if (backgroundPixels[i].y > menuCanvas.height + 20 * Math.sqrt(2)) {
+        //     backgroundPixels.splice(i, 1);
+        //     i -= 1;
+        //     continue;
+        // }
     }
     for (let i in backgroundPixels) {
         let size = 20;

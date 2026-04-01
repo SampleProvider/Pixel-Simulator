@@ -3,8 +3,9 @@ import { grid, gridWidth, gridHeight, gridStride, chunks, nextChunks, drawChunks
 import { random, randomSeed } from "./random.js";
 import { currentPuzzle } from "./puzzles.js";
 import { multiplayerId, multiplayerGameId, multiplayerGames, multiplayerPixelInventory } from "./multiplayer.js";
+import { aprilFools } from "./april-fools-pixels.js";
 
-const pixelTexture = await createImageBitmap(await (await fetch("./img/pixels.png")).blob());
+const pixelTexture = await createImageBitmap(await (await fetch("./img/aprilFoolsPixels.png")).blob());
 const ID = 0;
 const PIXEL_DATA = 1;
 const PUZZLE_DATA = 2;
@@ -8744,6 +8745,8 @@ for (let i in pixels) {
         updateCost(i);
     }
 }
+
+aprilFools();
 
 let corruptionName = pixelData.corruption.name;
 setInterval(() => {

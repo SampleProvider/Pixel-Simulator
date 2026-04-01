@@ -216,7 +216,7 @@ fn get_color(id: i32, color: vec4<f32>, pos: vec2<f32>) -> vec4<f32> {
     }
     let index = (u32(pos.x) + u32(pos.y) * grid_size.x) * stride;
     if (id == LAG_SPIKE_GENERATOR) {
-        return vec4<f32>(0.5, 1.0, 0.0, random(index + u32(time * 1000)));
+        return vec4<f32>(0.0, 0.5, 1.0, random(index + u32(time * 1000)));
     }
     if (id == MOSS) {
         let noise = perlinNoise2(floor(pos) / 6) + perlinNoise2(floor(pos) / 2) / 2 + random(index) - 0.5;
