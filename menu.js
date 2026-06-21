@@ -61,12 +61,12 @@ else if (titleRandom < 0.001) {
         }
     }, 1000);
 }
-else if (titleRandom < 0.1) {
-    titleImage = await createImageBitmap(await (await fetch("img/aprilFoolsTitleBad.png")).blob());
-}
+// else if (titleRandom < 0.1) {
+//     titleImage = await createImageBitmap(await (await fetch("img/aprilFoolsTitleBad.png")).blob());
+// }
 else {
-    // titleImage = await createImageBitmap(await (await fetch("img/title.png")).blob());
-    titleImage = await createImageBitmap(await (await fetch("img/aprilFoolsTitle.png")).blob());
+    titleImage = await createImageBitmap(await (await fetch("img/title.png")).blob());
+    // titleImage = await createImageBitmap(await (await fetch("img/aprilFoolsTitle.png")).blob());
 }
 
 let canvas = document.createElement("canvas");
